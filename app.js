@@ -95,10 +95,10 @@ const App = (() => {
     const total    = data.length;
     const monitored= data.filter(r => r._hasSheetRow).length;
     const followUp = data.filter(r => r.followUpDate && r.followUpDate !== '—').length;
-    const byStatus = Zoho.groupBy(data, 'status');
-    const byCity   = Zoho.groupBy(data, 'city');
-    const active   = Object.entries(byStatus)
-      .filter(([k]) => /active|progress|pending|contacted/i.test(k))
+    const byStatus  = Zoho.groupBy(data, 'status');
+    const byOffice  = Zoho.groupBy(data, 'ctiOffice');
+    const active    = Object.entries(byStatus)
+      .filter(([k]) => /active|progress|pending|onboard|hired|assigned|deployed|sign/i.test(k))
       .reduce((n, [, v]) => n + v, 0);
 
     destroyCharts();
@@ -116,13 +116,13 @@ const App = (() => {
           <canvas id="chartStatus" height="220"></canvas>
         </div>
         <div class="card chart-card">
-          <div class="card-title">By City</div>
-          <canvas id="chartCity" height="220"></canvas>
+          <div class="card-title">By CTI Office</div>
+          <canvas id="chartOffice" height="220"></canvas>
         </div>
       </div>`;
 
-    drawBar('chartStatus', byStatus);
-    drawBar('chartCity', topN(byCity, 8));
+    drawBar('chartStatus', topN(byStatus, 10));
+    drawBar('chartOffice', topN(byOffice, 8));
     updateStatus();
   }
 
@@ -177,8 +177,8 @@ const App = (() => {
       <div class="card table-card">
         <div class="table-wrap"><table class="data-table">
           <thead><tr>
-            <th>Name</th><th>Email</th><th>City</th><th>Status</th>
-            <th>Monitoring</th><th>Follow Up</th><th>Handled By</th><th></th>
+            <th>Name</th><th>CTI Office</th><th>Country</th><th>Position</th>
+            <th>Status</th><th>Monitoring</th><th>Follow Up</th><th></th>
           </tr></thead>
           <tbody id="recBody"></tbody>
         </table></div>
@@ -194,7 +194,7 @@ const App = (() => {
     const q = _search.trim().toLowerCase();
     if (!q) return _records;
     return _records.filter(r =>
-      [r.name, r.email, r.city, r.status, r.monitorStatus, r.handledBy]
+      [r.name, r.email, r.ctiOffice, r.country, r.position, r.status, r.monitorStatus, r.handledBy]
         .some(v => String(v).toLowerCase().includes(q)));
   }
 
@@ -208,13 +208,13 @@ const App = (() => {
     }
     tbody.innerHTML = rows.map((r, i) => `
       <tr>
-        <td>${esc(r.name)}</td>
-        <td>${esc(r.email)}</td>
-        <td>${esc(r.city)}</td>
+        <td>${esc(r.name)}<div class="cell-sub">${esc(r.email)}</div></td>
+        <td>${esc(r.ctiOffice)}</td>
+        <td>${esc(r.country)}</td>
+        <td>${esc(r.position)}</td>
         <td>${badge(r.status)}</td>
         <td>${badge(r.monitorStatus)}</td>
         <td>${formatDate(r.followUpDate)}</td>
-        <td>${esc(r.handledBy)}</td>
         <td><button class="btn-sm" data-edit="${_records.indexOf(r)}">Edit</button></td>
       </tr>`).join('');
     tbody.querySelectorAll('[data-edit]').forEach(b =>
@@ -232,8 +232,8 @@ const App = (() => {
       <h2>Edit — ${esc(rec.name)}</h2>
       <p class="modal-sub">${esc(rec.email)}</p>
 
-      <div class="form-section-label">Zoho Recruit</div>
-      <label>Status</label>
+      <div class="form-section-label">Zoho Recruit — Seafarers</div>
+      <label>Seafarer Status</label>
       <input id="f_status" value="${esc(rec.status === '—' ? '' : rec.status)}">
 
       <div class="form-section-label">Monitoring (Zoho Sheet)</div>

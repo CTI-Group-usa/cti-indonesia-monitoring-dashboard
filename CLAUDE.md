@@ -4,10 +4,12 @@
 A vanilla JS single-page application (SPA) for CTI Group Worldwide Services, Inc.
 to **monitor Indonesia-side records**. It is a **pull-and-push** dashboard:
 
-- **Pull:** live data from a custom **Zoho Recruit** module + supplementary
-  monitoring data from a **Zoho Sheet**, merged on a shared key (email).
-- **Push:** edits in the UI write back to Zoho Recruit (status) and the Zoho
-  Sheet (monitoring status, notes, follow-up, handled-by).
+- **Pull:** live data from the **Zoho Recruit `Candidates` module** (shown in
+  Recruit as **"Seafarers"** — maritime crew) + supplementary monitoring data
+  from a **Zoho Sheet**, merged on email.
+- **Push:** edits in the UI write back to Zoho Recruit (Seafarer Status =
+  `Candidate_Status`) and the Zoho Sheet (monitoring status, notes, follow-up,
+  handled-by).
 
 Deployed on **GitHub Pages**. No build tools, no framework — plain HTML/CSS/JS.
 Modeled on the J1 Dashboard (`C:\Users\putua\j1-dashboard`).
@@ -54,18 +56,19 @@ Browser → Cloudflare Worker (cti-indo-proxy.*.workers.dev)
 
 ## ⚠️ Setup checklist (before it shows live data)
 1. `config.js → PROXY` — the deployed worker URL.
-2. `config.js → RECRUIT_MODULE` — custom module API name.
-3. `config.js → FIELDS` — map each app field to its Zoho API field name.
-4. `config.js → SHEET.resourceId` — from the Zoho Sheet URL.
-5. `config.js → SHEET.worksheet / mergeKey / columns` — worksheet + column headers.
-6. `config.js → USERS` — replace the default `changeme` password hashes.
-7. Deploy the worker with the three secrets + KV binding above.
+2. ✅ `config.js → RECRUIT_MODULE` = `Candidates` (Seafarers) — done.
+3. ✅ `config.js → FIELDS` — mapped to the Candidates module API names
+   (from `Fields API - Candidates Module.xlsx`) — done.
+4. `config.js → SHEET.resourceId` — from the Zoho Sheet URL. ← still needed
+5. `config.js → SHEET.worksheet / mergeKey / columns` — worksheet + column headers. ← still needed
+6. `config.js → USERS` — replace the default `changeme` password hashes. ← still needed
+7. Deploy the worker with the three secrets + KV binding above. ← still needed
 
 ## Pages
 | Page | Route | Description |
 |------|-------|-------------|
-| Overview | `#overview` | Stat cards (Total, In Monitoring, Active, Follow-ups) + By Status / By City charts |
-| Records  | `#records`  | Searchable merged table; **Edit** opens a modal that pushes to Recruit + Sheet |
+| Overview | `#overview` | Stat cards (Total, In Monitoring, Active, Follow-ups) + By Status / By CTI Office charts |
+| Records  | `#records`  | Searchable merged table (Name/email, CTI Office, Country, Position, Status, Monitoring, Follow Up); **Edit** opens a modal that pushes to Recruit + Sheet |
 
 ## Key Patterns
 - **Merge:** `zoho.js` indexes Sheet rows by `SHEET.mergeKey` (case-insensitive)

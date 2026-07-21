@@ -1062,3 +1062,4 @@ th.sorted {
   border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 600; cursor: pointer;
 }
 .btn-secondary:hover { background: var(--bg); }
+.cell-sub { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }

@@ -43,22 +43,55 @@ const Zoho = (() => {
       page++;
     }
 
+    const val = v => (v == null || v === '') ? '—'
+      : (typeof v === 'object' ? (v.name ?? v.value ?? '—') : v);
+
     return all.map(r => ({
-      _source:      'recruit',
-      id:           r.id,
-      name:         r[F.name] || [r[F.firstName], r[F.lastName]].filter(Boolean).join(' ') || '—',
-      firstName:    r[F.firstName]    || '—',
-      lastName:     r[F.lastName]     || '—',
-      email:        r[F.email]        || '—',
-      phone:        r[F.phone]        || '—',
-      country:      r[F.country]      || '—',
-      city:         r[F.city]         || '—',
-      status:       r[F.status]       || '—',
-      position:     r[F.position]     || '—',
-      department:   r[F.department]   || '—',
-      owner:        (r[F.owner]?.name || r[F.owner]) || '—',
-      createdDate:  r[F.createdDate]  || null,
-      modifiedDate: r[F.modifiedDate] || null,
+      _source:          'recruit',
+      id:               r.id,
+      name:             [r[F.firstName], r[F.lastName]].filter(Boolean).join(' ') || '—',
+      firstName:        val(r[F.firstName]),
+      lastName:         val(r[F.lastName]),
+      email:            val(r[F.email]),
+      mobile:           val(r[F.mobile]),
+      gender:           val(r[F.gender]),
+      dateOfBirth:      r[F.dateOfBirth]  || null,
+      age:              val(r[F.age]),
+      seafarerId:       val(r[F.seafarerId]),
+      // Location
+      country:          val(r[F.country]),
+      city:             val(r[F.city]),
+      state:            val(r[F.state]),
+      ctiOffice:        val(r[F.ctiOffice]),
+      origin:           val(r[F.origin]),
+      // Pipeline
+      status:           val(r[F.status]),
+      crewStatus:       val(r[F.crewStatus]),
+      crewMemberStatus: val(r[F.crewMemberStatus]),
+      employmentStatus: val(r[F.employmentStatus]),
+      onboardingStatus: val(r[F.onboardingStatus]),
+      // Role / placement
+      department:       val(r[F.department]),
+      position:         val(r[F.position]),
+      currentJobTitle:  val(r[F.currentJobTitle]),
+      cruiseLine:       val(r[F.cruiseLine]),
+      joiningShip:      val(r[F.joiningShip]),
+      signOnDate:       r[F.signOnDate]   || null,
+      signOffDate:      r[F.signOffDate]  || null,
+      hiredDate:        r[F.hiredDate]    || null,
+      contractNumber:   val(r[F.contractNumber]),
+      source:           val(r[F.source]),
+      // People
+      owner:            val(r[F.owner]),
+      recruiter:        val(r[F.recruiter]),
+      // Documents
+      passportStatus:   val(r[F.passportStatus]),
+      passportExpiry:   r[F.passportExpiry] || null,
+      medicalStatus:    val(r[F.medicalStatus]),
+      medicalExpiry:    r[F.medicalExpiry]  || null,
+      // Timestamps
+      createdDate:      r[F.createdDate]  || null,
+      modifiedDate:     r[F.modifiedDate] || null,
     }));
   }
 

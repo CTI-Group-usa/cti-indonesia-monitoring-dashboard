@@ -13,30 +13,66 @@ const CONFIG = {
   // ─────────────────────────────────────────────────────────────
   //  ZOHO RECRUIT  — primary "pull" source
   // ─────────────────────────────────────────────────────────────
-  //   ⚠️ TODO: the API name of your custom Recruit module.
-  //   Zoho Recruit → Settings → Developer Space → Modules → API Name
-  RECRUIT_MODULE: 'CustomModuleX',
+  //   Recruit module API name = "Candidates" (shown as "Seafarers").
+  RECRUIT_MODULE: 'Candidates',
 
-  //   ⚠️ TODO: field API names for the custom module.
-  //   Zoho Recruit → Settings → Developer Space → API Names.
+  //   Field API names — from the "Candidates" (Seafarers) module.
   //   Left side = the name used throughout the app (keep these).
-  //   Right side = the exact Zoho API field name (edit these).
-  //   `mergeKey` MUST also exist as a column in the Zoho Sheet so
-  //   the two sources can be joined (see SHEET.mergeKey below).
+  //   Right side = the exact Zoho Recruit API field name.
+  //   `email` is the merge key joined against the Zoho Sheet.
   FIELDS: {
-    name:        'Full_Name',
-    firstName:   'First_Name',
-    lastName:    'Last_Name',
-    email:       'Email',            // ← used as the default merge key
-    phone:       'Phone',
-    country:     'Country',
-    city:        'City',
-    status:      'Status',           // pipeline / application status
-    position:    'Position',
-    department:  'Department',
-    owner:       'Owner',            // recruiter / handler
-    createdDate: 'Created_Time',
-    modifiedDate:'Modified_Time',
+    // Identity
+    firstName:        'First_Name',
+    lastName:         'Last_Name',
+    email:            'Email',                 // ← merge key against the Sheet
+    mobile:           'Mobile',
+    gender:           'Gender',
+    dateOfBirth:      'Date_of_Birth',
+    age:              'Ages',                  // Formula
+    seafarerId:       'Candidate_ID',          // Auto Number
+    salutation:       'Salutation',
+    maritalStatus:    'Marital_Status',
+
+    // Location
+    country:          'Country',
+    city:             'City',
+    state:            'State',                 // "Province"
+    ctiOffice:        'CTI_Office',            // Pick List (e.g. Indonesia)
+    origin:           'Origin',
+
+    // Pipeline / status
+    status:           'Candidate_Status',      // "Seafarer Status" — primary
+    crewStatus:       'Crew_Status',
+    crewMemberStatus: 'Crew_Member_Status',    // "Seafarers Status"
+    employmentStatus: 'Employment_Status',
+    onboardingStatus: 'Onboarding_Status',
+    complianceNotes:  'Compliance_Notes',
+
+    // Role / placement
+    department:       'Department',
+    position:         'Position_Applied',      // "Position Hired"
+    currentJobTitle:  'Current_Job_Title',
+    cruiseLine:       'Cruise_Line',
+    joiningShip:      'Joining_Ship',
+    signOnDate:       'Sign_On_Date',
+    signOffDate:      'Sign_Off_Date',
+    hiredDate:        'Hired_Date',
+    contractNumber:   'Contract_Number',
+    source:           'Source',
+
+    // People
+    owner:            'Candidate_Owner',       // Lookup
+    recruiter:        'Client_Interviewer',    // "Recruiter"
+
+    // Documents / readiness
+    passportStatus:   'Passport_Status',
+    passportExpiry:   'Passport_Expired_Date',
+    medicalStatus:    'Medical_Status',
+    medicalExpiry:    'Medical_Expiration_Date',
+
+    // Timestamps  (NOTE: Modified Time API name is Updated_On)
+    createdDate:      'Created_Time',
+    modifiedDate:     'Updated_On',
   },
 
   // ─────────────────────────────────────────────────────────────
