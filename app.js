@@ -244,13 +244,19 @@ const App = (() => {
       <div class="form-section-label">Visa Registration Log</div>
       ${info('Visa Type', rec.visaType)}
       ${info('Visa Status', rec.visaStatus)}
-      ${info('Registration Date', rec.visaRegDate)}
+      ${info('Payment Status', rec.visaPayment)}
+      ${info('Appointment Date', formatDate(rec.visaAppointment))}
+      ${info('Application ID', rec.visaAppId)}
+      ${info('Registered', formatDate(rec.visaRegDate))}
 
       <div class="form-section-label">Cruise Line Deployment</div>
       ${info('Cruise Line', rec.deployCruiseLine)}
       ${info('Ship', rec.deployShip)}
-      ${info('Deployment Status', rec.deployStatus)}
-      ${info('Deployment Date', rec.deployDate)}
+      ${info('Position Hired', rec.deployPosition)}
+      ${info('Onboarding Status', rec.deployStatus)}
+      ${info('Employment Status', rec.deployEmployment)}
+      ${info('Sign On Date', formatDate(rec.deployDate))}
+      ${info('Sign On Port', rec.deployPort)}
 
       <div class="modal-actions">
         <button class="btn-secondary" id="cancelEdit">Cancel</button>

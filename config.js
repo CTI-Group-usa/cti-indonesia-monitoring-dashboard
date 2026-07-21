@@ -29,7 +29,8 @@ const CONFIG = {
     gender:           'Gender',
     dateOfBirth:      'Date_of_Birth',
     age:              'Ages',                  // Formula
-    seafarerId:       'Candidate_ID',          // Auto Number
+    seafarerId:       'Candidate_ID',          // Auto Number ("Seafarer ID")
+    crewIdNumber:     'Crew_ID_Number',        // "Seafarer ID Number" — joins Cruise sheet
     salutation:       'Salutation',
     maritalStatus:    'Marital_Status',
 
@@ -86,22 +87,21 @@ const CONFIG = {
       key:        'visa',                       // internal id (keep unique)
       label:      'Visa Registration Log',
       resourceId: 'vpzkvba5ae0adfc1247a8b7383dbef6ea3d8d',
-
-      // ⚠️ CONFIRM: the worksheet (tab) name that holds the data.
-      worksheet:  'Sheet1',
+      worksheet:  'VISA APPLICATIONS',
       headerRow:  1,
 
-      // How to join to a seafarer. matchOn = record field:
-      //   'email' | 'seafarerId' | 'name'
-      // keyColumn = the exact header in THIS sheet holding that value.
-      matchOn:    'email',                      // ⚠️ CONFIRM
-      keyColumn:  'Email',                      // ⚠️ CONFIRM
+      // Join: sheet's "Email Address" == record email.
+      matchOn:    'email',
+      keyColumn:  'Email Address',
 
-      // ⚠️ CONFIRM: app field  ->  exact Sheet column header text.
+      // app field  ->  exact Sheet column header text.
       columns: {
-        visaType:    'Visa Type',
-        visaStatus:  'Visa Status',
-        visaRegDate: 'Registration Date',
+        visaType:        'Please select the type of visa you want to process',
+        visaStatus:      'Visa Status',
+        visaPayment:     'Payment Status',
+        visaAppointment: 'Appointment Date',
+        visaAppId:       'Visa Application ID',
+        visaRegDate:     'Added Time',
       },
       // Columns editable from the dashboard (pushed back). [] = read-only.
       editable: [],
@@ -110,18 +110,24 @@ const CONFIG = {
       key:        'cruise',
       label:      'Cruise Line Deployment Report',
       resourceId: 'begbjf0b04d7026534b328e36baa0a9d82df7',
-
-      worksheet:  'Sheet1',                     // ⚠️ CONFIRM
+      worksheet:  'Deployment',
       headerRow:  1,
 
-      matchOn:    'email',                      // ⚠️ CONFIRM
-      keyColumn:  'Email',                      // ⚠️ CONFIRM
+      // Join: sheet's "Crew ID" == record crewIdNumber (Crew_ID_Number).
+      // NOTE: this sheet is deployment HISTORY — a seafarer can appear many
+      // times. Last matching row wins (see zoho.js). Ask if you want "latest
+      // by Sign On Date" instead.
+      matchOn:    'crewIdNumber',
+      keyColumn:  'Crew ID',
 
       columns: {
         deployCruiseLine: 'Cruise Line',
-        deployShip:       'Ship',
-        deployStatus:     'Deployment Status',
-        deployDate:       'Deployment Date',
+        deployShip:       'Joining Ship',
+        deployStatus:     'Onboarding Status',
+        deployDate:       'Sign On Date',
+        deployPosition:   'Position Hired',
+        deployPort:       'Sign On Port',
+        deployEmployment: 'Employment Status',
       },
       editable: [],
     },

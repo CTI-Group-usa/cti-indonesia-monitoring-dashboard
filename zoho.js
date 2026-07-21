@@ -58,6 +58,7 @@ const Zoho = (() => {
       dateOfBirth:      r[F.dateOfBirth]  || null,
       age:              val(r[F.age]),
       seafarerId:       val(r[F.seafarerId]),
+      crewIdNumber:     val(r[F.crewIdNumber]),
       // Location
       country:          val(r[F.country]),
       city:             val(r[F.city]),
@@ -128,8 +129,11 @@ const Zoho = (() => {
   }
 
   // The value on a record used to join to a given sheet.
+  // '—' (our empty placeholder) is treated as no key, so blank records
+  // never collide on a shared key.
   function matchValue(rec, sheet) {
-    return String(rec[sheet.matchOn] ?? '').trim().toLowerCase();
+    const v = String(rec[sheet.matchOn] ?? '').trim();
+    return (v === '—') ? '' : v.toLowerCase();
   }
 
   // ═══════════════════════════════════════════════════════════
