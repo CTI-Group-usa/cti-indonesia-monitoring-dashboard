@@ -140,9 +140,10 @@ const CONFIG = {
   //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourpassword'))
   //     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
   USERS: {
-    // Default password below is "changeme" — ⚠️ TODO: replace the hashes.
-    admin: { hash: '057ba03d6c44104863dc7361fe4578965d1887360f90a0895882e58a6248fc86', role: 'admin' },
-    staff: { hash: '057ba03d6c44104863dc7361fe4578965d1887360f90a0895882e58a6248fc86', role: 'staff' },
+    // Strong random passwords set 2026-07-21 (given to the user in chat).
+    // To change: hash a new password with the snippet above and replace.
+    admin: { hash: '4666815848afddc46bcd7d5a547be6d1946959c78c685131bb82dfac1924983b', role: 'admin' },
+    staff: { hash: '3628f772f9ef208b9f88ba5acdf15bee475cf9f6b4ead5d31c7eba0d0ac26cf3', role: 'staff' },
   },
 
   // ── Branding ─────────────────────────────────────────────────
