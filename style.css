@@ -1063,3 +1063,6 @@ th.sorted {
 }
 .btn-secondary:hover { background: var(--bg); }
 .cell-sub { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
+.info-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+.info-row span { color: var(--muted); }
+.info-row b { color: var(--text); font-weight: 600; text-align: right; }

@@ -92,9 +92,9 @@ const App = (() => {
     const data = await loadData();
     if (!data) { mc.innerHTML = errorHTML(); return; }
 
-    const total    = data.length;
-    const monitored= data.filter(r => r._hasSheetRow).length;
-    const followUp = data.filter(r => r.followUpDate && r.followUpDate !== '—').length;
+    const total     = data.length;
+    const visaLogged= data.filter(r => r._sheetRows?.visa).length;
+    const deployed  = data.filter(r => r._sheetRows?.cruise).length;
     const byStatus  = Zoho.groupBy(data, 'status');
     const byOffice  = Zoho.groupBy(data, 'ctiOffice');
     const active    = Object.entries(byStatus)
@@ -105,10 +105,10 @@ const App = (() => {
     mc.innerHTML = `
       <div class="page-header"><h1>Overview</h1></div>
       <div class="stat-grid">
-        ${statCard('Total Records', total)}
-        ${statCard('In Monitoring', monitored)}
+        ${statCard('Total Seafarers', total)}
+        ${statCard('Visa Logged', visaLogged)}
+        ${statCard('Deployed', deployed)}
         ${statCard('Active / In Progress', active)}
-        ${statCard('Follow-ups Set', followUp)}
       </div>
       <div class="chart-row">
         <div class="card chart-card">
@@ -177,8 +177,8 @@ const App = (() => {
       <div class="card table-card">
         <div class="table-wrap"><table class="data-table">
           <thead><tr>
-            <th>Name</th><th>CTI Office</th><th>Country</th><th>Position</th>
-            <th>Status</th><th>Monitoring</th><th>Follow Up</th><th></th>
+            <th>Name</th><th>CTI Office</th><th>Position</th><th>Seafarer Status</th>
+            <th>Visa Status</th><th>Deployment</th><th></th>
           </tr></thead>
           <tbody id="recBody"></tbody>
         </table></div>
@@ -194,7 +194,8 @@ const App = (() => {
     const q = _search.trim().toLowerCase();
     if (!q) return _records;
     return _records.filter(r =>
-      [r.name, r.email, r.ctiOffice, r.country, r.position, r.status, r.monitorStatus, r.handledBy]
+      [r.name, r.email, r.ctiOffice, r.country, r.position, r.status,
+       r.visaStatus, r.deployCruiseLine, r.deployShip, r.deployStatus]
         .some(v => String(v).toLowerCase().includes(q)));
   }
 
@@ -203,48 +204,53 @@ const App = (() => {
     if (!tbody) return;
     const rows = filtered();
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="8" class="empty-row">No records match.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="empty-row">No records match.</td></tr>`;
       return;
     }
-    tbody.innerHTML = rows.map((r, i) => `
+    tbody.innerHTML = rows.map((r, i) => {
+      const deployment = [r.deployCruiseLine, r.deployShip]
+        .filter(v => v && v !== '—').join(' · ') || '—';
+      return `
       <tr>
         <td>${esc(r.name)}<div class="cell-sub">${esc(r.email)}</div></td>
         <td>${esc(r.ctiOffice)}</td>
-        <td>${esc(r.country)}</td>
         <td>${esc(r.position)}</td>
         <td>${badge(r.status)}</td>
-        <td>${badge(r.monitorStatus)}</td>
-        <td>${formatDate(r.followUpDate)}</td>
+        <td>${badge(r.visaStatus)}</td>
+        <td>${esc(deployment)}${r.deployStatus && r.deployStatus !== '—' ? `<div class="cell-sub">${esc(r.deployStatus)}</div>` : ''}</td>
         <td><button class="btn-sm" data-edit="${_records.indexOf(r)}">Edit</button></td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
     tbody.querySelectorAll('[data-edit]').forEach(b =>
       b.addEventListener('click', () => openEdit(_records[+b.dataset.edit])));
   }
 
-  // ── Edit modal → push to Recruit + Sheet ────────────────────
+  // ── Edit modal → push Recruit status; show merged sheets ────
   function openEdit(rec) {
-    const F = CONFIG.FIELDS;
-    const SC = CONFIG.SHEET.columns;
     const modal = document.getElementById('editModal');
     const body  = document.getElementById('editBody');
 
+    const info = (label, val) =>
+      `<div class="info-row"><span>${label}</span><b>${esc(val ?? '—')}</b></div>`;
+
     body.innerHTML = `
-      <h2>Edit — ${esc(rec.name)}</h2>
-      <p class="modal-sub">${esc(rec.email)}</p>
+      <h2>${esc(rec.name)}</h2>
+      <p class="modal-sub">${esc(rec.email)}${rec.ctiOffice && rec.ctiOffice !== '—' ? ' · ' + esc(rec.ctiOffice) : ''}</p>
 
       <div class="form-section-label">Zoho Recruit — Seafarers</div>
       <label>Seafarer Status</label>
       <input id="f_status" value="${esc(rec.status === '—' ? '' : rec.status)}">
 
-      <div class="form-section-label">Monitoring (Zoho Sheet)</div>
-      <label>Monitoring Status</label>
-      <input id="s_monitorStatus" value="${esc(rec.monitorStatus === '—' ? '' : rec.monitorStatus)}">
-      <label>Handled By</label>
-      <input id="s_handledBy" value="${esc(rec.handledBy === '—' ? '' : rec.handledBy)}">
-      <label>Follow Up Date</label>
-      <input id="s_followUpDate" type="date" value="${toDateInput(rec.followUpDate)}">
-      <label>Notes</label>
-      <textarea id="s_notes" rows="3">${esc(rec.notes === '—' ? '' : rec.notes)}</textarea>
+      <div class="form-section-label">Visa Registration Log</div>
+      ${info('Visa Type', rec.visaType)}
+      ${info('Visa Status', rec.visaStatus)}
+      ${info('Registration Date', rec.visaRegDate)}
+
+      <div class="form-section-label">Cruise Line Deployment</div>
+      ${info('Cruise Line', rec.deployCruiseLine)}
+      ${info('Ship', rec.deployShip)}
+      ${info('Deployment Status', rec.deployStatus)}
+      ${info('Deployment Date', rec.deployDate)}
 
       <div class="modal-actions">
         <button class="btn-secondary" id="cancelEdit">Cancel</button>
@@ -258,39 +264,20 @@ const App = (() => {
 
   function closeEdit() { document.getElementById('editModal').classList.remove('show'); }
 
-  function toDateInput(str) {
-    if (!str || str === '—') return '';
-    const d = new Date(str);
-    return isNaN(d) ? '' : d.toISOString().slice(0, 10);
-  }
-
   async function saveEdit(rec) {
     const btn = document.getElementById('saveEdit');
     btn.disabled = true; btn.textContent = 'Saving…';
 
-    const F  = CONFIG.FIELDS;
-    const SC = CONFIG.SHEET.columns;
+    const F = CONFIG.FIELDS;
+    const newStatus = document.getElementById('f_status').value.trim();
 
-    const newStatus   = document.getElementById('f_status').value.trim();
-    const sheetData   = {
-      [SC.monitorStatus]: document.getElementById('s_monitorStatus').value.trim(),
-      [SC.handledBy]:     document.getElementById('s_handledBy').value.trim(),
-      [SC.followUpDate]:  document.getElementById('s_followUpDate').value,
-      [SC.notes]:         document.getElementById('s_notes').value.trim(),
-    };
+    // Nothing changed → just close.
+    if (!newStatus || newStatus === rec.status) { closeEdit(); return; }
 
-    const tasks = [];
-    // Push to Recruit only if the status actually changed.
-    if (newStatus && newStatus !== rec.status)
-      tasks.push(Zoho.updateRecruit(rec, { id: rec.id, [F.status]: newStatus }));
-    // Push monitoring fields to the Sheet.
-    tasks.push(Zoho.updateSheet(rec, sheetData));
-
-    const results = await Promise.allSettled(tasks);
-    const failed  = results.filter(r => r.status === 'rejected');
-
-    if (failed.length) {
-      toast(`Save failed: ${failed[0].reason?.message || 'unknown error'}`, 'error');
+    try {
+      await Zoho.updateRecruit(rec, { id: rec.id, [F.status]: newStatus });
+    } catch (err) {
+      toast(`Save failed: ${err.message || 'unknown error'}`, 'error');
       btn.disabled = false; btn.textContent = 'Save';
       return;
     }

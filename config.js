@@ -76,34 +76,56 @@ const CONFIG = {
   },
 
   // ─────────────────────────────────────────────────────────────
-  //  ZOHO SHEET  — supplementary monitoring data (merged in)
+  //  ZOHO SHEETS  — additional data sources, merged into each
+  //  seafarer record. Each sheet's rows are joined to a Recruit
+  //  record by matching `keyColumn` (in the sheet) against the
+  //  record field named by `matchOn` (case-insensitive).
   // ─────────────────────────────────────────────────────────────
-  //   ⚠️ TODO: fill in your Zoho Sheet details.
-  SHEET: {
-    // The workbook resource id — from the sheet URL:
-    //   https://sheet.zoho.com/sheet/open/<RESOURCE_ID>/...
-    resourceId: 'PASTE_ZOHO_SHEET_RESOURCE_ID',
+  SHEETS: [
+    {
+      key:        'visa',                       // internal id (keep unique)
+      label:      'Visa Registration Log',
+      resourceId: 'vpzkvba5ae0adfc1247a8b7383dbef6ea3d8d',
 
-    // The worksheet (tab) name to read/write.
-    worksheet: 'Sheet1',
+      // ⚠️ CONFIRM: the worksheet (tab) name that holds the data.
+      worksheet:  'Sheet1',
+      headerRow:  1,
 
-    // Which row holds the column headers (usually 1).
-    headerRow: 1,
+      // How to join to a seafarer. matchOn = record field:
+      //   'email' | 'seafarerId' | 'name'
+      // keyColumn = the exact header in THIS sheet holding that value.
+      matchOn:    'email',                      // ⚠️ CONFIRM
+      keyColumn:  'Email',                      // ⚠️ CONFIRM
 
-    // The Sheet column whose value matches FIELDS.email on a Recruit
-    // record. Records are joined on this key (case-insensitive).
-    mergeKey: 'Email',
-
-    // Sheet columns surfaced in the dashboard. Left = app name,
-    // right = exact Sheet column header text.
-    columns: {
-      monitorStatus: 'Monitoring Status',
-      lastContact:   'Last Contact',
-      notes:         'Notes',
-      handledBy:     'Handled By',
-      followUpDate:  'Follow Up Date',
+      // ⚠️ CONFIRM: app field  ->  exact Sheet column header text.
+      columns: {
+        visaType:    'Visa Type',
+        visaStatus:  'Visa Status',
+        visaRegDate: 'Registration Date',
+      },
+      // Columns editable from the dashboard (pushed back). [] = read-only.
+      editable: [],
     },
-  },
+    {
+      key:        'cruise',
+      label:      'Cruise Line Deployment Report',
+      resourceId: 'begbjf0b04d7026534b328e36baa0a9d82df7',
+
+      worksheet:  'Sheet1',                     // ⚠️ CONFIRM
+      headerRow:  1,
+
+      matchOn:    'email',                      // ⚠️ CONFIRM
+      keyColumn:  'Email',                      // ⚠️ CONFIRM
+
+      columns: {
+        deployCruiseLine: 'Cruise Line',
+        deployShip:       'Ship',
+        deployStatus:     'Deployment Status',
+        deployDate:       'Deployment Date',
+      },
+      editable: [],
+    },
+  ],
 
   // ─────────────────────────────────────────────────────────────
   //  Local dashboard users (SHA-256 hashed passwords)

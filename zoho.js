@@ -98,17 +98,17 @@ const Zoho = (() => {
   // ═══════════════════════════════════════════════════════════
   //  ZOHO SHEET  (form-encoded POST API v2)
   //  Docs: https://www.zoho.com/sheet/help/api/v2-data-api.html
+  //  Every call targets ONE sheet config from CONFIG.SHEETS.
   // ═══════════════════════════════════════════════════════════
 
-  async function sheetCall(method, extra = {}) {
-    const S = CONFIG.SHEET;
+  async function sheetCall(sheet, method, extra = {}) {
     const body = new URLSearchParams({
       method,
-      worksheet_name: S.worksheet,
-      header_row: String(S.headerRow),
+      worksheet_name: sheet.worksheet,
+      header_row: String(sheet.headerRow ?? 1),
       ...extra,
     });
-    const resp = await fetch(`${PROXY}/sheet/v2/${S.resourceId}`, {
+    const resp = await fetch(`${PROXY}/sheet/v2/${sheet.resourceId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
@@ -121,74 +121,69 @@ const Zoho = (() => {
     return json;
   }
 
-  // Read all rows as objects keyed by column header.
-  async function getSheetRecords() {
-    const json = await sheetCall('worksheet.records.fetch');
+  // Read all rows of a sheet as objects keyed by column header.
+  async function getSheetRecords(sheet) {
+    const json = await sheetCall(sheet, 'worksheet.records.fetch');
     return json.records || [];
   }
 
-  // Update the row whose mergeKey column === keyValue.
-  async function updateSheetRow(keyValue, sheetData) {
-    const S = CONFIG.SHEET;
-    return sheetCall('worksheet.records.update', {
-      criteria: `"${S.mergeKey}" == "${keyValue}"`,
-      data: JSON.stringify(sheetData),
-    });
-  }
-
-  // Append a brand-new row.
-  async function addSheetRow(sheetData) {
-    return sheetCall('worksheet.records.add', {
-      data: JSON.stringify([sheetData]),
-    });
+  // The value on a record used to join to a given sheet.
+  function matchValue(rec, sheet) {
+    return String(rec[sheet.matchOn] ?? '').trim().toLowerCase();
   }
 
   // ═══════════════════════════════════════════════════════════
-  //  MERGE — Recruit records + Sheet supplementary data
+  //  MERGE — Recruit records + every sheet in CONFIG.SHEETS
   // ═══════════════════════════════════════════════════════════
 
   async function getAllRecords() {
-    const [recruitRes, sheetRes] = await Promise.allSettled([
+    const sheets = CONFIG.SHEETS || [];
+    const [recruitRes, ...sheetRes] = await Promise.allSettled([
       getRecruitRecords(),
-      getSheetRecords(),
+      ...sheets.map(s => getSheetRecords(s)),
     ]);
 
     const recruit = recruitRes.status === 'fulfilled' ? recruitRes.value : [];
-    const sheet   = sheetRes.status   === 'fulfilled' ? sheetRes.value   : [];
-
     if (recruitRes.status === 'rejected')
       console.error('❌ Recruit fetch failed:', recruitRes.reason?.message);
-    if (sheetRes.status === 'rejected')
-      console.error('❌ Sheet fetch failed:', sheetRes.reason?.message);
 
-    // Index Sheet rows by the merge-key column (case-insensitive).
-    const S = CONFIG.SHEET;
-    const sheetByKey = {};
-    for (const row of sheet) {
-      const k = String(row[S.mergeKey] ?? '').trim().toLowerCase();
-      if (k) sheetByKey[k] = row;
-    }
-
-    const blankSheet = () =>
-      Object.fromEntries(Object.keys(S.columns).map(k => [k, '—']));
-
-    const merged = recruit.map(rec => {
-      const key = String(rec.email ?? '').trim().toLowerCase();
-      const row = sheetByKey[key];
-      const extra = {};
-      for (const [appKey, colName] of Object.entries(S.columns)) {
-        extra[appKey] = (row && row[colName] != null && row[colName] !== '')
-          ? row[colName] : '—';
+    // Build a per-sheet index: sheet.key -> { matchValue -> row }.
+    const indexes = {};
+    sheets.forEach((sheet, i) => {
+      const res = sheetRes[i];
+      if (res.status === 'rejected') {
+        console.error(`❌ Sheet "${sheet.label}" fetch failed:`, res.reason?.message);
+        indexes[sheet.key] = {};
+        return;
       }
-      return { ...rec, ...(row ? extra : blankSheet()), _hasSheetRow: !!row };
+      const byKey = {};
+      for (const row of res.value) {
+        const k = String(row[sheet.keyColumn] ?? '').trim().toLowerCase();
+        if (k) byKey[k] = row;
+      }
+      indexes[sheet.key] = byKey;
+      console.log(`✅ Sheet "${sheet.label}": ${res.value.length} rows`);
     });
 
-    console.log(`✅ Loaded: ${recruit.length} Recruit records, ${sheet.length} Sheet rows`);
+    const merged = recruit.map(rec => {
+      const out = { ...rec, _sheetRows: {} };
+      for (const sheet of sheets) {
+        const row = indexes[sheet.key][matchValue(rec, sheet)];
+        out._sheetRows[sheet.key] = !!row;
+        for (const [appKey, colName] of Object.entries(sheet.columns)) {
+          out[appKey] = (row && row[colName] != null && row[colName] !== '')
+            ? row[colName] : '—';
+        }
+      }
+      return out;
+    });
+
+    console.log(`✅ Loaded: ${recruit.length} Recruit records across ${sheets.length} sheet(s)`);
     return merged;
   }
 
   // ═══════════════════════════════════════════════════════════
-  //  PUSH — write updates back to Recruit and/or the Sheet
+  //  PUSH — write updates back to Recruit and/or a Sheet
   // ═══════════════════════════════════════════════════════════
 
   // recruitFields: { Zoho_Api_Name: value, ... } (already mapped)
@@ -196,13 +191,21 @@ const Zoho = (() => {
     return recruitPut(`${CONFIG.RECRUIT_MODULE}/${record.id}`, { data: [recruitFields] });
   }
 
-  // sheetData: { "Column Header": value, ... } — updates the row
-  // matched on this record's merge key, appending one if absent.
-  async function updateSheet(record, sheetData) {
-    const S = CONFIG.SHEET;
-    const keyValue = record.email;
-    if (record._hasSheetRow) return updateSheetRow(keyValue, sheetData);
-    return addSheetRow({ [S.mergeKey]: keyValue, ...sheetData });
+  // Write to a specific sheet (by key). sheetData: { "Header": value }.
+  // Updates the row matched on this record's key, or appends one.
+  async function updateSheet(record, sheetKey, sheetData) {
+    const sheet = (CONFIG.SHEETS || []).find(s => s.key === sheetKey);
+    if (!sheet) throw new Error(`UNKNOWN_SHEET_${sheetKey}`);
+    const keyValue = record[sheet.matchOn];
+    if (record._sheetRows && record._sheetRows[sheetKey]) {
+      return sheetCall(sheet, 'worksheet.records.update', {
+        criteria: `"${sheet.keyColumn}" == "${keyValue}"`,
+        data: JSON.stringify(sheetData),
+      });
+    }
+    return sheetCall(sheet, 'worksheet.records.add', {
+      data: JSON.stringify([{ [sheet.keyColumn]: keyValue, ...sheetData }]),
+    });
   }
 
   // ── Derived helpers ────────────────────────────────────────
