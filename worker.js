@@ -20,14 +20,29 @@ const RECRUIT_BASE = 'https://recruit.zoho.com/recruit/v2';
 const SHEET_BASE   = 'https://sheet.zoho.com/api/v2';
 const ACCOUNTS     = 'https://accounts.zoho.com';
 
-const CORS = {
-  'Access-Control-Allow-Origin':  '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-};
+// Only these page origins may call the proxy from a browser. Add a
+// localhost entry here temporarily if you need to test locally.
+const ALLOWED_ORIGINS = [
+  'https://cti-group-usa.github.io',
+];
+
+// Build CORS headers for a given request, echoing the origin only if
+// it is allow-listed (so the proxy can't be used by arbitrary sites).
+function cors(request) {
+  const origin = request.headers.get('Origin') || '';
+  const h = {
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Vary': 'Origin',
+  };
+  if (ALLOWED_ORIGINS.includes(origin)) h['Access-Control-Allow-Origin'] = origin;
+  return h;
+}
 
 export default {
   async fetch(request, env) {
+    const CORS = cors(request);
+
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS });
     }
@@ -42,25 +57,25 @@ export default {
       if (path.startsWith('/recruit/v2/')) {
         const target = new URL(RECRUIT_BASE + path.replace('/recruit/v2', ''));
         url.searchParams.forEach((v, k) => target.searchParams.set(k, v));
-        return proxy(target.toString(), request, token);
+        return proxy(target.toString(), request, token, CORS);
       }
 
       // ── Zoho Sheet ────────────────────────────────────────
       if (path.startsWith('/sheet/v2/')) {
         const target = SHEET_BASE + path.replace('/sheet/v2', '');
-        return proxy(target, request, token);
+        return proxy(target, request, token, CORS);
       }
 
-      return json({ error: 'Not found' }, 404);
+      return json({ error: 'Not found' }, 404, CORS);
     } catch (err) {
-      return json({ error: String(err && err.message || err) }, 500);
+      return json({ error: String(err && err.message || err) }, 500, CORS);
     }
   },
 };
 
 // Forward a request to Zoho with the OAuth header, preserving
 // method / body / content-type. Adds CORS to the response.
-async function proxy(targetUrl, request, token) {
+async function proxy(targetUrl, request, token, CORS) {
   const init = {
     method: request.method,
     headers: { Authorization: `Zoho-oauthtoken ${token}` },
@@ -102,7 +117,7 @@ async function getAccessToken(env) {
   return data.access_token;
 }
 
-function json(obj, status = 200) {
+function json(obj, status = 200, CORS = {}) {
   return new Response(JSON.stringify(obj), {
     status,
     headers: { ...CORS, 'Content-Type': 'application/json' },
