@@ -37,30 +37,15 @@ const Zoho = (() => {
     const module = CONFIG.RECRUIT_MODULE;
     const F      = CONFIG.FIELDS;
     const fields = Object.values(F).join(',');
-    const PER = 200, BATCH = 4;   // fetch a few pages concurrently per round
-
-    // Fetch one page with retries — a transient failure under concurrency
-    // must NOT be mistaken for "end of data" (that silently drops records).
-    const fetchPage = async (p) => {
-      for (let attempt = 0; ; attempt++) {
-        try { return await recruitGet(module, { fields, page: p, per_page: PER }); }
-        catch (e) {
-          if (attempt >= 3) throw e;   // give up → fail loudly, not silently
-          await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
-        }
-      }
-    };
-
-    let all = [], startPage = 1, done = false;
-    while (!done) {
-      const nums = Array.from({ length: BATCH }, (_, i) => startPage + i);
-      const pages = await Promise.all(nums.map(fetchPage));  // in page order
-      for (const data of pages) {
-        all = all.concat(data.data || []);
-        if (data.info?.more_records !== true) done = true;   // only on success
-      }
-      startPage += BATCH;
-      if (all.length > 50000) done = true;                   // safety cap
+    // Sequential paging — reliable (concurrent paging silently truncated
+    // the result). Speed on refresh comes from the IndexedDB cache instead.
+    let all = [], page = 1, more = true;
+    while (more) {
+      const data = await recruitGet(module, { fields, page, per_page: 200 });
+      all  = all.concat(data.data || []);
+      more = data.info?.more_records === true;
+      page++;
+      if (all.length > 50000) break;   // safety cap
     }
 
     const val = v => (v == null || v === '') ? '—'
