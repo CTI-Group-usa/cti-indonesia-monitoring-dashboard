@@ -174,6 +174,34 @@ const App = (() => {
       statusKey: 'oktbStatus',      expiryKey: null,              sheetType: /oktb/i },
   ];
   let _visaTab = 'c1d';
+  let _visaFilters = { office: '', cruiseLine: '', onboarding: '', from: '', to: '' };
+
+  // Distinct non-empty values of a field, sorted (for filter dropdowns).
+  function distinctVals(data, key) {
+    return [...new Set(data.map(r => r[key]).filter(v => v && v !== '—'))]
+      .sort((a, b) => String(a).localeCompare(String(b)));
+  }
+
+  // Apply the shared VISA filters (CTI office / cruise line / onboarding
+  // status / sign-on date range) to the dataset.
+  function applyVisaFilters(data) {
+    const f = _visaFilters;
+    const from = f.from ? new Date(f.from) : null;
+    const to   = f.to   ? new Date(f.to)   : null;
+    if (to) to.setHours(23, 59, 59, 999);
+    return data.filter(r => {
+      if (f.office     && r.ctiOffice        !== f.office)     return false;
+      if (f.cruiseLine && r.deployCruiseLine !== f.cruiseLine) return false;
+      if (f.onboarding && r.deployStatus     !== f.onboarding) return false;
+      if (from || to) {
+        const d = new Date(r.deployDate);
+        if (isNaN(d)) return false;
+        if (from && d < from) return false;
+        if (to   && d > to)   return false;
+      }
+      return true;
+    });
+  }
 
   // Effective status for a record under a visa tab: the module field
   // first, falling back to the Visa Log sheet when the module is blank.
@@ -194,17 +222,49 @@ const App = (() => {
     if (!data) { mc.innerHTML = errorHTML(); return; }
 
     destroyCharts();
+    const offices     = distinctVals(data, 'ctiOffice');
+    const cruiseLines = distinctVals(data, 'deployCruiseLine');
+    const onboardings = distinctVals(data, 'deployStatus');
+    const opts = (arr, sel) =>
+      arr.map(v => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(v)}</option>`).join('');
+
     mc.innerHTML = `
       <div class="page-header"><h1>Visa</h1></div>
       <div class="subtabs">
         ${VISA_TABS.map(t => `<button class="subtab ${t.key === _visaTab ? 'active' : ''}" data-visatab="${t.key}">${t.label}</button>`).join('')}
       </div>
+      <div class="filter-bar">
+        <select id="fOffice"><option value="">All CTI Offices</option>${opts(offices, _visaFilters.office)}</select>
+        <select id="fLine"><option value="">All Cruise Lines</option>${opts(cruiseLines, _visaFilters.cruiseLine)}</select>
+        <select id="fOnboard"><option value="">All Onboarding Status</option>${opts(onboardings, _visaFilters.onboarding)}</select>
+        <label class="filter-date">Sign On <input type="date" id="fFrom" value="${esc(_visaFilters.from)}"></label>
+        <label class="filter-date">to <input type="date" id="fTo" value="${esc(_visaFilters.to)}"></label>
+        <button class="btn-sm" id="fClear">Clear</button>
+      </div>
       <div id="visaPanel"></div>`;
 
-    mc.querySelectorAll('[data-visatab]').forEach(b =>
-      b.addEventListener('click', () => { _visaTab = b.dataset.visatab; renderVisa(); }));
+    const repaint = () => { destroyCharts(); paintVisaPanel(applyVisaFilters(data)); };
 
-    paintVisaPanel(data);
+    mc.querySelectorAll('[data-visatab]').forEach(b =>
+      b.addEventListener('click', () => {
+        _visaTab = b.dataset.visatab;
+        mc.querySelectorAll('[data-visatab]').forEach(x =>
+          x.classList.toggle('active', x.dataset.visatab === _visaTab));
+        repaint();
+      }));
+
+    const wire = (id, prop) => {
+      const el = mc.querySelector('#' + id);
+      el.addEventListener('change', () => { _visaFilters[prop] = el.value; repaint(); });
+    };
+    wire('fOffice', 'office'); wire('fLine', 'cruiseLine'); wire('fOnboard', 'onboarding');
+    wire('fFrom', 'from'); wire('fTo', 'to');
+    mc.querySelector('#fClear').addEventListener('click', () => {
+      _visaFilters = { office: '', cruiseLine: '', onboarding: '', from: '', to: '' };
+      renderVisa();
+    });
+
+    repaint();
     updateStatus();
   }
 
