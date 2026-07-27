@@ -7,10 +7,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="style.css?v=20260721c">
-  <script src="config.js?v=20260721c"></script>
-  <script src="auth.js?v=20260721c"></script>
-  <script src="zoho.js?v=20260721c"></script>
+  <link rel="stylesheet" href="style.css?v=20260721d">
+  <script src="config.js?v=20260721d"></script>
+  <script src="auth.js?v=20260721d"></script>
+  <script src="zoho.js?v=20260721d"></script>
 </head>
 <body>
   <!-- Auth guard -->
@@ -38,6 +38,10 @@
         <a href="#" class="nav-link" data-page="records">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           Records
+        </a>
+        <a href="#" class="nav-link" data-page="visa">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+          Visa
         </a>
       </nav>
 
@@ -85,7 +89,7 @@
   <!-- Toast container -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="app.js?v=20260721c"></script>
+  <script src="app.js?v=20260721d"></script>
   <script>
     const sess = Auth.getSession();
     if (sess) {

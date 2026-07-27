@@ -1066,3 +1066,13 @@ th.sorted {
 .info-row { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
 .info-row span { color: var(--muted); }
 .info-row b { color: var(--text); font-weight: 600; text-align: right; }
+
+/* ─── VISA page sub-tabs ─── */
+.subtabs { display: flex; gap: 6px; margin: 0 0 18px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+.subtab {
+  padding: 9px 18px; background: transparent; border: none; border-bottom: 2px solid transparent;
+  color: var(--muted); font-size: 0.9rem; font-weight: 600; font-family: inherit; cursor: pointer;
+  margin-bottom: -1px; transition: color 0.15s, border-color 0.15s;
+}
+.subtab:hover { color: var(--text); }
+.subtab.active { color: var(--accent); border-bottom-color: var(--accent); }

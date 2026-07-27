@@ -158,6 +158,114 @@ const App = (() => {
     _charts.push(c);
   }
 
+  function drawDonut(canvasId, obj) {
+    const el = document.getElementById(canvasId);
+    if (!el || typeof Chart === 'undefined') return;
+    const palette = ['#B01A18','#2563eb','#059669','#d97706','#7c3aed','#0891b2','#db2777','#65a30d'];
+    const c = new Chart(el, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(obj),
+        datasets: [{ data: Object.values(obj), backgroundColor: palette, borderWidth: 0 }],
+      },
+      options: {
+        plugins: { legend: { position: 'right' } },
+        responsive: true, maintainAspectRatio: false,
+      },
+    });
+    _charts.push(c);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  PAGE: VISA  (sub-tabs per visa type, chart-driven)
+  //  Data merged: Candidates module per-visa fields + Visa Log sheet.
+  // ═══════════════════════════════════════════════════════════
+  const VISA_TABS = [
+    { key: 'c1d',      label: 'C1D',
+      statusKey: 'c1dVisaStatus',   expiryKey: 'c1dVisaExpiry',   sheetType: /c1\s*\/?\s*d/i },
+    { key: 'schengen', label: 'Schengen',
+      statusKey: 'otherVisaStatus', expiryKey: 'otherVisaExpiry', sheetType: /schengen/i,
+      nameKey: 'otherVisaName',     nameMatch: /schengen/i },
+    { key: 'mcv',      label: 'MCV',
+      statusKey: 'mcvStatus',       expiryKey: 'mcvExpiry',       sheetType: /mcv/i },
+    { key: 'oktb',     label: 'OKTB',
+      statusKey: 'oktbStatus',      expiryKey: null,              sheetType: /oktb/i },
+  ];
+  let _visaTab = 'c1d';
+
+  // Effective status for a record under a visa tab: the module field
+  // first, falling back to the Visa Log sheet when the module is blank.
+  // Returns null when the seafarer has no record of that visa.
+  function visaStatusOf(rec, tab) {
+    let s = rec[tab.statusKey];
+    // Schengen only counts when the "Other Visa" is actually Schengen.
+    if (tab.nameMatch && !tab.nameMatch.test(String(rec[tab.nameKey] || ''))) s = '—';
+    if ((!s || s === '—') && tab.sheetType && tab.sheetType.test(String(rec.visaType || '')))
+      s = rec.visaStatus;
+    return (s && s !== '—') ? String(s) : null;
+  }
+
+  async function renderVisa() {
+    const mc = document.getElementById('main-content');
+    mc.innerHTML = skeletonHTML();
+    const data = await loadData();
+    if (!data) { mc.innerHTML = errorHTML(); return; }
+
+    destroyCharts();
+    mc.innerHTML = `
+      <div class="page-header"><h1>Visa</h1></div>
+      <div class="subtabs">
+        ${VISA_TABS.map(t => `<button class="subtab ${t.key === _visaTab ? 'active' : ''}" data-visatab="${t.key}">${t.label}</button>`).join('')}
+      </div>
+      <div id="visaPanel"></div>`;
+
+    mc.querySelectorAll('[data-visatab]').forEach(b =>
+      b.addEventListener('click', () => { _visaTab = b.dataset.visatab; renderVisa(); }));
+
+    paintVisaPanel(data);
+    updateStatus();
+  }
+
+  function paintVisaPanel(data) {
+    const tab = VISA_TABS.find(t => t.key === _visaTab);
+    const panel = document.getElementById('visaPanel');
+
+    const holders = data.map(r => ({ r, s: visaStatusOf(r, tab) })).filter(x => x.s);
+    const total = holders.length;
+    const isApproved = s => /approv|issued|granted|done|complete|pass|board|ok to/i.test(s);
+    const isPending  = s => /pending|process|progress|applied|appointment|schedul|await/i.test(s);
+    const approved = holders.filter(x => isApproved(x.s)).length;
+    const pending  = holders.filter(x => isPending(x.s)).length;
+
+    let expiring = 0;
+    if (tab.expiryKey) {
+      const now = Date.now(), soon = now + 90 * 86400000;
+      expiring = holders.filter(x => {
+        const d = new Date(x.r[tab.expiryKey]);
+        return !isNaN(d) && d.getTime() >= now && d.getTime() <= soon;
+      }).length;
+    }
+
+    const byStatus = {};
+    holders.forEach(x => { byStatus[x.s] = (byStatus[x.s] || 0) + 1; });
+
+    panel.innerHTML = `
+      <div class="stat-grid">
+        ${statCard(`Total ${tab.label}`, total)}
+        ${statCard('Approved', approved)}
+        ${statCard('Pending', pending)}
+        ${tab.expiryKey ? statCard('Expiring ≤90d', expiring) : statCard('Distinct statuses', Object.keys(byStatus).length)}
+      </div>
+      <div class="chart-row">
+        <div class="card chart-card">
+          <div class="card-title">${tab.label} — By Status</div>
+          ${total ? `<canvas id="visaChart" height="240"></canvas>` : `<p class="empty-row">No ${tab.label} visa records found.</p>`}
+        </div>
+      </div>`;
+
+    if (total) drawDonut('visaChart', topN(byStatus, 8));
+  }
+
   // ═══════════════════════════════════════════════════════════
   //  PAGE: RECORDS  (table + edit → push)
   // ═══════════════════════════════════════════════════════════
@@ -294,8 +402,8 @@ const App = (() => {
   }
 
   // ── Router ──────────────────────────────────────────────────
-  const ROUTES = { overview: renderOverview, records: renderRecords };
-  const TITLES = { overview: 'Overview', records: 'Records' };
+  const ROUTES = { overview: renderOverview, records: renderRecords, visa: renderVisa };
+  const TITLES = { overview: 'Overview', records: 'Records', visa: 'Visa' };
 
   function currentPage() {
     const p = (location.hash || '#overview').slice(1);
