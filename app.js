@@ -232,10 +232,12 @@ const App = (() => {
 
     const holders = data.map(r => ({ r, s: visaStatusOf(r, tab) })).filter(x => x.s);
     const total = holders.length;
-    const isApproved = s => /approv|issued|granted|done|complete|pass|board|ok to/i.test(s);
-    const isPending  = s => /pending|process|progress|applied|appointment|schedul|await/i.test(s);
-    const approved = holders.filter(x => isApproved(x.s)).length;
-    const pending  = holders.filter(x => isPending(x.s)).length;
+    // Status vocabulary in the module: Valid / Not Required / Need to
+    // Process / In Process / Pending / Rejected / Approved.
+    const isValid    = s => /valid|approv|issued|granted|complete|pass|board|ok to/i.test(s);
+    const isProgress = s => /need|process|pending|progress|applied|appointment|schedul|await/i.test(s);
+    const valid      = holders.filter(x => isValid(x.s)).length;
+    const inProgress = holders.filter(x => isProgress(x.s)).length;
 
     let expiring = 0;
     if (tab.expiryKey) {
@@ -252,8 +254,8 @@ const App = (() => {
     panel.innerHTML = `
       <div class="stat-grid">
         ${statCard(`Total ${tab.label}`, total)}
-        ${statCard('Approved', approved)}
-        ${statCard('Pending', pending)}
+        ${statCard('Valid', valid)}
+        ${statCard('In Progress', inProgress)}
         ${tab.expiryKey ? statCard('Expiring ≤90d', expiring) : statCard('Distinct statuses', Object.keys(byStatus).length)}
       </div>
       <div class="chart-row">
