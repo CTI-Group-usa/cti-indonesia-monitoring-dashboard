@@ -8,7 +8,7 @@ const CONFIG = {
   //   This worker holds the Zoho refresh token as a secret and
   //   proxies both Zoho Recruit and Zoho Sheet. See worker.js.
   //   ⚠️ TODO: after deploying the worker, paste its URL here.
-  PROXY: 'https://cti-indo-proxy.putuastrawijaya.workers.dev',
+  PROXY: 'https://cti-indo-proxy.putu-astra.workers.dev',
 
   // ─────────────────────────────────────────────────────────────
   //  ZOHO RECRUIT  — primary "pull" source
