@@ -34,13 +34,20 @@ const Zoho = (() => {
     const module = CONFIG.RECRUIT_MODULE;
     const F      = CONFIG.FIELDS;
     const fields = Object.values(F).join(',');
-    let all = [], page = 1, more = true;
+    const PER = 200, BATCH = 6;   // fetch 6 pages concurrently per round
+    let all = [], startPage = 1, done = false;
 
-    while (more) {
-      const data = await recruitGet(module, { fields, page, per_page: 200 });
-      all  = all.concat(data.data || []);
-      more = data.info?.more_records === true;
-      page++;
+    while (!done) {
+      const nums = Array.from({ length: BATCH }, (_, i) => startPage + i);
+      const pages = await Promise.all(nums.map(p =>
+        recruitGet(module, { fields, page: p, per_page: PER })
+          .catch(() => ({ data: [], info: { more_records: false } }))));
+      for (const data of pages) {                 // processed in page order
+        all = all.concat(data.data || []);
+        if (data.info?.more_records !== true) done = true;
+      }
+      startPage += BATCH;
+      if (all.length > 50000) done = true;         // safety cap
     }
 
     const val = v => (v == null || v === '') ? '—'

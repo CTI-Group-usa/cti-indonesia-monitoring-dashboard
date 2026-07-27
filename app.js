@@ -70,16 +70,45 @@ const App = (() => {
       </div>`;
   }
 
-  // ── Data load (cached) ──────────────────────────────────────
+  // ── Data load (stale-while-revalidate) ──────────────────────
+  // On refresh the SPA reboots and _records is null; rather than
+  // re-fetch everything (slow), we render instantly from a session
+  // cache and revalidate in the background.
+  const CACHE_KEY = 'cti_indo_records';
+  const CACHE_TTL = 30 * 60 * 1000; // 30 min
+
+  function readCache() {
+    try {
+      const raw = sessionStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const { ts, records } = JSON.parse(raw);
+      if (!Array.isArray(records) || (Date.now() - ts) > CACHE_TTL) return null;
+      return records;
+    } catch { return null; }
+  }
+  function writeCache(records) {
+    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), records })); }
+    catch { /* quota exceeded — skip caching, still works (just slower) */ }
+  }
+
+  async function fetchFresh() {
+    _records = await Zoho.getAllRecords();
+    writeCache(_records);
+    return _records;
+  }
+
+  function revalidate() {
+    fetchFresh().then(() => renderCurrentPage()).catch(() => {});
+  }
+
   async function loadData(force = false) {
     if (_records && !force) return _records;
-    try {
-      _records = await Zoho.getAllRecords();
-      return _records;
-    } catch (err) {
-      toast(`Failed to load: ${err.message}`, 'error');
-      return null;
+    if (!force) {
+      const cached = readCache();
+      if (cached) { _records = cached; revalidate(); return _records; }
     }
+    try { return await fetchFresh(); }
+    catch (err) { toast(`Failed to load: ${err.message}`, 'error'); return null; }
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -463,10 +492,11 @@ const App = (() => {
     ROUTES[page]();
   }
 
+  // Manual/post-save refresh: refetch in the background, keeping the
+  // current data on screen (no skeleton flash), then repaint.
   async function refresh() {
-    _records = null;
-    await loadData(true);
-    renderCurrentPage();
+    try { await fetchFresh(); renderCurrentPage(); }
+    catch (err) { toast(`Refresh failed: ${err.message}`, 'error'); }
   }
 
   function init() {
@@ -479,8 +509,8 @@ const App = (() => {
       });
     });
     window.addEventListener('hashchange', renderCurrentPage);
-    // Auto-refresh every 10 minutes.
-    setInterval(() => { _records = null; renderCurrentPage(); }, 600000);
+    // Auto-refresh every 10 minutes — in the background, no skeleton.
+    setInterval(revalidate, 600000);
     renderCurrentPage();
   }
 
