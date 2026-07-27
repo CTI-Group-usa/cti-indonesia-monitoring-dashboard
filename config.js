@@ -140,10 +140,10 @@ const CONFIG = {
   //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourpassword'))
   //     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
   USERS: {
-    // Strong random passwords set 2026-07-21 (given to the user in chat).
+    // Passwords updated 2026-07-21 per user request.
     // To change: hash a new password with the snippet above and replace.
-    admin: { hash: '4666815848afddc46bcd7d5a547be6d1946959c78c685131bb82dfac1924983b', role: 'admin' },
-    staff: { hash: '3628f772f9ef208b9f88ba5acdf15bee475cf9f6b4ead5d31c7eba0d0ac26cf3', role: 'staff' },
+    admin: { hash: '3b612c75a7b5048a435fb6ec81e52ff92d6d795a8b5a9c17070f6a63c97a53b2', role: 'admin' },
+    staff: { hash: 'cdc4d189f8469bf67d5c5d2137221b8712e04c29415bb67df0b7e8d347694ef2', role: 'staff' },
   },
 
   // ── Branding ─────────────────────────────────────────────────
