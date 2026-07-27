@@ -158,24 +158,6 @@ const App = (() => {
     _charts.push(c);
   }
 
-  function drawDonut(canvasId, obj) {
-    const el = document.getElementById(canvasId);
-    if (!el || typeof Chart === 'undefined') return;
-    const palette = ['#B01A18','#2563eb','#059669','#d97706','#7c3aed','#0891b2','#db2777','#65a30d'];
-    const c = new Chart(el, {
-      type: 'doughnut',
-      data: {
-        labels: Object.keys(obj),
-        datasets: [{ data: Object.values(obj), backgroundColor: palette, borderWidth: 0 }],
-      },
-      options: {
-        plugins: { legend: { position: 'right' } },
-        responsive: true, maintainAspectRatio: false,
-      },
-    });
-    _charts.push(c);
-  }
-
   // ═══════════════════════════════════════════════════════════
   //  PAGE: VISA  (sub-tabs per visa type, chart-driven)
   //  Data merged: Candidates module per-visa fields + Visa Log sheet.
@@ -265,7 +247,7 @@ const App = (() => {
         </div>
       </div>`;
 
-    if (total) drawDonut('visaChart', topN(byStatus, 8));
+    if (total) drawBar('visaChart', topN(byStatus, 8));
   }
 
   // ═══════════════════════════════════════════════════════════
