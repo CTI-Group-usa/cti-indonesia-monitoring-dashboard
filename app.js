@@ -193,7 +193,7 @@ const App = (() => {
       Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n));
   }
 
-  function drawBar(canvasId, obj) {
+  function drawBar(canvasId, obj, onClick) {
     const el = document.getElementById(canvasId);
     if (!el || typeof Chart === 'undefined') return;
     const accent = CONFIG.ACCENT_COLOR || '#B01A18';
@@ -207,6 +207,8 @@ const App = (() => {
         plugins: { legend: { display: false } },
         scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
         responsive: true, maintainAspectRatio: false,
+        onClick: onClick ? (evt, els) => { if (els.length) onClick(c.data.labels[els[0].index]); } : undefined,
+        onHover: onClick ? (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; } : undefined,
       },
     });
     _charts.push(c);
@@ -218,14 +220,18 @@ const App = (() => {
   // ═══════════════════════════════════════════════════════════
   const VISA_TABS = [
     { key: 'c1d',      label: 'C1D',
-      statusKey: 'c1dVisaStatus',   expiryKey: 'c1dVisaExpiry',   sheetType: /c1\s*\/?\s*d/i },
+      statusKey: 'c1dVisaStatus',   numberKey: 'c1dVisaNumber',   apptKey: 'c1dVisaAppointment',
+      expiryKey: 'c1dVisaExpiry',   sheetType: /c1\s*\/?\s*d/i },
     { key: 'schengen', label: 'Schengen',
-      statusKey: 'otherVisaStatus', expiryKey: 'otherVisaExpiry', sheetType: /schengen/i,
+      statusKey: 'otherVisaStatus', numberKey: 'otherVisaNumber', apptKey: 'otherVisaAppointment',
+      expiryKey: 'otherVisaExpiry', sheetType: /schengen/i,
       nameKey: 'otherVisaName',     nameMatch: /schengen/i },
     { key: 'mcv',      label: 'MCV',
-      statusKey: 'mcvStatus',       expiryKey: 'mcvExpiry',       sheetType: /mcv/i },
+      statusKey: 'mcvStatus',       numberKey: 'mcvNumber',       apptKey: null,
+      expiryKey: 'mcvExpiry',       sheetType: /mcv/i },
     { key: 'oktb',     label: 'OKTB',
-      statusKey: 'oktbStatus',      expiryKey: null,              sheetType: /oktb/i },
+      statusKey: 'oktbStatus',      numberKey: null,              apptKey: null,
+      expiryKey: null,              sheetType: /oktb/i },
   ];
   let _visaTab = 'c1d';
   let _visaFilters = { office: '', cruiseLine: '', onboarding: '', from: '', to: '' };
@@ -356,12 +362,46 @@ const App = (() => {
       </div>
       <div class="chart-row">
         <div class="card chart-card">
-          <div class="card-title">${tab.label} — By Status</div>
+          <div class="card-title">${tab.label} — By Status ${total ? '<span class="hint">(click a bar to list those seafarers)</span>' : ''}</div>
           ${total ? `<canvas id="visaChart" height="240"></canvas>` : `<p class="empty-row">No ${tab.label} visa records found.</p>`}
         </div>
-      </div>`;
+      </div>
+      <div id="visaDetail"></div>`;
 
-    if (total) drawBar('visaChart', topN(byStatus, 8));
+    if (total) drawBar('visaChart', topN(byStatus, 8), status => showVisaDetail(holders, tab, status));
+  }
+
+  // Drill-down: list the seafarers behind a clicked status bar.
+  function showVisaDetail(holders, tab, status) {
+    const rows = holders.filter(x => x.s === status).map(x => x.r);
+    const det = document.getElementById('visaDetail');
+    if (!det) return;
+
+    const cols = [
+      ['Name', r => `${esc(r.name)}<div class="cell-sub">${esc(r.email)}</div>`],
+      ['CTI Office', r => esc(r.ctiOffice)],
+    ];
+    if (tab.numberKey) cols.push(['Number',      r => esc(r[tab.numberKey])]);
+    if (tab.apptKey)   cols.push(['Appointment', r => formatDate(r[tab.apptKey])]);
+    if (tab.expiryKey) cols.push(['Expiry',      r => formatDate(r[tab.expiryKey])]);
+    cols.push(['Deployment', r => {
+      const d = [r.deployCruiseLine, r.deployShip].filter(v => v && v !== '—').join(' · ');
+      return esc(d || '—');
+    }]);
+
+    det.innerHTML = `
+      <div class="card table-card" style="margin-top:16px">
+        <div class="detail-head">
+          <span><b>${esc(tab.label)} — ${esc(status)}</b> · ${rows.length} seafarer${rows.length === 1 ? '' : 's'}</span>
+          <button class="btn-sm" id="detailClose">Close</button>
+        </div>
+        <div class="table-wrap"><table class="data-table">
+          <thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead>
+          <tbody>${rows.map(r => `<tr>${cols.map(c => `<td>${c[1](r)}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table></div>
+      </div>`;
+    document.getElementById('detailClose').onclick = () => { det.innerHTML = ''; };
+    det.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   // ═══════════════════════════════════════════════════════════

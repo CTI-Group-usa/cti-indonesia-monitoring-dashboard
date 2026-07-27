@@ -1085,3 +1085,7 @@ th.sorted {
 }
 .filter-bar select:focus, .filter-bar input:focus { border-color: var(--accent); }
 .filter-date { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--muted); }
+
+/* ─── VISA drill-down detail ─── */
+.card-title .hint { font-weight: 400; font-size: 0.76rem; color: var(--muted); margin-left: 6px; }
+.detail-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 0.9rem; color: var(--text); }
