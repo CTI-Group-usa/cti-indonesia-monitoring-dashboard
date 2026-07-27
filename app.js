@@ -388,6 +388,7 @@ const App = (() => {
       const d = [r.deployCruiseLine, r.deployShip].filter(v => v && v !== '—').join(' · ');
       return esc(d || '—');
     }]);
+    cols.push(['Sign On', r => formatDate(r.deployDate)]);
 
     det.innerHTML = `
       <div class="card table-card" style="margin-top:16px">
