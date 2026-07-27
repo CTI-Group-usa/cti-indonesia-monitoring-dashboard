@@ -15,8 +15,11 @@ const Zoho = (() => {
     const url = new URL(`${PROXY}/recruit/v2/${endpoint}`);
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     const resp = await fetch(url.toString());
+    // Zoho returns 204 (no content) for a page past the last one.
+    if (resp.status === 204) return { data: [], info: { more_records: false } };
     if (!resp.ok) throw new Error(`RECRUIT_API_ERROR_${resp.status}`);
-    return resp.json();
+    const text = await resp.text();
+    return text ? JSON.parse(text) : { data: [], info: { more_records: false } };
   }
 
   async function recruitPut(endpoint, body) {
@@ -34,20 +37,30 @@ const Zoho = (() => {
     const module = CONFIG.RECRUIT_MODULE;
     const F      = CONFIG.FIELDS;
     const fields = Object.values(F).join(',');
-    const PER = 200, BATCH = 6;   // fetch 6 pages concurrently per round
-    let all = [], startPage = 1, done = false;
+    const PER = 200, BATCH = 4;   // fetch a few pages concurrently per round
 
+    // Fetch one page with retries — a transient failure under concurrency
+    // must NOT be mistaken for "end of data" (that silently drops records).
+    const fetchPage = async (p) => {
+      for (let attempt = 0; ; attempt++) {
+        try { return await recruitGet(module, { fields, page: p, per_page: PER }); }
+        catch (e) {
+          if (attempt >= 3) throw e;   // give up → fail loudly, not silently
+          await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        }
+      }
+    };
+
+    let all = [], startPage = 1, done = false;
     while (!done) {
       const nums = Array.from({ length: BATCH }, (_, i) => startPage + i);
-      const pages = await Promise.all(nums.map(p =>
-        recruitGet(module, { fields, page: p, per_page: PER })
-          .catch(() => ({ data: [], info: { more_records: false } }))));
-      for (const data of pages) {                 // processed in page order
+      const pages = await Promise.all(nums.map(fetchPage));  // in page order
+      for (const data of pages) {
         all = all.concat(data.data || []);
-        if (data.info?.more_records !== true) done = true;
+        if (data.info?.more_records !== true) done = true;   // only on success
       }
       startPage += BATCH;
-      if (all.length > 50000) done = true;         // safety cap
+      if (all.length > 50000) done = true;                   // safety cap
     }
 
     const val = v => (v == null || v === '') ? '—'

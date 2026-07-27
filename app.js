@@ -70,30 +70,51 @@ const App = (() => {
       </div>`;
   }
 
-  // ── Data load (stale-while-revalidate) ──────────────────────
-  // On refresh the SPA reboots and _records is null; rather than
-  // re-fetch everything (slow), we render instantly from a session
-  // cache and revalidate in the background.
-  const CACHE_KEY = 'cti_indo_records';
-  const CACHE_TTL = 30 * 60 * 1000; // 30 min
+  // ── Data load (stale-while-revalidate via IndexedDB) ────────
+  // On refresh the SPA reboots and _records is null. Re-fetching
+  // everything is slow (~6.5k records + 10k sheet rows), so we render
+  // instantly from an IndexedDB cache (handles the ~10MB dataset that
+  // would overflow localStorage) and revalidate only when it's stale.
+  const CACHE_TTL   = 30 * 60 * 1000;  // ignore cache older than 30 min
+  const REVAL_AFTER =  5 * 60 * 1000;  // only background-refresh if >5 min old
+  const DB_NAME = 'cti_indo', STORE = 'cache', CACHE_KEY = 'records';
 
-  function readCache() {
+  function idbOpen() {
+    return new Promise((res, rej) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+  }
+  async function idbGet(key) {
     try {
-      const raw = sessionStorage.getItem(CACHE_KEY);
-      if (!raw) return null;
-      const { ts, records } = JSON.parse(raw);
-      if (!Array.isArray(records) || (Date.now() - ts) > CACHE_TTL) return null;
-      return records;
+      const db = await idbOpen();
+      return await new Promise((res, rej) => {
+        const r = db.transaction(STORE, 'readonly').objectStore(STORE).get(key);
+        r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+      });
     } catch { return null; }
   }
-  function writeCache(records) {
-    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), records })); }
-    catch { /* quota exceeded — skip caching, still works (just slower) */ }
+  async function idbSet(key, val) {
+    try {
+      const db = await idbOpen();
+      await new Promise((res, rej) => {
+        const r = db.transaction(STORE, 'readwrite').objectStore(STORE).put(val, key);
+        r.onsuccess = () => res(); r.onerror = () => rej(r.error);
+      });
+    } catch { /* ignore cache write failures */ }
+  }
+
+  async function readCache() {
+    const c = await idbGet(CACHE_KEY);
+    if (!c || !Array.isArray(c.records) || (Date.now() - c.ts) > CACHE_TTL) return null;
+    return c;
   }
 
   async function fetchFresh() {
     _records = await Zoho.getAllRecords();
-    writeCache(_records);
+    idbSet(CACHE_KEY, { ts: Date.now(), records: _records });  // fire and forget
     return _records;
   }
 
@@ -104,8 +125,12 @@ const App = (() => {
   async function loadData(force = false) {
     if (_records && !force) return _records;
     if (!force) {
-      const cached = readCache();
-      if (cached) { _records = cached; revalidate(); return _records; }
+      const c = await readCache();
+      if (c) {
+        _records = c.records;
+        if (Date.now() - c.ts > REVAL_AFTER) revalidate();  // refresh if stale
+        return _records;
+      }
     }
     try { return await fetchFresh(); }
     catch (err) { toast(`Failed to load: ${err.message}`, 'error'); return null; }
