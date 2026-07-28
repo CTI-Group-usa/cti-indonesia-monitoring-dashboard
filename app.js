@@ -378,6 +378,9 @@ const App = (() => {
     const validRows    = holders.filter(x => isValid(x.s)).map(x => x.r);
     const progressRows = holders.filter(x => isProgress(x.s)).map(x => x.r);
     const valid = validRows.length, inProgress = progressRows.length;
+    // Seafarers with no status set for this visa (empty field, dropped by visaStatusOf).
+    const noStatusRows = data.filter(r => !visaStatusOf(r, tab));
+    const noStatus = noStatusRows.length;
 
     let expiringRows = [];
     if (tab.expiryKey) {
@@ -400,7 +403,7 @@ const App = (() => {
         ${statCard(`Total ${tab.label}`, total, { id: 'statTotal', clickable: total > 0 })}
         ${statCard('Valid', valid, { id: 'statValid', clickable: valid > 0 })}
         ${statCard('In Progress', inProgress, { id: 'statProgress', clickable: inProgress > 0 })}
-        ${tab.expiryKey ? statCard('Expiring < 9 months', expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('Distinct statuses', total, { id: 'statDistinct', clickable: total > 0 })}
+        ${tab.expiryKey ? statCard('Expiring < 9 months', expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('No Status', noStatus, { id: 'statNoStatus', clickable: noStatus > 0 })}
       </div>
       <div class="chart-row">
         <div class="card chart-card">
@@ -420,7 +423,7 @@ const App = (() => {
     wireStat('statValid',    validRows,    `${tab.label} — Valid`);
     wireStat('statProgress', progressRows, `${tab.label} — In Progress`);
     wireStat('statExpiring', expiringRows, `${tab.label} — Expiring < 9 months`);
-    wireStat('statDistinct', totalRows,    `${tab.label} — All`);
+    wireStat('statNoStatus', noStatusRows, `${tab.label} — No Status`);
   }
 
   // Drill-down: list the seafarers behind a clicked status bar.
