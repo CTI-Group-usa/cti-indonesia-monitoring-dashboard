@@ -400,7 +400,7 @@ const App = (() => {
         ${statCard(`Total ${tab.label}`, total, { id: 'statTotal', clickable: total > 0 })}
         ${statCard('Valid', valid, { id: 'statValid', clickable: valid > 0 })}
         ${statCard('In Progress', inProgress, { id: 'statProgress', clickable: inProgress > 0 })}
-        ${tab.expiryKey ? statCard('Expiring < 9 months', expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('Distinct statuses', Object.keys(byStatus).length, { id: 'statDistinct', clickable: total > 0 })}
+        ${tab.expiryKey ? statCard('Expiring < 9 months', expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('Distinct statuses', total, { id: 'statDistinct', clickable: total > 0 })}
       </div>
       <div class="chart-row">
         <div class="card chart-card">
