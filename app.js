@@ -32,11 +32,24 @@ const App = (() => {
     return `<span class="badge badge-gray">${esc(text)}</span>`;
   }
 
+  // Parse a date from Zoho. Recruit fields come as ISO / MM-DD-YYYY
+  // (native-parseable); Zoho Sheet cells come as DD/MM/YYYY (Indonesian
+  // locale) which native Date can't handle — fall back to that.
+  function parseDate(v) {
+    if (v == null || v === '' || v === '—') return null;
+    if (v instanceof Date) return isNaN(v) ? null : v;
+    const s = String(v).trim();
+    const d = new Date(s);
+    if (!isNaN(d)) return d;
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/); // DD/MM/YYYY
+    if (m) { let y = +m[3]; if (y < 100) y += 2000; return new Date(y, (+m[2]) - 1, +m[1]); }
+    return null;
+  }
+
   function formatDate(str) {
-    if (!str || str === '—') return '—';
-    const d = new Date(str);
-    if (isNaN(d)) return str;
-    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    const d = parseDate(str);
+    if (d) return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return (str && str !== '—') ? String(str) : '—';
   }
 
   function destroyCharts() { _charts.forEach(c => c.destroy()); _charts = []; }
@@ -254,8 +267,8 @@ const App = (() => {
       if (f.cruiseLine && r.deployCruiseLine !== f.cruiseLine) return false;
       if (f.onboarding && r.deployStatus     !== f.onboarding) return false;
       if (from || to) {
-        const d = new Date(r.deployDate);
-        if (isNaN(d)) return false;
+        const d = parseDate(r.deployDate);
+        if (!d) return false;
         if (from && d < from) return false;
         if (to   && d > to)   return false;
       }
@@ -345,8 +358,8 @@ const App = (() => {
     if (tab.expiryKey) {
       const now = Date.now(), soon = now + 90 * 86400000;
       expiring = holders.filter(x => {
-        const d = new Date(x.r[tab.expiryKey]);
-        return !isNaN(d) && d.getTime() >= now && d.getTime() <= soon;
+        const d = parseDate(x.r[tab.expiryKey]);
+        return d && d.getTime() >= now && d.getTime() <= soon;
       }).length;
     }
 
