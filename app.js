@@ -441,10 +441,7 @@ const App = (() => {
     if (tab.numberKey) cols.push(['Number',      r => esc(r[tab.numberKey])]);
     if (tab.apptKey)   cols.push(['Appointment', r => formatDate(r[tab.apptKey])]);
     if (tab.expiryKey) cols.push(['Expiry',      r => formatDate(r[tab.expiryKey])]);
-    cols.push(['Deployment', r => {
-      const d = [r.deployCruiseLine, r.deployShip].filter(v => v && v !== '—').join(' · ');
-      return esc(d || '—');
-    }]);
+    cols.push(['Ship', r => esc(r.deployShip)]);
     cols.push(['Onboarding', r => esc(r.deployStatus)]);
     cols.push(['Sign On',  r => formatSheetDate(r.deployDate)]);
     cols.push(['Sign Off', r => formatDate(r.signOffDate)]);
