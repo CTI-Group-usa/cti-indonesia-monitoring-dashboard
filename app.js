@@ -420,7 +420,10 @@ const App = (() => {
     wireStat('statValid',    validRows,    `${tab.label} — Valid`);
     wireStat('statProgress', progressRows, `${tab.label} — In Progress`);
     wireStat('statExpiring', expiringRows, `${tab.label} — Expiring < 9 months`);
-    wireStat('statDistinct', totalRows,    `${tab.label} — All`);
+    // Distinct statuses → show the status breakdown (matches the tile's count).
+    const distinctCard = document.getElementById('statDistinct');
+    if (distinctCard && total > 0)
+      distinctCard.onclick = () => showStatusBreakdown(holders, tab);
   }
 
   // Drill-down: list the seafarers behind a clicked status bar.
@@ -514,6 +517,41 @@ const App = (() => {
   }
 
   function closeDetail() { document.getElementById('detailModal').classList.remove('show'); }
+
+  // Status breakdown drill-down: one row per distinct status with its seafarer
+  // count; click a row to list those seafarers.
+  function showStatusBreakdown(holders, tab) {
+    const modal = document.getElementById('detailModal');
+    const body  = document.getElementById('detailBody');
+    if (!modal || !body) return;
+
+    const byStatus = {};
+    holders.forEach(x => { (byStatus[x.s] = byStatus[x.s] || []).push(x.r); });
+    const entries = Object.entries(byStatus).sort((a, b) => b[1].length - a[1].length);
+
+    body.innerHTML = `
+      <div class="modal-detail-head">
+        <span><b>${esc(tab.label)} — Statuses</b><span class="count">· ${entries.length} distinct · ${holders.length} seafarer${holders.length === 1 ? '' : 's'}</span></span>
+        <button class="btn-sm" id="detailClose">Close</button>
+      </div>
+      <div class="modal-detail-body">
+        <div class="table-wrap detail-wrap"><table class="data-table detail-table">
+          <thead><tr><th>Status</th><th>Seafarers</th></tr></thead>
+          <tbody>${entries.map(([s, rs], i) =>
+            `<tr class="brk-row" data-i="${i}" title="Click to list these seafarers"><td>${esc(s)}</td><td>${rs.length}</td></tr>`
+          ).join('')}</tbody>
+        </table></div>
+      </div>`;
+
+    modal.classList.add('show');
+    document.getElementById('detailClose').onclick = closeDetail;
+    body.querySelectorAll('.brk-row').forEach(tr => {
+      tr.onclick = () => {
+        const [s, rs] = entries[+tr.dataset.i];
+        renderVisaDetail(rs, tab, `${tab.label} — ${s}`);
+      };
+    });
+  }
 
   // ═══════════════════════════════════════════════════════════
   //  PAGE: RECORDS  (table + edit → push)
