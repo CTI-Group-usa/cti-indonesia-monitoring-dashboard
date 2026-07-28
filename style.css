@@ -1084,6 +1084,15 @@ th.sorted {
   background: var(--card); color: var(--text); font-size: 0.86rem; font-family: inherit; outline: none;
 }
 .filter-bar select:focus, .filter-bar input:focus { border-color: var(--accent); }
+/* Native calendar icon is dark by default and vanishes on the dark input.
+   Invert it in dark mode and give it a subtle hover cue in both themes. */
+.filter-bar input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer; opacity: 0.65; transition: opacity 0.15s;
+}
+.filter-bar input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+[data-theme="dark"] .filter-bar input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
 .filter-date { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--muted); }
 
 /* ─── VISA drill-down detail ─── */
