@@ -216,12 +216,11 @@ const App = (() => {
   function statCard(label, value, opts = {}) {
     const cls = 'card stat-card' + (opts.clickable ? ' stat-card--clickable' : '');
     const idAttr = opts.id ? ` id="${opts.id}"` : '';
-    const hint = opts.clickable ? '<div class="stat-hint">click to view</div>' : '';
+    const titleAttr = opts.clickable ? ' title="Click to view"' : '';
     return `
-      <div class="${cls}"${idAttr}>
+      <div class="${cls}"${idAttr}${titleAttr}>
         <div class="stat-value">${value}</div>
         <div class="stat-label">${label}</div>
-        ${hint}
       </div>`;
   }
 
