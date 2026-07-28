@@ -1041,8 +1041,8 @@ th.sorted {
   background: var(--card); border-radius: var(--radius); width: 100%; max-width: 460px;
   max-height: 90vh; overflow-y: auto; padding: 28px; box-shadow: var(--shadow-lg);
 }
-#detailModal { padding: 6px; }
-.modal-box--wide { max-width: min(1500px, 96vw); max-height: 98vh; padding: 0; }
+#detailModal { padding: 0; }
+.modal-box--wide { max-width: min(1500px, 96vw); max-height: 100vh; padding: 0; }
 .modal-detail-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 18px 22px; border-bottom: 1px solid var(--border);
