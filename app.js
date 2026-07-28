@@ -376,7 +376,9 @@ const App = (() => {
 
     let expiring = 0;
     if (tab.expiryKey) {
-      const now = Date.now(), soon = now + 90 * 86400000;
+      const now = Date.now();
+      const soonDate = new Date(); soonDate.setMonth(soonDate.getMonth() + 9);
+      const soon = soonDate.getTime();
       expiring = holders.filter(x => {
         const d = parseDate(x.r[tab.expiryKey]);
         return d && d.getTime() >= now && d.getTime() <= soon;
@@ -391,7 +393,7 @@ const App = (() => {
         ${statCard(`Total ${tab.label}`, total)}
         ${statCard('Valid', valid)}
         ${statCard('In Progress', inProgress)}
-        ${tab.expiryKey ? statCard('Expiring ≤90d', expiring) : statCard('Distinct statuses', Object.keys(byStatus).length)}
+        ${tab.expiryKey ? statCard('Expiring < 9 months', expiring) : statCard('Distinct statuses', Object.keys(byStatus).length)}
       </div>
       <div class="chart-row">
         <div class="card chart-card">
