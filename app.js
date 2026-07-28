@@ -255,7 +255,7 @@ const App = (() => {
   //  Data merged: Candidates module per-visa fields + Visa Log sheet.
   // ═══════════════════════════════════════════════════════════
   const VISA_TABS = [
-    { key: 'c1d',      label: 'C1D',
+    { key: 'c1d',      label: 'C1/D',
       statusKey: 'c1dVisaStatus',   numberKey: 'c1dVisaNumber',   apptKey: 'c1dVisaAppointment',
       expiryKey: 'c1dVisaExpiry',   sheetType: /c1\s*\/?\s*d/i },
     { key: 'schengen', label: 'Schengen',
