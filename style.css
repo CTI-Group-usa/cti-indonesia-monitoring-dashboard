@@ -1089,3 +1089,12 @@ th.sorted {
 /* ─── VISA drill-down detail ─── */
 .card-title .hint { font-weight: 400; font-size: 0.76rem; color: var(--muted); margin-left: 6px; }
 .detail-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 0.9rem; color: var(--text); }
+
+/* ─── VISA drill-down: fit all columns, no horizontal scroll ─── */
+.detail-wrap { overflow-x: hidden; }
+.detail-table { width: 100%; table-layout: fixed; }
+.detail-table th, .detail-table td {
+  font-size: 0.78rem; padding: 8px 10px; white-space: normal;
+  word-break: break-word; overflow-wrap: anywhere;
+}
+.detail-table .cell-sub { font-size: 0.72rem; }

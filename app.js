@@ -52,6 +52,24 @@ const App = (() => {
     return (str && str !== '—') ? String(str) : '—';
   }
 
+  // Zoho SHEET dates are DD/MM/YYYY (Indonesian). Unlike module dates,
+  // day comes first — parse day-first for slash/dash dates, else native
+  // (handles ISO / datetime strings). Use this for any Sheet-sourced date.
+  function parseSheetDate(v) {
+    if (v == null || v === '' || v === '—') return null;
+    if (v instanceof Date) return isNaN(v) ? null : v;
+    const s = String(v).trim();
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+    if (m) { let y = +m[3]; if (y < 100) y += 2000; const d = new Date(y, (+m[2]) - 1, +m[1]); return isNaN(d) ? null : d; }
+    const d = new Date(s);
+    return isNaN(d) ? null : d;
+  }
+  function formatSheetDate(v) {
+    const d = parseSheetDate(v);
+    if (d) return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return (v && v !== '—') ? String(v) : '—';
+  }
+
   function destroyCharts() { _charts.forEach(c => c.destroy()); _charts = []; }
 
   function updateStatus() {
@@ -267,7 +285,7 @@ const App = (() => {
       if (f.cruiseLine && r.deployCruiseLine !== f.cruiseLine) return false;
       if (f.onboarding && r.deployStatus     !== f.onboarding) return false;
       if (from || to) {
-        const d = parseDate(r.deployDate);
+        const d = parseSheetDate(r.deployDate);
         if (!d) return false;
         if (from && d < from) return false;
         if (to   && d > to)   return false;
@@ -401,7 +419,8 @@ const App = (() => {
       const d = [r.deployCruiseLine, r.deployShip].filter(v => v && v !== '—').join(' · ');
       return esc(d || '—');
     }]);
-    cols.push(['Sign On', r => formatDate(r.deployDate)]);
+    cols.push(['Onboarding', r => esc(r.deployStatus)]);
+    cols.push(['Sign On', r => formatSheetDate(r.deployDate)]);
 
     det.innerHTML = `
       <div class="card table-card" style="margin-top:16px">
@@ -409,7 +428,7 @@ const App = (() => {
           <span><b>${esc(tab.label)} — ${esc(status)}</b> · ${rows.length} seafarer${rows.length === 1 ? '' : 's'}</span>
           <button class="btn-sm" id="detailClose">Close</button>
         </div>
-        <div class="table-wrap"><table class="data-table">
+        <div class="table-wrap detail-wrap"><table class="data-table detail-table">
           <thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead>
           <tbody>${rows.map(r => `<tr>${cols.map(c => `<td>${c[1](r)}</td>`).join('')}</tr>`).join('')}</tbody>
         </table></div>
@@ -505,9 +524,9 @@ const App = (() => {
       ${info('Visa Type', rec.visaType)}
       ${info('Visa Status', rec.visaStatus)}
       ${info('Payment Status', rec.visaPayment)}
-      ${info('Appointment Date', formatDate(rec.visaAppointment))}
+      ${info('Appointment Date', formatSheetDate(rec.visaAppointment))}
       ${info('Application ID', rec.visaAppId)}
-      ${info('Registered', formatDate(rec.visaRegDate))}
+      ${info('Registered', formatSheetDate(rec.visaRegDate))}
 
       <div class="form-section-label">Cruise Line Deployment</div>
       ${info('Cruise Line', rec.deployCruiseLine)}
@@ -515,7 +534,7 @@ const App = (() => {
       ${info('Position Hired', rec.deployPosition)}
       ${info('Onboarding Status', rec.deployStatus)}
       ${info('Employment Status', rec.deployEmployment)}
-      ${info('Sign On Date', formatDate(rec.deployDate))}
+      ${info('Sign On Date', formatSheetDate(rec.deployDate))}
       ${info('Sign On Port', rec.deployPort)}
 
       <div class="modal-actions">
