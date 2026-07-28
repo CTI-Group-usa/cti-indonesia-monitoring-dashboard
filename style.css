@@ -273,6 +273,9 @@ a { color: inherit; text-decoration: none; }
 }
 .stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1; }
 .stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 4px; font-weight: 500; white-space: nowrap; }
+.stat-hint { font-size: 0.62rem; color: var(--accent); margin-top: 6px; font-weight: 600; letter-spacing: 0.02em; opacity: 0.8; }
+.stat-card--clickable { cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s; }
+.stat-card--clickable:hover { border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .stat-card.warn .stat-value { color: #d97706; }
 .stat-card.good .stat-value { color: #16a34a; }
 .stat-card.accent .stat-value { color: var(--accent); }

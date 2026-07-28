@@ -213,11 +213,15 @@ const App = (() => {
     updateStatus();
   }
 
-  function statCard(label, value) {
+  function statCard(label, value, opts = {}) {
+    const cls = 'card stat-card' + (opts.clickable ? ' stat-card--clickable' : '');
+    const idAttr = opts.id ? ` id="${opts.id}"` : '';
+    const hint = opts.clickable ? '<div class="stat-hint">click to view</div>' : '';
     return `
-      <div class="card stat-card">
+      <div class="${cls}"${idAttr}>
         <div class="stat-value">${value}</div>
         <div class="stat-label">${label}</div>
+        ${hint}
       </div>`;
   }
 
@@ -374,16 +378,18 @@ const App = (() => {
     const valid      = holders.filter(x => isValid(x.s)).length;
     const inProgress = holders.filter(x => isProgress(x.s)).length;
 
-    let expiring = 0;
+    let expiringRows = [];
     if (tab.expiryKey) {
       const now = Date.now();
       const soonDate = new Date(); soonDate.setMonth(soonDate.getMonth() + 9);
       const soon = soonDate.getTime();
-      expiring = holders.filter(x => {
-        const d = parseDate(x.r[tab.expiryKey]);
-        return d && d.getTime() >= now && d.getTime() <= soon;
-      }).length;
+      expiringRows = holders
+        .map(x => ({ r: x.r, t: (parseDate(x.r[tab.expiryKey]) || {}).getTime?.() }))
+        .filter(x => x.t && x.t >= now && x.t <= soon)
+        .sort((a, b) => a.t - b.t)   // soonest expiry first
+        .map(x => x.r);
     }
+    const expiring = expiringRows.length;
 
     const byStatus = {};
     holders.forEach(x => { byStatus[x.s] = (byStatus[x.s] || 0) + 1; });
@@ -393,7 +399,7 @@ const App = (() => {
         ${statCard(`Total ${tab.label}`, total)}
         ${statCard('Valid', valid)}
         ${statCard('In Progress', inProgress)}
-        ${tab.expiryKey ? statCard('Expiring < 9 months', expiring) : statCard('Distinct statuses', Object.keys(byStatus).length)}
+        ${tab.expiryKey ? statCard('Expiring < 9 months', expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('Distinct statuses', Object.keys(byStatus).length)}
       </div>
       <div class="chart-row">
         <div class="card chart-card">
@@ -404,11 +410,23 @@ const App = (() => {
       <div id="visaDetail"></div>`;
 
     if (total) drawBar('visaChart', topN(byStatus, 8), status => showVisaDetail(holders, tab, status));
+
+    // Expiring tile → drill down to the seafarers expiring within 9 months.
+    const expCard = document.getElementById('statExpiring');
+    if (expCard && expiring > 0) {
+      expCard.onclick = () =>
+        renderVisaDetail(expiringRows, tab, `${tab.label} — Expiring < 9 months`);
+    }
   }
 
   // Drill-down: list the seafarers behind a clicked status bar.
   function showVisaDetail(holders, tab, status) {
-    const rows = holders.filter(x => x.s === status).map(x => x.r);
+    renderVisaDetail(holders.filter(x => x.s === status).map(x => x.r), tab,
+      `${tab.label} — ${status}`);
+  }
+
+  // Render a drill-down detail table for an arbitrary set of seafarer records.
+  function renderVisaDetail(rows, tab, title) {
     const det = document.getElementById('visaDetail');
     if (!det) return;
 
@@ -429,7 +447,7 @@ const App = (() => {
     det.innerHTML = `
       <div class="card table-card" style="margin-top:16px">
         <div class="detail-head">
-          <span><b>${esc(tab.label)} — ${esc(status)}</b> · ${rows.length} seafarer${rows.length === 1 ? '' : 's'}</span>
+          <span><b>${esc(title)}</b> · ${rows.length} seafarer${rows.length === 1 ? '' : 's'}</span>
           <button class="btn-sm" id="detailClose">Close</button>
         </div>
         <div class="table-wrap detail-wrap"><table class="data-table detail-table">
