@@ -14,7 +14,9 @@ const Zoho = (() => {
   async function recruitGet(endpoint, params = {}) {
     const url = new URL(`${PROXY}/recruit/v2/${endpoint}`);
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-    const resp = await fetch(url.toString());
+    // no-store: never let the browser serve a stale proxy response from its
+    // HTTP cache — data freshness is the whole point of this dashboard.
+    const resp = await fetch(url.toString(), { cache: 'no-store' });
     // Zoho returns 204 (no content) for a page past the last one.
     if (resp.status === 204) return { data: [], info: { more_records: false } };
     if (!resp.ok) throw new Error(`RECRUIT_API_ERROR_${resp.status}`);

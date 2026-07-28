@@ -107,7 +107,6 @@ const App = (() => {
   // instantly from an IndexedDB cache (handles the ~10MB dataset that
   // would overflow localStorage) and revalidate only when it's stale.
   const CACHE_TTL   = 30 * 60 * 1000;  // ignore cache older than 30 min
-  const REVAL_AFTER =  5 * 60 * 1000;  // only background-refresh if >5 min old
   const DB_NAME = 'cti_indo', STORE = 'cache', CACHE_KEY = 'records';
 
   function idbOpen() {
@@ -159,7 +158,10 @@ const App = (() => {
       const c = await readCache();
       if (c) {
         _records = c.records;
-        if (Date.now() - c.ts > REVAL_AFTER) revalidate();  // refresh if stale
+        // Always pull fresh in the background so a page reload reflects
+        // the latest Zoho edits. The cache only avoids a blank-screen wait;
+        // it is never the final word within a session.
+        revalidate();
         return _records;
       }
     }

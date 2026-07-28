@@ -92,6 +92,8 @@ async function proxy(targetUrl, request, token, CORS) {
     headers: {
       ...CORS,
       'Content-Type': resp.headers.get('Content-Type') || 'application/json',
+      // Never cache live Zoho data at the browser or any CDN edge.
+      'Cache-Control': 'no-store',
     },
   });
 }
