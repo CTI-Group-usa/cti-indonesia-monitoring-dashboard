@@ -1064,6 +1064,9 @@ th.sorted {
 .modal-detail-body .detail-table th:first-child,
 .modal-detail-body .detail-table td:first-child { width: 17%; }
 .modal-detail-body .detail-table .cell-sub { overflow: hidden; text-overflow: ellipsis; }
+.modal-detail-body .detail-table th.sortable { cursor: pointer; user-select: none; }
+.modal-detail-body .detail-table th.sortable:hover { color: var(--accent); }
+.modal-detail-body .detail-table th .sort-arrow { margin-left: 4px; font-size: 0.7em; color: var(--accent); }
 .modal-box h2 { font-size: 1.15rem; margin: 0 0 2px; color: var(--text); }
 .modal-sub { color: var(--muted); font-size: 0.85rem; margin: 0 0 18px; }
 .modal-box label { display: block; font-size: 0.8rem; font-weight: 500; margin: 12px 0 5px; color: var(--text); }

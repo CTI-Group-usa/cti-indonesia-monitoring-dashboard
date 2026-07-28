@@ -434,25 +434,66 @@ const App = (() => {
     const body  = document.getElementById('detailBody');
     if (!modal || !body) return;
 
+    const txtSort  = v => (v == null || v === '' || v === '—') ? '' : String(v).toLowerCase();
+    const dateSort = d => d ? d.getTime() : null;   // null = missing, sorted last
+
+    // Each column: label, render(row) -> HTML, sort(row) -> comparable, num flag.
     const cols = [
-      ['Name', r => `${esc(r.name)}<div class="cell-sub">${esc(r.email)}</div>`],
-      ['CTI Office', r => esc(r.ctiOffice)],
+      { label: 'Name',       render: r => `${esc(r.name)}<div class="cell-sub">${esc(r.email)}</div>`, sort: r => txtSort(r.name) },
+      { label: 'CTI Office', render: r => esc(r.ctiOffice), sort: r => txtSort(r.ctiOffice) },
     ];
-    if (tab.numberKey) cols.push(['Number',      r => esc(r[tab.numberKey])]);
-    if (tab.apptKey)   cols.push(['Appointment', r => formatDate(r[tab.apptKey])]);
-    if (tab.expiryKey) cols.push(['Expiry',      r => formatDate(r[tab.expiryKey])]);
-    cols.push(['Ship', r => esc(r.deployShip)]);
-    cols.push(['Onboarding', r => esc(r.deployStatus)]);
-    cols.push(['Sign On',  r => formatSheetDate(r.deployDate)]);
-    cols.push(['Sign Off', r => formatDate(r.signOffDate)]);
+    if (tab.numberKey) cols.push({ label: 'Number',      render: r => esc(r[tab.numberKey]),      sort: r => txtSort(r[tab.numberKey]) });
+    if (tab.apptKey)   cols.push({ label: 'Appointment', render: r => formatDate(r[tab.apptKey]), sort: r => dateSort(parseDate(r[tab.apptKey])), num: true });
+    if (tab.expiryKey) cols.push({ label: 'Expiry',      render: r => formatDate(r[tab.expiryKey]), sort: r => dateSort(parseDate(r[tab.expiryKey])), num: true });
+    cols.push({ label: 'Ship',       render: r => esc(r.deployShip),   sort: r => txtSort(r.deployShip) });
+    cols.push({ label: 'Onboarding', render: r => esc(r.deployStatus), sort: r => txtSort(r.deployStatus) });
+    cols.push({ label: 'Sign On',    render: r => formatSheetDate(r.deployDate),  sort: r => dateSort(parseSheetDate(r.deployDate)), num: true });
+    cols.push({ label: 'Sign Off',   render: r => formatDate(r.signOffDate),      sort: r => dateSort(parseDate(r.signOffDate)),     num: true });
 
     // Columns are fixed-width with ellipsis (no horizontal scroll); expose the
     // full value on hover via a title attribute (HTML stripped for plain text).
     const cell = (c, r) => {
-      const html = c[1](r);
+      const html = c.render(r);
       const txt  = String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
       return `<td title="${esc(txt)}">${html}</td>`;
     };
+
+    let sortI = -1, dir = 1;   // no sort initially; dir 1 = asc, -1 = desc
+
+    const sortedRows = () => {
+      if (sortI < 0) return rows;
+      const c = cols[sortI];
+      return rows.slice().sort((a, b) => {
+        const x = c.sort(a), y = c.sort(b);
+        const xe = (x === null || x === ''), ye = (y === null || y === '');
+        if (xe && ye) return 0;
+        if (xe) return 1;            // missing values always last
+        if (ye) return -1;
+        const cmp = c.num ? (x - y) : String(x).localeCompare(String(y));
+        return cmp * dir;
+      });
+    };
+
+    const headHtml = () => `<tr>${cols.map((c, i) => {
+      const arrow = i === sortI ? `<span class="sort-arrow">${dir > 0 ? '▲' : '▼'}</span>` : '';
+      return `<th class="sortable" data-i="${i}">${c.label}${arrow}</th>`;
+    }).join('')}</tr>`;
+
+    const bodyHtml = () => sortedRows().map(r => `<tr>${cols.map(c => cell(c, r)).join('')}</tr>`).join('');
+
+    const repaint = () => {
+      body.querySelector('thead').innerHTML = headHtml();
+      body.querySelector('tbody').innerHTML = bodyHtml();
+      wireHeads();
+    };
+
+    const wireHeads = () => body.querySelectorAll('th.sortable').forEach(th => {
+      th.onclick = () => {
+        const i = +th.dataset.i;
+        if (i === sortI) dir = -dir; else { sortI = i; dir = 1; }
+        repaint();
+      };
+    });
 
     body.innerHTML = `
       <div class="modal-detail-head">
@@ -461,13 +502,14 @@ const App = (() => {
       </div>
       <div class="modal-detail-body">
         <div class="table-wrap detail-wrap"><table class="data-table detail-table">
-          <thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead>
-          <tbody>${rows.map(r => `<tr>${cols.map(c => cell(c, r)).join('')}</tr>`).join('')}</tbody>
+          <thead>${headHtml()}</thead>
+          <tbody>${bodyHtml()}</tbody>
         </table></div>
       </div>`;
 
     modal.classList.add('show');
     document.getElementById('detailClose').onclick = closeDetail;
+    wireHeads();
   }
 
   function closeDetail() { document.getElementById('detailModal').classList.remove('show'); }
