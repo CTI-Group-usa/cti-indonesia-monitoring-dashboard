@@ -375,8 +375,10 @@ const App = (() => {
     // Process / In Process / Pending / Rejected / Approved.
     const isValid    = s => /valid|approv|issued|granted|complete|pass|board|ok to/i.test(s);
     const isProgress = s => /need|process|pending|progress|applied|appointment|schedul|await/i.test(s);
-    const valid      = holders.filter(x => isValid(x.s)).length;
-    const inProgress = holders.filter(x => isProgress(x.s)).length;
+    const totalRows    = holders.map(x => x.r);
+    const validRows    = holders.filter(x => isValid(x.s)).map(x => x.r);
+    const progressRows = holders.filter(x => isProgress(x.s)).map(x => x.r);
+    const valid = validRows.length, inProgress = progressRows.length;
 
     let expiringRows = [];
     if (tab.expiryKey) {
@@ -396,9 +398,9 @@ const App = (() => {
 
     panel.innerHTML = `
       <div class="stat-grid">
-        ${statCard(`Total ${tab.label}`, total)}
-        ${statCard('Valid', valid)}
-        ${statCard('In Progress', inProgress)}
+        ${statCard(`Total ${tab.label}`, total, { id: 'statTotal', clickable: total > 0 })}
+        ${statCard('Valid', valid, { id: 'statValid', clickable: valid > 0 })}
+        ${statCard('In Progress', inProgress, { id: 'statProgress', clickable: inProgress > 0 })}
         ${tab.expiryKey ? statCard('Expiring < 9 months', expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('Distinct statuses', Object.keys(byStatus).length)}
       </div>
       <div class="chart-row">
@@ -411,12 +413,15 @@ const App = (() => {
 
     if (total) drawBar('visaChart', topN(byStatus, 8), status => showVisaDetail(holders, tab, status));
 
-    // Expiring tile → drill down to the seafarers expiring within 9 months.
-    const expCard = document.getElementById('statExpiring');
-    if (expCard && expiring > 0) {
-      expCard.onclick = () =>
-        renderVisaDetail(expiringRows, tab, `${tab.label} — Expiring < 9 months`);
-    }
+    // Stat tiles → drill down to the seafarers behind each count.
+    const wireStat = (id, rows, title) => {
+      const el = document.getElementById(id);
+      if (el && rows.length) el.onclick = () => renderVisaDetail(rows, tab, title);
+    };
+    wireStat('statTotal',    totalRows,    `${tab.label} — All`);
+    wireStat('statValid',    validRows,    `${tab.label} — Valid`);
+    wireStat('statProgress', progressRows, `${tab.label} — In Progress`);
+    wireStat('statExpiring', expiringRows, `${tab.label} — Expiring < 9 months`);
   }
 
   // Drill-down: list the seafarers behind a clicked status bar.
