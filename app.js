@@ -446,7 +446,16 @@ const App = (() => {
       return esc(d || '—');
     }]);
     cols.push(['Onboarding', r => esc(r.deployStatus)]);
-    cols.push(['Sign On', r => formatSheetDate(r.deployDate)]);
+    cols.push(['Sign On',  r => formatSheetDate(r.deployDate)]);
+    cols.push(['Sign Off', r => formatDate(r.signOffDate)]);
+
+    // Columns are fixed-width with ellipsis (no horizontal scroll); expose the
+    // full value on hover via a title attribute (HTML stripped for plain text).
+    const cell = (c, r) => {
+      const html = c[1](r);
+      const txt  = String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      return `<td title="${esc(txt)}">${html}</td>`;
+    };
 
     body.innerHTML = `
       <div class="modal-detail-head">
@@ -456,7 +465,7 @@ const App = (() => {
       <div class="modal-detail-body">
         <div class="table-wrap detail-wrap"><table class="data-table detail-table">
           <thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead>
-          <tbody>${rows.map(r => `<tr>${cols.map(c => `<td>${c[1](r)}</td>`).join('')}</tr>`).join('')}</tbody>
+          <tbody>${rows.map(r => `<tr>${cols.map(c => cell(c, r)).join('')}</tr>`).join('')}</tbody>
         </table></div>
       </div>`;
 

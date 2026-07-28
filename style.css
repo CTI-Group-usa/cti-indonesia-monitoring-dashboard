@@ -1051,12 +1051,19 @@ th.sorted {
 .modal-detail-head b { color: var(--text); font-size: 1rem; }
 .modal-detail-head .count { color: var(--muted); font-size: 0.85rem; font-weight: 500; margin-left: 6px; }
 .modal-detail-body { padding: 8px 22px 22px; }
-.modal-detail-body .detail-wrap { overflow-x: auto; }
-/* In the modal, size columns to content and keep each row on one line
-   (the inline table-layout:fixed + word-break is for the compact page view). */
-.modal-detail-body .detail-table { table-layout: auto; }
+/* In the modal the table fills 100% width with fixed columns: each row stays
+   on one line and long values ellipsize (hover shows the full text) — so the
+   whole table fits on one screen with no horizontal scroll. */
+.modal-detail-body .detail-wrap { overflow-x: hidden; }
+.modal-detail-body .detail-table { table-layout: fixed; width: 100%; }
 .modal-detail-body .detail-table th,
-.modal-detail-body .detail-table td { white-space: nowrap; word-break: normal; overflow-wrap: normal; }
+.modal-detail-body .detail-table td {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  word-break: normal; overflow-wrap: normal;
+}
+.modal-detail-body .detail-table th:first-child,
+.modal-detail-body .detail-table td:first-child { width: 17%; }
+.modal-detail-body .detail-table .cell-sub { overflow: hidden; text-overflow: ellipsis; }
 .modal-box h2 { font-size: 1.15rem; margin: 0 0 2px; color: var(--text); }
 .modal-sub { color: var(--muted); font-size: 0.85rem; margin: 0 0 18px; }
 .modal-box label { display: block; font-size: 0.8rem; font-weight: 500; margin: 12px 0 5px; color: var(--text); }
