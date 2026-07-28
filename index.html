@@ -7,10 +7,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="style.css?v=20260728g">
-  <script src="config.js?v=20260728g"></script>
-  <script src="auth.js?v=20260728g"></script>
-  <script src="zoho.js?v=20260728g"></script>
+  <link rel="stylesheet" href="style.css?v=20260728h">
+  <script src="config.js?v=20260728h"></script>
+  <script src="auth.js?v=20260728h"></script>
+  <script src="zoho.js?v=20260728h"></script>
 </head>
 <body>
   <!-- Auth guard -->
@@ -86,10 +86,15 @@
     <div class="modal-box" id="editBody"></div>
   </div>
 
+  <!-- Drill-down detail modal -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal-box modal-box--wide" id="detailBody"></div>
+  </div>
+
   <!-- Toast container -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="app.js?v=20260728g"></script>
+  <script src="app.js?v=20260728h"></script>
   <script>
     const sess = Auth.getSession();
     if (sess) {

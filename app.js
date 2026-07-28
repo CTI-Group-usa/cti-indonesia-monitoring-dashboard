@@ -407,8 +407,7 @@ const App = (() => {
           <div class="card-title">${tab.label} — By Status ${total ? '<span class="hint">(click a bar to list those seafarers)</span>' : ''}</div>
           ${total ? `<canvas id="visaChart" height="240"></canvas>` : `<p class="empty-row">No ${tab.label} visa records found.</p>`}
         </div>
-      </div>
-      <div id="visaDetail"></div>`;
+      </div>`;
 
     if (total) drawBar('visaChart', topN(byStatus, 8), status => showVisaDetail(holders, tab, status));
 
@@ -429,10 +428,11 @@ const App = (() => {
       `${tab.label} — ${status}`);
   }
 
-  // Render a drill-down detail table for an arbitrary set of seafarer records.
+  // Render a drill-down detail table (in a modal) for a set of seafarer records.
   function renderVisaDetail(rows, tab, title) {
-    const det = document.getElementById('visaDetail');
-    if (!det) return;
+    const modal = document.getElementById('detailModal');
+    const body  = document.getElementById('detailBody');
+    if (!modal || !body) return;
 
     const cols = [
       ['Name', r => `${esc(r.name)}<div class="cell-sub">${esc(r.email)}</div>`],
@@ -448,20 +448,23 @@ const App = (() => {
     cols.push(['Onboarding', r => esc(r.deployStatus)]);
     cols.push(['Sign On', r => formatSheetDate(r.deployDate)]);
 
-    det.innerHTML = `
-      <div class="card table-card" style="margin-top:16px">
-        <div class="detail-head">
-          <span><b>${esc(title)}</b> · ${rows.length} seafarer${rows.length === 1 ? '' : 's'}</span>
-          <button class="btn-sm" id="detailClose">Close</button>
-        </div>
+    body.innerHTML = `
+      <div class="modal-detail-head">
+        <span><b>${esc(title)}</b><span class="count">· ${rows.length} seafarer${rows.length === 1 ? '' : 's'}</span></span>
+        <button class="btn-sm" id="detailClose">Close</button>
+      </div>
+      <div class="modal-detail-body">
         <div class="table-wrap detail-wrap"><table class="data-table detail-table">
           <thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead>
           <tbody>${rows.map(r => `<tr>${cols.map(c => `<td>${c[1](r)}</td>`).join('')}</tr>`).join('')}</tbody>
         </table></div>
       </div>`;
-    document.getElementById('detailClose').onclick = () => { det.innerHTML = ''; };
-    det.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    modal.classList.add('show');
+    document.getElementById('detailClose').onclick = closeDetail;
   }
+
+  function closeDetail() { document.getElementById('detailModal').classList.remove('show'); }
 
   // ═══════════════════════════════════════════════════════════
   //  PAGE: RECORDS  (table + edit → push)
@@ -633,6 +636,12 @@ const App = (() => {
       });
     });
     window.addEventListener('hashchange', renderCurrentPage);
+    // Drill-down modal: close on backdrop click or Escape.
+    const detailModal = document.getElementById('detailModal');
+    detailModal?.addEventListener('click', e => { if (e.target === detailModal) closeDetail(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && detailModal?.classList.contains('show')) closeDetail();
+    });
     // Auto-refresh every 10 minutes — in the background, no skeleton.
     setInterval(revalidate, 600000);
     renderCurrentPage();
