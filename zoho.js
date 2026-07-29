@@ -50,8 +50,15 @@ const Zoho = (() => {
       if (all.length > 50000) break;   // safety cap
     }
 
-    const val = v => (v == null || v === '') ? '—'
-      : (typeof v === 'object' ? (v.name ?? v.value ?? '—') : v);
+    const val = v => {
+      if (v == null || v === '') return '—';
+      // Multi-select fields (e.g. Vaccines_Status) come back as arrays.
+      if (Array.isArray(v)) {
+        const s = v.filter(x => x != null && x !== '').join(', ');
+        return s || '—';
+      }
+      return (typeof v === 'object' ? (v.name ?? v.value ?? '—') : v);
+    };
 
     return all.map(r => ({
       _source:          'recruit',
