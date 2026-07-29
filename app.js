@@ -281,9 +281,17 @@ const App = (() => {
       expiryKey: null,              sheetType: /oktb/i },
   ];
   let _visaTab = 'c1d';
-  const emptyFilters = () => ({ office: '', cruiseLine: '', onboarding: '', from: '', to: '' });
+  const DEFAULT_OFFICE = 'CTI Indonesia';
+  // office / cruiseLine / onboarding are arrays (multi-select). Empty = "all".
+  // Office defaults to CTI Indonesia.
+  const emptyFilters = () => ({ office: [DEFAULT_OFFICE], cruiseLine: [], onboarding: [], from: '', to: '' });
   let _visaFilters = emptyFilters();
   let _recFilters  = emptyFilters();
+  let _recSort = { i: -1, dir: 1 };   // Records table sort (col index, direction)
+
+  // Sort comparables shared by all sortable tables.
+  const txtSort  = v => (v == null || v === '' || v === '—') ? '' : String(v).toLowerCase();
+  const dateSort = d => d ? d.getTime() : null;   // null = missing, sorted last
 
   // Distinct non-empty values of a field, sorted (for filter dropdowns).
   function distinctVals(data, key) {
@@ -293,14 +301,16 @@ const App = (() => {
 
   // Apply the shared deployment filters (CTI office / cruise line / onboarding
   // status / sign-on date range) to the dataset. Fields are module-sourced.
+  // office/cruiseLine/onboarding are arrays; an empty array means no filter.
   function applyDeployFilters(data, f) {
     const from = f.from ? new Date(f.from) : null;
     const to   = f.to   ? new Date(f.to)   : null;
     if (to) to.setHours(23, 59, 59, 999);
+    const inSet = (arr, v) => !arr.length || arr.includes(v);
     return data.filter(r => {
-      if (f.office     && r.ctiOffice       !== f.office)     return false;
-      if (f.cruiseLine && r.cruiseLine       !== f.cruiseLine) return false;
-      if (f.onboarding && r.onboardingStatus !== f.onboarding) return false;
+      if (!inSet(f.office,     r.ctiOffice))       return false;
+      if (!inSet(f.cruiseLine, r.cruiseLine))      return false;
+      if (!inSet(f.onboarding, r.onboardingStatus)) return false;
       if (from || to) {
         const d = parseDate(r.signOnDate);
         if (!d) return false;
@@ -313,6 +323,41 @@ const App = (() => {
 
   function applyVisaFilters(data) {
     return applyDeployFilters(data, _visaFilters);
+  }
+
+  // ── Multi-select dropdown (button + checkbox panel) ────────────
+  function msSummary(allLabel, sel) {
+    return !sel.length ? allLabel : (sel.length === 1 ? sel[0] : `${sel.length} selected`);
+  }
+  function msHTML(id, allLabel, options, selected) {
+    const sel = selected || [];
+    return `<div class="ms" id="${id}" data-all="${esc(allLabel)}">
+      <button type="button" class="ms-btn"><span class="ms-label">${esc(msSummary(allLabel, sel))}</span><span class="ms-caret">▾</span></button>
+      <div class="ms-panel" hidden>
+        ${options.map(o => `<label class="ms-opt"><input type="checkbox" value="${esc(o)}"${sel.includes(o) ? ' checked' : ''}><span>${esc(o)}</span></label>`).join('') || '<div class="ms-empty">No options</div>'}
+      </div>
+    </div>`;
+  }
+  function wireMS(root, id, onChange) {
+    const el = root.querySelector('#' + id);
+    if (!el) return;
+    const btn = el.querySelector('.ms-btn');
+    const panel = el.querySelector('.ms-panel');
+    const label = el.querySelector('.ms-label');
+    const allLabel = el.dataset.all;
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const willOpen = panel.hidden;
+      document.querySelectorAll('.ms-panel').forEach(p => p.hidden = true);
+      panel.hidden = !willOpen;
+    });
+    panel.addEventListener('click', e => e.stopPropagation());
+    panel.querySelectorAll('input[type=checkbox]').forEach(cb =>
+      cb.addEventListener('change', () => {
+        const sel = [...panel.querySelectorAll('input:checked')].map(x => x.value);
+        label.textContent = msSummary(allLabel, sel);
+        onChange(sel);
+      }));
   }
 
   // Effective status for a record under a visa tab: the module field
@@ -339,8 +384,6 @@ const App = (() => {
     const offices     = distinctVals(data, 'ctiOffice');
     const cruiseLines = distinctVals(data, 'cruiseLine');
     const onboardings = distinctVals(data, 'onboardingStatus');
-    const opts = (arr, sel) =>
-      arr.map(v => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(v)}</option>`).join('');
 
     mc.innerHTML = `
       <div class="page-header"><h1>Visa</h1></div>
@@ -348,9 +391,9 @@ const App = (() => {
         ${VISA_TABS.map(t => `<button class="subtab ${t.key === _visaTab ? 'active' : ''}" data-visatab="${t.key}">${t.label}</button>`).join('')}
       </div>
       <div class="filter-bar">
-        <select id="fOffice"><option value="">All CTI Offices</option>${opts(offices, _visaFilters.office)}</select>
-        <select id="fLine"><option value="">All Cruise Lines</option>${opts(cruiseLines, _visaFilters.cruiseLine)}</select>
-        <select id="fOnboard"><option value="">All Onboarding Status</option>${opts(onboardings, _visaFilters.onboarding)}</select>
+        ${msHTML('fOffice', 'All CTI Offices', offices, _visaFilters.office)}
+        ${msHTML('fLine', 'All Cruise Lines', cruiseLines, _visaFilters.cruiseLine)}
+        ${msHTML('fOnboard', 'All Onboarding Status', onboardings, _visaFilters.onboarding)}
         <label class="filter-date">Sign On <input type="date" id="fFrom" value="${esc(_visaFilters.from)}"></label>
         <label class="filter-date">to <input type="date" id="fTo" value="${esc(_visaFilters.to)}"></label>
         <button class="btn-sm" id="fClear">Clear</button>
@@ -367,14 +410,16 @@ const App = (() => {
         repaint();
       }));
 
+    wireMS(mc, 'fOffice',  sel => { _visaFilters.office = sel;     repaint(); });
+    wireMS(mc, 'fLine',    sel => { _visaFilters.cruiseLine = sel; repaint(); });
+    wireMS(mc, 'fOnboard', sel => { _visaFilters.onboarding = sel; repaint(); });
     const wire = (id, prop) => {
       const el = mc.querySelector('#' + id);
       el.addEventListener('change', () => { _visaFilters[prop] = el.value; repaint(); });
     };
-    wire('fOffice', 'office'); wire('fLine', 'cruiseLine'); wire('fOnboard', 'onboarding');
     wire('fFrom', 'from'); wire('fTo', 'to');
     mc.querySelector('#fClear').addEventListener('click', () => {
-      _visaFilters = { office: '', cruiseLine: '', onboarding: '', from: '', to: '' };
+      _visaFilters = emptyFilters();
       renderVisa();
     });
 
@@ -455,9 +500,6 @@ const App = (() => {
     const modal = document.getElementById('detailModal');
     const body  = document.getElementById('detailBody');
     if (!modal || !body) return;
-
-    const txtSort  = v => (v == null || v === '' || v === '—') ? '' : String(v).toLowerCase();
-    const dateSort = d => d ? d.getTime() : null;   // null = missing, sorted last
 
     // Each column: label, render(row) -> HTML, sort(row) -> comparable, num flag.
     const cols = [
@@ -553,43 +595,85 @@ const App = (() => {
     const offices     = distinctVals(data, 'ctiOffice');
     const cruiseLines = distinctVals(data, 'cruiseLine');
     const onboardings = distinctVals(data, 'onboardingStatus');
-    const opts = (arr, sel) =>
-      arr.map(v => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(v)}</option>`).join('');
+
+    // Records columns: label, render(row) -> HTML, sort(row) -> comparable, num.
+    const cols = [
+      { label: 'Joining Ship',          render: r => esc(r.joiningShip),      sort: r => txtSort(r.joiningShip) },
+      { label: 'Sign On Date',          render: r => formatDate(r.signOnDate), sort: r => dateSort(parseDate(r.signOnDate)), num: true },
+      { label: 'Sign On Port',          render: r => esc(r.signOnPort),        sort: r => txtSort(r.signOnPort) },
+      { label: 'Onboarding Status',     render: r => esc(r.onboardingStatus),  sort: r => txtSort(r.onboardingStatus) },
+      { label: 'Seafarer Name',         render: r => esc(r.name),              sort: r => txtSort(r.name) },
+      { label: 'Seafarer ID Number',    render: r => esc(r.crewIdNumber),      sort: r => txtSort(r.crewIdNumber) },
+      { label: 'Passport Status',       render: r => esc(r.passportStatus),    sort: r => txtSort(r.passportStatus) },
+      { label: 'BST Status',            render: r => esc(r.bstStatus),         sort: r => txtSort(r.bstStatus) },
+      { label: 'Seaman Book Status',    render: r => esc(r.seamanBookStatus),  sort: r => txtSort(r.seamanBookStatus) },
+      { label: 'Medical Status',        render: r => esc(r.medicalStatus),     sort: r => txtSort(r.medicalStatus) },
+      { label: 'C1/D Visa Status',      render: r => esc(r.c1dVisaStatus),     sort: r => txtSort(r.c1dVisaStatus) },
+      { label: 'OKTB Status',           render: r => esc(r.oktbStatus),        sort: r => txtSort(r.oktbStatus) },
+      { label: 'MCV Status',            render: r => esc(r.mcvStatus),         sort: r => txtSort(r.mcvStatus) },
+      { label: "MCV's Passport Number", render: r => esc(r.mcvPassportNumber), sort: r => txtSort(r.mcvPassportNumber) },
+      { label: 'Passport Number',       render: r => esc(r.passportNumber),    sort: r => txtSort(r.passportNumber) },
+      { label: 'Completed Vaccination', render: r => esc(r.vaccinesStatus),    sort: r => txtSort(r.vaccinesStatus) },
+      { label: 'Other Visa Status',     render: r => esc(r.otherVisaStatus),   sort: r => txtSort(r.otherVisaStatus) },
+      { label: 'Other Visa Issued Date',render: r => formatDate(r.otherVisaIssuedDate), sort: r => dateSort(parseDate(r.otherVisaIssuedDate)), num: true },
+    ];
+
+    const headHtml = () => `<tr>${cols.map((c, i) => {
+      const arrow = i === _recSort.i ? `<span class="sort-arrow">${_recSort.dir > 0 ? '▲' : '▼'}</span>` : '';
+      return `<th class="sortable" data-i="${i}">${c.label}${arrow}</th>`;
+    }).join('')}<th></th></tr>`;
 
     mc.innerHTML = `
       <div class="page-header"><h1>Records</h1></div>
       <div class="filter-bar">
-        <select id="rOffice"><option value="">All CTI Offices</option>${opts(offices, _recFilters.office)}</select>
-        <select id="rLine"><option value="">All Cruise Lines</option>${opts(cruiseLines, _recFilters.cruiseLine)}</select>
-        <select id="rOnboard"><option value="">All Onboarding Status</option>${opts(onboardings, _recFilters.onboarding)}</select>
+        ${msHTML('rOffice', 'All CTI Offices', offices, _recFilters.office)}
+        ${msHTML('rLine', 'All Cruise Lines', cruiseLines, _recFilters.cruiseLine)}
+        ${msHTML('rOnboard', 'All Onboarding Status', onboardings, _recFilters.onboarding)}
         <label class="filter-date">Sign On <input type="date" id="rFrom" value="${esc(_recFilters.from)}"></label>
         <label class="filter-date">to <input type="date" id="rTo" value="${esc(_recFilters.to)}"></label>
         <button class="btn-sm" id="rClear">Clear</button>
       </div>
       <div class="toolbar">
         <input type="search" id="recSearch" class="search-input"
-               placeholder="Search name, email, city, status…" value="${esc(_search)}">
+               placeholder="Search name, email, ID, port, status…" value="${esc(_search)}">
       </div>
       <div class="card table-card">
         <div class="table-wrap"><table class="data-table">
-          <thead><tr>
-            <th>Joining Ship</th><th>Sign On Date</th><th>Sign On Port</th><th>Onboarding Status</th>
-            <th>Seafarer Name</th><th>Seafarer ID Number</th><th>Passport Status</th><th>BST Status</th>
-            <th>Seaman Book Status</th><th>Medical Status</th><th>C1/D Visa Status</th><th>OKTB Status</th>
-            <th>MCV Status</th><th>MCV's Passport Number</th><th>Passport Number</th><th>Completed Vaccination</th>
-            <th>Other Visa Status</th><th>Other Visa Issued Date</th><th></th>
-          </tr></thead>
+          <thead id="recHead">${headHtml()}</thead>
           <tbody id="recBody"></tbody>
         </table></div>
       </div>`;
 
-    const paint = () => paintRows(recFiltered(data));
+    const paint = () => {
+      let rows = recFiltered(data);
+      if (_recSort.i >= 0) {
+        const c = cols[_recSort.i];
+        rows = rows.slice().sort((a, b) => {
+          const x = c.sort(a), y = c.sort(b);
+          const xe = (x === null || x === ''), ye = (y === null || y === '');
+          if (xe && ye) return 0;
+          if (xe) return 1;
+          if (ye) return -1;
+          return (c.num ? (x - y) : String(x).localeCompare(String(y))) * _recSort.dir;
+        });
+      }
+      document.getElementById('recHead').innerHTML = headHtml();
+      paintRows(rows, cols);
+      document.querySelectorAll('#recHead th.sortable').forEach(th =>
+        th.onclick = () => {
+          const i = +th.dataset.i;
+          if (i === _recSort.i) _recSort.dir = -_recSort.dir; else { _recSort.i = i; _recSort.dir = 1; }
+          paint();
+        });
+    };
 
+    wireMS(mc, 'rOffice',  sel => { _recFilters.office = sel;     paint(); });
+    wireMS(mc, 'rLine',    sel => { _recFilters.cruiseLine = sel; paint(); });
+    wireMS(mc, 'rOnboard', sel => { _recFilters.onboarding = sel; paint(); });
     const wire = (id, prop) => {
       const el = mc.querySelector('#' + id);
       el.addEventListener('change', () => { _recFilters[prop] = el.value; paint(); });
     };
-    wire('rOffice', 'office'); wire('rLine', 'cruiseLine'); wire('rOnboard', 'onboarding');
     wire('rFrom', 'from'); wire('rTo', 'to');
     mc.querySelector('#rClear').addEventListener('click', () => {
       _recFilters = emptyFilters();
@@ -614,35 +698,16 @@ const App = (() => {
     return rows;
   }
 
-  function paintRows(rows) {
+  function paintRows(rows, cols) {
     const tbody = document.getElementById('recBody');
     if (!tbody) return;
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="19" class="empty-row">No records match.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${cols.length + 1}" class="empty-row">No records match.</td></tr>`;
       return;
     }
-    tbody.innerHTML = rows.map(r => `
-      <tr>
-        <td>${esc(r.joiningShip)}</td>
-        <td>${formatDate(r.signOnDate)}</td>
-        <td>${esc(r.signOnPort)}</td>
-        <td>${esc(r.onboardingStatus)}</td>
-        <td>${esc(r.name)}</td>
-        <td>${esc(r.crewIdNumber)}</td>
-        <td>${esc(r.passportStatus)}</td>
-        <td>${esc(r.bstStatus)}</td>
-        <td>${esc(r.seamanBookStatus)}</td>
-        <td>${esc(r.medicalStatus)}</td>
-        <td>${esc(r.c1dVisaStatus)}</td>
-        <td>${esc(r.oktbStatus)}</td>
-        <td>${esc(r.mcvStatus)}</td>
-        <td>${esc(r.mcvPassportNumber)}</td>
-        <td>${esc(r.passportNumber)}</td>
-        <td>${esc(r.vaccinesStatus)}</td>
-        <td>${esc(r.otherVisaStatus)}</td>
-        <td>${formatDate(r.otherVisaIssuedDate)}</td>
-        <td><button class="btn-sm" data-edit="${_records.indexOf(r)}">Edit</button></td>
-      </tr>`).join('');
+    tbody.innerHTML = rows.map(r =>
+      `<tr>${cols.map(c => `<td>${c.render(r)}</td>`).join('')}<td><button class="btn-sm" data-edit="${_records.indexOf(r)}">Edit</button></td></tr>`
+    ).join('');
     tbody.querySelectorAll('[data-edit]').forEach(b =>
       b.addEventListener('click', () => openEdit(_records[+b.dataset.edit])));
   }
@@ -767,6 +832,9 @@ const App = (() => {
       });
     });
     window.addEventListener('hashchange', renderCurrentPage);
+    // Close any open multi-select panel when clicking elsewhere.
+    document.addEventListener('click', () =>
+      document.querySelectorAll('.ms-panel').forEach(p => p.hidden = true));
     // Drill-down modal: close on backdrop click or Escape.
     const detailModal = document.getElementById('detailModal');
     detailModal?.addEventListener('click', e => { if (e.target === detailModal) closeDetail(); });
