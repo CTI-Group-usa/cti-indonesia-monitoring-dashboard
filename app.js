@@ -207,7 +207,7 @@ const App = (() => {
       <div class="stat-grid" id="ovStats"></div>
       <div class="chart-row">
         <div class="card chart-card">
-          <div class="card-title">Deployments — last 13 months <span class="hint">(sign-on, deployment history)</span></div>
+          <div class="card-title">Deployments — last 12 months <span class="hint">(sign-on, deployment history)</span></div>
           <canvas id="chartDeploy" height="240"></canvas>
         </div>
         <div class="card chart-card">
