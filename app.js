@@ -240,14 +240,29 @@ const App = (() => {
     const newHired = recs.filter(isNewHire).length;
     const repeater = recs.filter(isRepeater).length;
     const assigned = recs.filter(hasSignOn).length;
-    const noAssign = recs.length - assigned;
+    const noAssignRows = recs.filter(r => !hasSignOn(r));
+    const noAssign = noAssignRows.length;
     const stats = document.getElementById('ovStats');
     if (stats) stats.innerHTML =
       statCard('Total Seafarers', recs.length.toLocaleString()) +
       statCard('New Hired', newHired.toLocaleString()) +
       statCard('Repeater', repeater.toLocaleString()) +
       statCard('Assigned', assigned.toLocaleString()) +
-      statCard('No Assignment', noAssign.toLocaleString());
+      statCard('No Assignment', noAssign.toLocaleString(), { id: 'statNoAssign', clickable: noAssign > 0 });
+
+    // No Assignment tile → drill down to those seafarers.
+    const naCard = document.getElementById('statNoAssign');
+    if (naCard && noAssign) {
+      const naCols = [
+        { label: 'ID Number',         render: r => esc(r.crewIdNumber),     sort: r => txtSort(r.crewIdNumber) },
+        { label: 'Name',              render: r => esc(r.name),             sort: r => txtSort(r.name) },
+        { label: 'Email',             render: r => esc(r.email),            sort: r => txtSort(r.email) },
+        { label: 'Position Approved', render: r => esc(r.position),         sort: r => txtSort(r.position) },
+        { label: 'Hired Date',        render: r => formatDate(r.hiredDate), sort: r => dateSort(parseDate(r.hiredDate)), num: true },
+        { label: 'Onboarding Status', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus) },
+      ];
+      naCard.onclick = () => openDetailModal(noAssignRows, naCols, 'No Assignment');
+    }
 
     destroyCharts();
 
@@ -599,10 +614,6 @@ const App = (() => {
 
   // Render a drill-down detail table (in a modal) for a set of seafarer records.
   function renderVisaDetail(rows, tab, title) {
-    const modal = document.getElementById('detailModal');
-    const body  = document.getElementById('detailBody');
-    if (!modal || !body) return;
-
     // Each column: label, render(row) -> HTML, sort(row) -> comparable, num flag.
     const cols = [
       { label: 'Name',       render: r => `${esc(r.name)}<div class="cell-sub">${esc(r.email)}</div>`, sort: r => txtSort(r.name) },
@@ -617,6 +628,16 @@ const App = (() => {
     cols.push({ label: 'Onboarding', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus) });
     cols.push({ label: 'Sign On',    render: r => formatDate(r.signOnDate),  sort: r => dateSort(parseDate(r.signOnDate)), num: true });
     cols.push({ label: 'Sign Off',   render: r => formatDate(r.signOffDate),      sort: r => dateSort(parseDate(r.signOffDate)),     num: true });
+
+    openDetailModal(rows, cols, title);
+  }
+
+  // Generic sortable drill-down modal for any set of records + column defs.
+  // cols: [{ label, render(row)->HTML, sort(row)->comparable, num? }]
+  function openDetailModal(rows, cols, title) {
+    const modal = document.getElementById('detailModal');
+    const body  = document.getElementById('detailBody');
+    if (!modal || !body) return;
 
     // Columns are fixed-width with ellipsis (no horizontal scroll); expose the
     // full value on hover via a title attribute (HTML stripped for plain text).
