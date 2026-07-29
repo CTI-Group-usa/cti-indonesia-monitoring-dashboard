@@ -68,9 +68,13 @@ const CONFIG = {
 
     // Documents / readiness
     passportStatus:   'Passport_Status',
+    passportNumber:   'Passport_Number',
     passportExpiry:   'Passport_Expired_Date',
     medicalStatus:    'Medical_Status',
     medicalExpiry:    'Medical_Expiration_Date',
+    bstStatus:        'BST_Status',
+    seamanBookStatus: 'Seaman_Book_Status',
+    vaccinesStatus:   'Vaccines_Status',       // "Completed Vaccination"
 
     // Per-visa-type fields (for the VISA page sub-tabs)
     c1dVisaStatus:       'C1_D_Visa_Status',
@@ -80,6 +84,7 @@ const CONFIG = {
     mcvStatus:           'MCV_Status',
     mcvNumber:           'MCV_Number',
     mcvExpiry:           'MCV_Expiration_Date',
+    mcvPassportNumber:   'MCV_s_Passport_Number',
     oktbStatus:          'OKTB',
     // Schengen is tracked via the "Other Visa" fields (Other Visa Name = Schengen)
     otherVisaStatus:     'Other_Visa_Status',
@@ -87,6 +92,7 @@ const CONFIG = {
     otherVisaNumber:     'Other_Visa_Number',
     otherVisaAppointment:'Other_Visa_Appointment_Date',
     otherVisaExpiry:     'Other_Visa_Expiration_Date',
+    otherVisaIssuedDate: 'Other_Visa_Issued_Date',
 
     // Timestamps  (NOTE: Modified Time API name is Updated_On)
     createdDate:      'Created_Time',

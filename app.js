@@ -573,8 +573,11 @@ const App = (() => {
       <div class="card table-card">
         <div class="table-wrap"><table class="data-table">
           <thead><tr>
-            <th>Name</th><th>CTI Office</th><th>Position</th><th>Seafarer Status</th>
-            <th>Visa Status</th><th>Deployment</th><th></th>
+            <th>Joining Ship</th><th>Sign On Date</th><th>Sign On Port</th><th>Onboarding Status</th>
+            <th>Seafarer Name</th><th>Seafarer ID Number</th><th>Passport Status</th><th>BST Status</th>
+            <th>Seaman Book Status</th><th>Medical Status</th><th>C1/D Visa Status</th><th>OKTB Status</th>
+            <th>MCV Status</th><th>MCV's Passport Number</th><th>Passport Number</th><th>Completed Vaccination</th>
+            <th>Other Visa Status</th><th>Other Visa Issued Date</th><th></th>
           </tr></thead>
           <tbody id="recBody"></tbody>
         </table></div>
@@ -604,8 +607,9 @@ const App = (() => {
     let rows = applyDeployFilters(data, _recFilters);
     const q = _search.trim().toLowerCase();
     if (q) rows = rows.filter(r =>
-      [r.name, r.email, r.ctiOffice, r.country, r.position, r.status,
-       r.visaStatus, r.cruiseLine, r.joiningShip, r.onboardingStatus]
+      [r.name, r.email, r.ctiOffice, r.crewIdNumber, r.joiningShip, r.signOnPort,
+       r.onboardingStatus, r.passportNumber, r.passportStatus, r.mcvPassportNumber,
+       r.c1dVisaStatus, r.oktbStatus, r.mcvStatus, r.otherVisaStatus]
         .some(v => String(v).toLowerCase().includes(q)));
     return rows;
   }
@@ -614,23 +618,31 @@ const App = (() => {
     const tbody = document.getElementById('recBody');
     if (!tbody) return;
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="7" class="empty-row">No records match.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="19" class="empty-row">No records match.</td></tr>`;
       return;
     }
-    tbody.innerHTML = rows.map(r => {
-      const deployment = [r.cruiseLine, r.joiningShip]
-        .filter(v => v && v !== '—').join(' · ') || '—';
-      return `
+    tbody.innerHTML = rows.map(r => `
       <tr>
-        <td>${esc(r.name)}<div class="cell-sub">${esc(r.email)}</div></td>
-        <td>${esc(r.ctiOffice)}</td>
-        <td>${esc(r.position)}</td>
-        <td>${badge(r.status)}</td>
-        <td>${badge(r.visaStatus)}</td>
-        <td>${esc(deployment)}${r.onboardingStatus && r.onboardingStatus !== '—' ? `<div class="cell-sub">${esc(r.onboardingStatus)}</div>` : ''}</td>
+        <td>${esc(r.joiningShip)}</td>
+        <td>${formatDate(r.signOnDate)}</td>
+        <td>${esc(r.signOnPort)}</td>
+        <td>${esc(r.onboardingStatus)}</td>
+        <td>${esc(r.name)}</td>
+        <td>${esc(r.crewIdNumber)}</td>
+        <td>${esc(r.passportStatus)}</td>
+        <td>${esc(r.bstStatus)}</td>
+        <td>${esc(r.seamanBookStatus)}</td>
+        <td>${esc(r.medicalStatus)}</td>
+        <td>${esc(r.c1dVisaStatus)}</td>
+        <td>${esc(r.oktbStatus)}</td>
+        <td>${esc(r.mcvStatus)}</td>
+        <td>${esc(r.mcvPassportNumber)}</td>
+        <td>${esc(r.passportNumber)}</td>
+        <td>${esc(r.vaccinesStatus)}</td>
+        <td>${esc(r.otherVisaStatus)}</td>
+        <td>${formatDate(r.otherVisaIssuedDate)}</td>
         <td><button class="btn-sm" data-edit="${_records.indexOf(r)}">Edit</button></td>
-      </tr>`;
-    }).join('');
+      </tr>`).join('');
     tbody.querySelectorAll('[data-edit]').forEach(b =>
       b.addEventListener('click', () => openEdit(_records[+b.dataset.edit])));
   }

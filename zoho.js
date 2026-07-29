@@ -95,9 +95,13 @@ const Zoho = (() => {
       recruiter:        val(r[F.recruiter]),
       // Documents
       passportStatus:   val(r[F.passportStatus]),
+      passportNumber:   val(r[F.passportNumber]),
       passportExpiry:   r[F.passportExpiry] || null,
       medicalStatus:    val(r[F.medicalStatus]),
       medicalExpiry:    r[F.medicalExpiry]  || null,
+      bstStatus:        val(r[F.bstStatus]),
+      seamanBookStatus: val(r[F.seamanBookStatus]),
+      vaccinesStatus:   val(r[F.vaccinesStatus]),
       // Per-visa-type (VISA page)
       c1dVisaStatus:      val(r[F.c1dVisaStatus]),
       c1dVisaNumber:      val(r[F.c1dVisaNumber]),
@@ -106,12 +110,14 @@ const Zoho = (() => {
       mcvStatus:          val(r[F.mcvStatus]),
       mcvNumber:          val(r[F.mcvNumber]),
       mcvExpiry:          r[F.mcvExpiry]          || null,
+      mcvPassportNumber:  val(r[F.mcvPassportNumber]),
       oktbStatus:         val(r[F.oktbStatus]),
       otherVisaStatus:      val(r[F.otherVisaStatus]),
       otherVisaName:        val(r[F.otherVisaName]),
       otherVisaNumber:      val(r[F.otherVisaNumber]),
       otherVisaAppointment: r[F.otherVisaAppointment] || null,
       otherVisaExpiry:      r[F.otherVisaExpiry]      || null,
+      otherVisaIssuedDate:  r[F.otherVisaIssuedDate]  || null,
       // Timestamps
       createdDate:      r[F.createdDate]  || null,
       modifiedDate:     r[F.modifiedDate] || null,
