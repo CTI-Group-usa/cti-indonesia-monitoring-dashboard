@@ -115,6 +115,9 @@ const App = (() => {
   // instantly from an IndexedDB cache (handles the ~10MB dataset that
   // would overflow localStorage) and revalidate only when it's stale.
   const CACHE_TTL   = 30 * 60 * 1000;  // ignore cache older than 30 min
+  // Bump when the record-mapping logic changes so old snapshots are discarded
+  // (otherwise a stale snapshot mapped by the previous code is shown first).
+  const CACHE_VERSION = 3;
   const DB_NAME = 'cti_indo', STORE = 'cache', CACHE_KEY = 'records';
 
   function idbOpen() {
@@ -146,14 +149,14 @@ const App = (() => {
 
   async function readCache() {
     const c = await idbGet(CACHE_KEY);
-    if (!c || !Array.isArray(c.records) || (Date.now() - c.ts) > CACHE_TTL) return null;
+    if (!c || c.v !== CACHE_VERSION || !Array.isArray(c.records) || (Date.now() - c.ts) > CACHE_TTL) return null;
     return c;
   }
 
   async function fetchFresh() {
     _records = await Zoho.getAllRecords();
     _lastUpdated = Date.now();
-    idbSet(CACHE_KEY, { ts: _lastUpdated, records: _records });  // fire and forget
+    idbSet(CACHE_KEY, { ts: _lastUpdated, v: CACHE_VERSION, records: _records });  // fire and forget
     return _records;
   }
 
