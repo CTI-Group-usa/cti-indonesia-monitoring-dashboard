@@ -100,7 +100,11 @@ const Zoho = (() => {
       medicalStatus:    val(r[F.medicalStatus]),
       medicalExpiry:    r[F.medicalExpiry]  || null,
       bstStatus:        val(r[F.bstStatus]),
+      bstNumber:        val(r[F.bstNumber]),
+      bstExpiry:        r[F.bstExpiry]        || null,
       seamanBookStatus: val(r[F.seamanBookStatus]),
+      seamanBookNumber: val(r[F.seamanBookNumber]),
+      seamanBookExpiry: r[F.seamanBookExpiry] || null,
       vaccinesStatus:   val(r[F.vaccinesStatus]),
       // Per-visa-type (VISA page)
       c1dVisaStatus:      val(r[F.c1dVisaStatus]),

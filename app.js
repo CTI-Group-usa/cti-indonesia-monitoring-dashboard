@@ -265,6 +265,20 @@ const App = (() => {
   //  Data merged: Candidates module per-visa fields + Visa Log sheet.
   // ═══════════════════════════════════════════════════════════
   const VISA_TABS = [
+    // General documents (module-only — no sheet fallback).
+    { key: 'passport', label: 'Passport',
+      statusKey: 'passportStatus',    numberKey: 'passportNumber',    apptKey: null,
+      expiryKey: 'passportExpiry' },
+    { key: 'bst',      label: 'BST',
+      statusKey: 'bstStatus',         numberKey: 'bstNumber',         apptKey: null,
+      expiryKey: 'bstExpiry' },
+    { key: 'seaman',   label: "Seaman's Book",
+      statusKey: 'seamanBookStatus',  numberKey: 'seamanBookNumber',  apptKey: null,
+      expiryKey: 'seamanBookExpiry' },
+    { key: 'medical',  label: 'Medical',
+      statusKey: 'medicalStatus',     numberKey: null,                apptKey: null,
+      expiryKey: 'medicalExpiry' },
+    // Visas.
     { key: 'c1d',      label: 'C1/D',
       statusKey: 'c1dVisaStatus',   numberKey: 'c1dVisaNumber',   apptKey: 'c1dVisaAppointment',
       expiryKey: 'c1dVisaExpiry',   sheetType: /c1\s*\/?\s*d/i },
@@ -280,7 +294,7 @@ const App = (() => {
       statusKey: 'oktbStatus',      numberKey: null,              apptKey: null,
       expiryKey: null,              sheetType: /oktb/i },
   ];
-  let _visaTab = 'c1d';
+  let _visaTab = 'passport';
   const DEFAULT_OFFICE = 'CTI Indonesia';
   // Onboarding statuses hidden from the whole dashboard (VISA + Records).
   const EXCLUDED_ONBOARDING = ['resigned', 'process by mss philippines'];
@@ -389,7 +403,7 @@ const App = (() => {
     const onboardings = distinctVals(data, 'onboardingStatus');
 
     mc.innerHTML = `
-      <div class="page-header"><h1>Visa</h1></div>
+      <div class="page-header"><h1>Documents</h1></div>
       <div class="filter-bar">
         ${msHTML('fOffice', 'All CTI Offices', offices, _visaFilters.office)}
         ${msHTML('fLine', 'All Cruise Lines', cruiseLines, _visaFilters.cruiseLine)}
@@ -474,7 +488,7 @@ const App = (() => {
       <div class="chart-row">
         <div class="card chart-card">
           <div class="card-title">${tab.label} — By Status ${total ? '<span class="hint">(click a bar to list those seafarers)</span>' : ''}</div>
-          ${total ? `<canvas id="visaChart" height="240"></canvas>` : `<p class="empty-row">No ${tab.label} visa records found.</p>`}
+          ${total ? `<canvas id="visaChart" height="240"></canvas>` : `<p class="empty-row">No ${tab.label} records found.</p>`}
         </div>
       </div>`;
 
@@ -809,8 +823,8 @@ const App = (() => {
   }
 
   // ── Router ──────────────────────────────────────────────────
-  const ROUTES = { overview: renderOverview, records: renderRecords, visa: renderVisa };
-  const TITLES = { overview: 'Overview', records: 'Records', visa: 'Visa' };
+  const ROUTES = { overview: renderOverview, records: renderRecords, documents: renderVisa, visa: renderVisa };
+  const TITLES = { overview: 'Overview', records: 'Records', documents: 'Documents', visa: 'Documents' };
 
   function currentPage() {
     const p = (location.hash || '#overview').slice(1);

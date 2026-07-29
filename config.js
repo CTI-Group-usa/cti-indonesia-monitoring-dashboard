@@ -73,7 +73,11 @@ const CONFIG = {
     medicalStatus:    'Medical_Status',
     medicalExpiry:    'Medical_Expiration_Date',
     bstStatus:        'BST_Status',
+    bstNumber:        'BST_Certificate_Number',
+    bstExpiry:        'BST_Expiration_Date',
     seamanBookStatus: 'Seaman_Book_Status',
+    seamanBookNumber: 'Seaman_Book_Number',
+    seamanBookExpiry: 'Seaman_Book_Expiration_Date',
     vaccinesStatus:   'Vaccines_Status',       // "Completed Vaccination"
 
     // Per-visa-type fields (for the VISA page sub-tabs)
