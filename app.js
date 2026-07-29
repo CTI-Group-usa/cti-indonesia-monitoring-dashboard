@@ -675,7 +675,8 @@ const App = (() => {
     }).join('')}</tr>`;
 
     const render = () => {
-      const n = curRows().length;
+      // Header count: total across all tabs (not just the active one).
+      const n = tabs ? tabs.reduce((s, t) => s + t.rows.length, 0) : curRows().length;
       const subtabs = tabs ? `<div class="subtabs" style="padding:8px 22px 0;margin:0;">${
         tabs.map((t, i) => `<button class="subtab ${i === activeTab ? 'active' : ''}" data-dtab="${i}">${esc(t.label)} · ${t.rows.length}</button>`).join('')
       }</div>` : '';
