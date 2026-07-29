@@ -268,7 +268,7 @@ const App = (() => {
     // General documents (module-only — no sheet fallback).
     { key: 'passport', label: 'Passport',
       statusKey: 'passportStatus',    numberKey: 'passportNumber',    apptKey: null,
-      expiryKey: 'passportExpiry' },
+      expiryKey: 'passportExpiry',    expiryMonths: 18 },
     { key: 'bst',      label: 'BST',
       statusKey: 'bstStatus',         numberKey: 'bstNumber',         apptKey: null,
       expiryKey: 'bstExpiry' },
@@ -462,12 +462,16 @@ const App = (() => {
     const noStatusRows = data.filter(r => !visaStatusOf(r, tab));
     const noStatus = noStatusRows.length;
 
+    const expiryMonths = tab.expiryMonths || 9;
     let expiringRows = [];
     if (tab.expiryKey) {
       const now = Date.now();
-      const soonDate = new Date(); soonDate.setMonth(soonDate.getMonth() + 9);
+      const soonDate = new Date(); soonDate.setMonth(soonDate.getMonth() + expiryMonths);
       const soon = soonDate.getTime();
+      // Only currently-Valid documents count as "expiring" — in-process /
+      // need-to-process ones are already being worked on.
       expiringRows = holders
+        .filter(x => isValid(x.s))
         .map(x => ({ r: x.r, t: (parseDate(x.r[tab.expiryKey]) || {}).getTime?.() }))
         .filter(x => x.t && x.t >= now && x.t <= soon)
         .sort((a, b) => a.t - b.t)   // soonest expiry first
@@ -483,7 +487,7 @@ const App = (() => {
         ${statCard(`Total ${tab.label}`, total, { id: 'statTotal', clickable: total > 0 })}
         ${statCard('Valid', valid, { id: 'statValid', clickable: valid > 0 })}
         ${statCard('In Progress', inProgress, { id: 'statProgress', clickable: inProgress > 0 })}
-        ${tab.expiryKey ? statCard('Expiring < 9 months', expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('No Status', noStatus, { id: 'statNoStatus', clickable: noStatus > 0 })}
+        ${tab.expiryKey ? statCard(`Expiring < ${expiryMonths} months`, expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('No Status', noStatus, { id: 'statNoStatus', clickable: noStatus > 0 })}
       </div>
       <div class="chart-row">
         <div class="card chart-card">
@@ -502,7 +506,7 @@ const App = (() => {
     wireStat('statTotal',    totalRows,    `${tab.label} — All`);
     wireStat('statValid',    validRows,    `${tab.label} — Valid`);
     wireStat('statProgress', progressRows, `${tab.label} — In Progress`);
-    wireStat('statExpiring', expiringRows, `${tab.label} — Expiring < 9 months`);
+    wireStat('statExpiring', expiringRows, `${tab.label} — Expiring < ${expiryMonths} months`);
     wireStat('statNoStatus', noStatusRows, `${tab.label} — No Status`);
   }
 
