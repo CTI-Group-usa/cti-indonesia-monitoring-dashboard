@@ -248,10 +248,10 @@ const App = (() => {
 
     destroyCharts();
 
-    // Chart 1 — deployments (sheet), last 13 months (current + 12 back).
+    // Chart 1 — deployments (sheet), last 12 months (current + 11 back).
     const back = {};
-    for (let i = 12; i >= 0; i--) { const d = new Date(base); d.setMonth(d.getMonth() - i); back[monthKey(d)] = 0; }
-    const minBack = new Date(base); minBack.setMonth(minBack.getMonth() - 12);
+    for (let i = 11; i >= 0; i--) { const d = new Date(base); d.setMonth(d.getMonth() - i); back[monthKey(d)] = 0; }
+    const minBack = new Date(base); minBack.setMonth(minBack.getMonth() - 11);
     const maxCur  = new Date(base); maxCur.setMonth(maxCur.getMonth() + 1);
     deployRows.forEach(row => {
       if (!inSet(f.office, row['CTI Office']) || !inSet(f.cruiseLine, row['Cruise Line'])) return;
@@ -291,6 +291,30 @@ const App = (() => {
       Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, n));
   }
 
+  // Draws each bar's value just above the bar, so the count is visible
+  // without hovering.
+  const barValueLabels = {
+    id: 'barValueLabels',
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || meta.hidden) return;
+      const color = (getComputedStyle(document.documentElement)
+        .getPropertyValue('--text') || '#e5e7eb').trim();
+      ctx.save();
+      ctx.font = '600 11px Inter, system-ui, sans-serif';
+      ctx.fillStyle = color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      meta.data.forEach((bar, i) => {
+        const v = chart.data.datasets[0].data[i];
+        if (v == null) return;
+        ctx.fillText(Number(v).toLocaleString(), bar.x, bar.y - 4);
+      });
+      ctx.restore();
+    },
+  };
+
   function drawBar(canvasId, obj, onClick) {
     const el = document.getElementById(canvasId);
     if (!el || typeof Chart === 'undefined') return;
@@ -303,11 +327,12 @@ const App = (() => {
       },
       options: {
         plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        scales: { y: { beginAtZero: true, grace: '8%', ticks: { precision: 0 } } },
         responsive: true, maintainAspectRatio: false,
         onClick: onClick ? (evt, els) => { if (els.length) onClick(c.data.labels[els[0].index]); } : undefined,
         onHover: onClick ? (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; } : undefined,
       },
+      plugins: [barValueLabels],
     });
     _charts.push(c);
   }
