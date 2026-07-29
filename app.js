@@ -257,7 +257,7 @@ const App = (() => {
         { label: 'ID Number',         render: r => esc(r.crewIdNumber),     sort: r => txtSort(r.crewIdNumber) },
         { label: 'Name',              render: r => esc(r.name),             sort: r => txtSort(r.name) },
         { label: 'Email',             render: r => esc(r.email),            sort: r => txtSort(r.email) },
-        { label: 'Position Approved', render: r => esc(r.position),         sort: r => txtSort(r.position) },
+        { label: 'Position Hired',    render: r => esc(r.position),         sort: r => txtSort(r.position) },
         { label: 'Hired Date',        render: r => formatDate(r.hiredDate), sort: r => dateSort(parseDate(r.hiredDate)), num: true },
         { label: 'Onboarding Status', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus) },
       ];
