@@ -1164,9 +1164,9 @@ th.sorted {
 .data-table th .sort-arrow { margin-left: 4px; font-size: 0.7em; color: var(--accent); }
 
 /* ─── Records table: compact + frozen ID/Name columns ─── */
-.records-table { font-size: 0.75rem; }
-.records-table thead th { font-size: 0.64rem; padding: 7px 9px; }
-.records-table tbody td { padding: 5px 9px; }
+.records-table { font-size: 0.68rem; }
+.records-table thead th { font-size: 0.58rem; padding: 5px 7px; }
+.records-table tbody td { padding: 3px 7px; }
 /* Freeze the first two columns (Seafarer ID Number, Seafarer Name). */
 .records-table th.sticky-col, .records-table td.sticky-col {
   position: sticky; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
