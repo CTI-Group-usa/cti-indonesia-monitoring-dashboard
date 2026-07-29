@@ -286,11 +286,11 @@ const App = (() => {
     const to   = f.to   ? new Date(f.to)   : null;
     if (to) to.setHours(23, 59, 59, 999);
     return data.filter(r => {
-      if (f.office     && r.ctiOffice        !== f.office)     return false;
-      if (f.cruiseLine && r.deployCruiseLine !== f.cruiseLine) return false;
-      if (f.onboarding && r.deployStatus     !== f.onboarding) return false;
+      if (f.office     && r.ctiOffice       !== f.office)     return false;
+      if (f.cruiseLine && r.cruiseLine       !== f.cruiseLine) return false;
+      if (f.onboarding && r.onboardingStatus !== f.onboarding) return false;
       if (from || to) {
-        const d = parseSheetDate(r.deployDate);
+        const d = parseDate(r.signOnDate);
         if (!d) return false;
         if (from && d < from) return false;
         if (to   && d > to)   return false;
@@ -319,8 +319,8 @@ const App = (() => {
 
     destroyCharts();
     const offices     = distinctVals(data, 'ctiOffice');
-    const cruiseLines = distinctVals(data, 'deployCruiseLine');
-    const onboardings = distinctVals(data, 'deployStatus');
+    const cruiseLines = distinctVals(data, 'cruiseLine');
+    const onboardings = distinctVals(data, 'onboardingStatus');
     const opts = (arr, sel) =>
       arr.map(v => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(v)}</option>`).join('');
 
@@ -449,11 +449,11 @@ const App = (() => {
     if (tab.numberKey) cols.push({ label: 'Number',      render: r => esc(r[tab.numberKey]),      sort: r => txtSort(r[tab.numberKey]) });
     if (tab.apptKey)   cols.push({ label: 'Appointment', render: r => formatDate(r[tab.apptKey]), sort: r => dateSort(parseDate(r[tab.apptKey])), num: true });
     if (tab.expiryKey) cols.push({ label: 'Expiry',      render: r => formatDate(r[tab.expiryKey]), sort: r => dateSort(parseDate(r[tab.expiryKey])), num: true });
-    cols.push({ label: 'Ship',       render: r => esc(r.deployShip),   sort: r => txtSort(r.deployShip) });
+    cols.push({ label: 'Ship',       render: r => esc(r.joiningShip),   sort: r => txtSort(r.joiningShip) });
     if (tab.key === 'oktb')
-      cols.push({ label: 'Joining Port', render: r => esc(r.deployPort), sort: r => txtSort(r.deployPort) });
-    cols.push({ label: 'Onboarding', render: r => esc(r.deployStatus), sort: r => txtSort(r.deployStatus) });
-    cols.push({ label: 'Sign On',    render: r => formatSheetDate(r.deployDate),  sort: r => dateSort(parseSheetDate(r.deployDate)), num: true });
+      cols.push({ label: 'Joining Port', render: r => esc(r.signOnPort), sort: r => txtSort(r.signOnPort) });
+    cols.push({ label: 'Onboarding', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus) });
+    cols.push({ label: 'Sign On',    render: r => formatDate(r.signOnDate),  sort: r => dateSort(parseDate(r.signOnDate)), num: true });
     cols.push({ label: 'Sign Off',   render: r => formatDate(r.signOffDate),      sort: r => dateSort(parseDate(r.signOffDate)),     num: true });
 
     // Columns are fixed-width with ellipsis (no horizontal scroll); expose the

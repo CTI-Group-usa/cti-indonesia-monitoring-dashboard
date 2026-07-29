@@ -57,6 +57,7 @@ const CONFIG = {
     joiningShip:      'Joining_Ship',
     signOnDate:       'Sign_On_Date',
     signOffDate:      'Sign_Off_Date',
+    signOnPort:       'Sign_On_Port',
     hiredDate:        'Hired_Date',
     contractNumber:   'Contract_Number',
     source:           'Source',

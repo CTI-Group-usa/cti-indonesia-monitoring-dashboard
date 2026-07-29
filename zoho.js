@@ -86,6 +86,7 @@ const Zoho = (() => {
       joiningShip:      val(r[F.joiningShip]),
       signOnDate:       r[F.signOnDate]   || null,
       signOffDate:      r[F.signOffDate]  || null,
+      signOnPort:       val(r[F.signOnPort]),
       hiredDate:        r[F.hiredDate]    || null,
       contractNumber:   val(r[F.contractNumber]),
       source:           val(r[F.source]),
