@@ -234,7 +234,7 @@ const App = (() => {
     const recs = data.filter(r => inSet(f.office, r.ctiOffice) && inSet(f.cruiseLine, r.cruiseLine));
 
     // Stat cards (from the module, respecting the filter).
-    const isNewHire  = r => /new\s*hire/i.test(String(r.employmentStatus || ''));
+    const isNewHire  = r => /new\s*hire|re\s*hire/i.test(String(r.employmentStatus || ''));
     const isRepeater = r => /repeat/i.test(String(r.employmentStatus || ''));
     const hasSignOn  = r => r.signOnDate && r.signOnDate !== '—';
     const newHired = recs.filter(isNewHire).length;
