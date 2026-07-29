@@ -637,6 +637,7 @@ const App = (() => {
         { label: 'MCV Passport Number', render: r => esc(r.mcvPassportNumber), sort: r => txtSort(r.mcvPassportNumber), w: 180 },
         { label: 'Passport Number',     render: r => esc(r.passportNumber),    sort: r => txtSort(r.passportNumber),    w: 160 },
         { label: 'MCV Status',          render: r => esc(r.mcvStatus),         sort: r => txtSort(r.mcvStatus),    w: 130 },
+        { label: 'MCV Expiry',          render: r => formatDate(r.mcvExpiry),  sort: r => dateSort(parseDate(r.mcvExpiry)), num: true, w: 120 },
         { label: 'Sign On Date',        render: r => formatDate(r.signOnDate), sort: r => dateSort(parseDate(r.signOnDate)), num: true, w: 120 },
         { label: 'Sign Off Date',       render: r => formatDate(r.signOffDate),sort: r => dateSort(parseDate(r.signOffDate)), num: true, w: 120 },
         { label: 'Ship',                render: r => esc(r.joiningShip),       sort: r => txtSort(r.joiningShip),  w: 150 },
