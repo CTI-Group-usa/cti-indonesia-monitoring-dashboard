@@ -390,9 +390,6 @@ const App = (() => {
 
     mc.innerHTML = `
       <div class="page-header"><h1>Visa</h1></div>
-      <div class="subtabs">
-        ${VISA_TABS.map(t => `<button class="subtab ${t.key === _visaTab ? 'active' : ''}" data-visatab="${t.key}">${t.label}</button>`).join('')}
-      </div>
       <div class="filter-bar">
         ${msHTML('fOffice', 'All CTI Offices', offices, _visaFilters.office)}
         ${msHTML('fLine', 'All Cruise Lines', cruiseLines, _visaFilters.cruiseLine)}
@@ -400,6 +397,9 @@ const App = (() => {
         <label class="filter-date">Sign On <input type="date" id="fFrom" value="${esc(_visaFilters.from)}"></label>
         <label class="filter-date">to <input type="date" id="fTo" value="${esc(_visaFilters.to)}"></label>
         <button class="btn-sm" id="fClear">Clear</button>
+      </div>
+      <div class="subtabs">
+        ${VISA_TABS.map(t => `<button class="subtab ${t.key === _visaTab ? 'active' : ''}" data-visatab="${t.key}">${t.label}</button>`).join('')}
       </div>
       <div id="visaPanel"></div>`;
 
