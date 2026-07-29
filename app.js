@@ -271,7 +271,8 @@ const App = (() => {
     { key: 'schengen', label: 'Schengen',
       statusKey: 'otherVisaStatus', numberKey: 'otherVisaNumber', apptKey: 'otherVisaAppointment',
       expiryKey: 'otherVisaExpiry', sheetType: /schengen/i,
-      nameKey: 'otherVisaName',     nameMatch: /schengen/i },
+      nameKey: 'otherVisaName',     nameMatch: /schengen/i,
+      moduleOnly: true },   // Recruit module only — no Visa Log sheet fallback (excludes payment statuses)
     { key: 'mcv',      label: 'MCV',
       statusKey: 'mcvStatus',       numberKey: 'mcvNumber',       apptKey: null,
       expiryKey: 'mcvExpiry',       sheetType: /mcv/i },
@@ -316,7 +317,7 @@ const App = (() => {
     let s = rec[tab.statusKey];
     // Schengen only counts when the "Other Visa" is actually Schengen.
     if (tab.nameMatch && !tab.nameMatch.test(String(rec[tab.nameKey] || ''))) s = '—';
-    if ((!s || s === '—') && tab.sheetType && tab.sheetType.test(String(rec.visaType || '')))
+    if (!tab.moduleOnly && (!s || s === '—') && tab.sheetType && tab.sheetType.test(String(rec.visaType || '')))
       s = rec.visaStatus;
     return (s && s !== '—') ? String(s) : null;
   }
