@@ -233,18 +233,20 @@ const App = (() => {
     // Filtered module records.
     const recs = data.filter(r => inSet(f.office, r.ctiOffice) && inSet(f.cruiseLine, r.cruiseLine));
 
-    // Stat cards (respect the filter).
-    const byStatus = {};
-    recs.forEach(r => { byStatus[r.status] = (byStatus[r.status] || 0) + 1; });
-    const active = Object.entries(byStatus)
-      .filter(([k]) => /active|progress|pending|onboard|hired|assigned|deployed|sign/i.test(k))
-      .reduce((n, [, v]) => n + v, 0);
+    // Stat cards (from the module, respecting the filter).
+    const isNewHire  = r => /new\s*hire/i.test(String(r.employmentStatus || ''));
+    const isRepeater = r => /repeat/i.test(String(r.employmentStatus || ''));
+    const hasSignOn  = r => r.signOnDate && r.signOnDate !== '—';
+    const newHired = recs.filter(isNewHire).length;
+    const repeater = recs.filter(isRepeater).length;
+    const assigned = recs.filter(hasSignOn).length;
+    const noAssign = recs.length - assigned;
     const stats = document.getElementById('ovStats');
     if (stats) stats.innerHTML =
-      statCard('Total Seafarers', recs.length.toLocaleString()) +
-      statCard('Visa Logged', recs.filter(r => r._sheetRows?.visa).length.toLocaleString()) +
-      statCard('Deployed', recs.filter(r => r._sheetRows?.cruise).length.toLocaleString()) +
-      statCard('Active / In Progress', active.toLocaleString());
+      statCard('New Hired', newHired.toLocaleString()) +
+      statCard('Repeater', repeater.toLocaleString()) +
+      statCard('Assigned', assigned.toLocaleString()) +
+      statCard('No Assignment', noAssign.toLocaleString());
 
     destroyCharts();
 
