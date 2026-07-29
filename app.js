@@ -588,11 +588,14 @@ const App = (() => {
     if (tab.key === 'mcv') {
       const norm = v => String(v ?? '').trim().toUpperCase();
       const blank = s => s === '' || s === '—';
-      unmatchedRows = holders.map(x => x.r).filter(r => {
-        const a = norm(r.mcvPassportNumber), b = norm(r.passportNumber);
-        if (blank(a) || blank(b)) return false;   // need both present to compare
-        return a !== b;
-      });
+      unmatchedRows = holders
+        .filter(x => isValid(x.s))   // only Valid MCV documents
+        .map(x => x.r)
+        .filter(r => {
+          const a = norm(r.mcvPassportNumber), b = norm(r.passportNumber);
+          if (blank(a) || blank(b)) return false;   // need both present to compare
+          return a !== b;
+        });
     }
     const unmatched = unmatchedRows.length;
 
