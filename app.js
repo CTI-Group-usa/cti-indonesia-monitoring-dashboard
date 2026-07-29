@@ -261,7 +261,11 @@ const App = (() => {
         { label: 'Hired Date',        render: r => formatDate(r.hiredDate), sort: r => dateSort(parseDate(r.hiredDate)), num: true },
         { label: 'Onboarding Status', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus) },
       ];
-      naCard.onclick = () => openDetailModal(noAssignRows, naCols, 'No Assignment');
+      const naTabs = [
+        { label: 'New Hire', rows: noAssignRows.filter(isNewHire) },
+        { label: 'Repeater', rows: noAssignRows.filter(isRepeater) },
+      ];
+      naCard.onclick = () => openDetailModal(null, naCols, 'No Assignment', naTabs);
     }
 
     destroyCharts();
@@ -634,25 +638,27 @@ const App = (() => {
 
   // Generic sortable drill-down modal for any set of records + column defs.
   // cols: [{ label, render(row)->HTML, sort(row)->comparable, num? }]
-  function openDetailModal(rows, cols, title) {
+  // tabs (optional): [{ label, rows }] — renders sub-tabs; `rows` param ignored.
+  function openDetailModal(rows, cols, title, tabs) {
     const modal = document.getElementById('detailModal');
     const body  = document.getElementById('detailBody');
     if (!modal || !body) return;
 
-    // Columns are fixed-width with ellipsis (no horizontal scroll); expose the
-    // full value on hover via a title attribute (HTML stripped for plain text).
+    let activeTab = 0, sortI = -1, dir = 1;
+    const curRows = () => tabs ? tabs[activeTab].rows : rows;
+
+    // Fixed-width columns with ellipsis; full value on hover via title.
     const cell = (c, r) => {
       const html = c.render(r);
       const txt  = String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
       return `<td title="${esc(txt)}">${html}</td>`;
     };
 
-    let sortI = -1, dir = 1;   // no sort initially; dir 1 = asc, -1 = desc
-
     const sortedRows = () => {
-      if (sortI < 0) return rows;
+      const rws = curRows();
+      if (sortI < 0) return rws;
       const c = cols[sortI];
-      return rows.slice().sort((a, b) => {
+      return rws.slice().sort((a, b) => {
         const x = c.sort(a), y = c.sort(b);
         const xe = (x === null || x === ''), ye = (y === null || y === '');
         if (xe && ye) return 0;
@@ -668,37 +674,36 @@ const App = (() => {
       return `<th class="sortable" data-i="${i}">${c.label}${arrow}</th>`;
     }).join('')}</tr>`;
 
-    const bodyHtml = () => sortedRows().map(r => `<tr>${cols.map(c => cell(c, r)).join('')}</tr>`).join('');
-
-    const repaint = () => {
-      body.querySelector('thead').innerHTML = headHtml();
-      body.querySelector('tbody').innerHTML = bodyHtml();
-      wireHeads();
-    };
-
-    const wireHeads = () => body.querySelectorAll('th.sortable').forEach(th => {
-      th.onclick = () => {
+    const render = () => {
+      const n = curRows().length;
+      const subtabs = tabs ? `<div class="subtabs" style="padding:8px 22px 0;margin:0;">${
+        tabs.map((t, i) => `<button class="subtab ${i === activeTab ? 'active' : ''}" data-dtab="${i}">${esc(t.label)} · ${t.rows.length}</button>`).join('')
+      }</div>` : '';
+      body.innerHTML = `
+        <div class="modal-detail-head">
+          <span><b>${esc(title)}</b><span class="count">· ${n} seafarer${n === 1 ? '' : 's'}</span></span>
+          <button class="btn-sm" id="detailClose">Close</button>
+        </div>
+        ${subtabs}
+        <div class="modal-detail-body">
+          <div class="table-wrap detail-wrap"><table class="data-table detail-table">
+            <thead>${headHtml()}</thead>
+            <tbody>${sortedRows().map(r => `<tr>${cols.map(c => cell(c, r)).join('')}</tr>`).join('')}</tbody>
+          </table></div>
+        </div>`;
+      document.getElementById('detailClose').onclick = closeDetail;
+      body.querySelectorAll('th.sortable').forEach(th => th.onclick = () => {
         const i = +th.dataset.i;
         if (i === sortI) dir = -dir; else { sortI = i; dir = 1; }
-        repaint();
-      };
-    });
-
-    body.innerHTML = `
-      <div class="modal-detail-head">
-        <span><b>${esc(title)}</b><span class="count">· ${rows.length} seafarer${rows.length === 1 ? '' : 's'}</span></span>
-        <button class="btn-sm" id="detailClose">Close</button>
-      </div>
-      <div class="modal-detail-body">
-        <div class="table-wrap detail-wrap"><table class="data-table detail-table">
-          <thead>${headHtml()}</thead>
-          <tbody>${bodyHtml()}</tbody>
-        </table></div>
-      </div>`;
+        render();
+      });
+      body.querySelectorAll('[data-dtab]').forEach(b => b.onclick = () => {
+        activeTab = +b.dataset.dtab; sortI = -1; dir = 1; render();
+      });
+    };
 
     modal.classList.add('show');
-    document.getElementById('detailClose').onclick = closeDetail;
-    wireHeads();
+    render();
   }
 
   function closeDetail() { document.getElementById('detailModal').classList.remove('show'); }
