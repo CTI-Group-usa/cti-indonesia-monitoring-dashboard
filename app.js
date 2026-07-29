@@ -281,7 +281,9 @@ const App = (() => {
       expiryKey: null,              sheetType: /oktb/i },
   ];
   let _visaTab = 'c1d';
-  let _visaFilters = { office: '', cruiseLine: '', onboarding: '', from: '', to: '' };
+  const emptyFilters = () => ({ office: '', cruiseLine: '', onboarding: '', from: '', to: '' });
+  let _visaFilters = emptyFilters();
+  let _recFilters  = emptyFilters();
 
   // Distinct non-empty values of a field, sorted (for filter dropdowns).
   function distinctVals(data, key) {
@@ -289,10 +291,9 @@ const App = (() => {
       .sort((a, b) => String(a).localeCompare(String(b)));
   }
 
-  // Apply the shared VISA filters (CTI office / cruise line / onboarding
-  // status / sign-on date range) to the dataset.
-  function applyVisaFilters(data) {
-    const f = _visaFilters;
+  // Apply the shared deployment filters (CTI office / cruise line / onboarding
+  // status / sign-on date range) to the dataset. Fields are module-sourced.
+  function applyDeployFilters(data, f) {
     const from = f.from ? new Date(f.from) : null;
     const to   = f.to   ? new Date(f.to)   : null;
     if (to) to.setHours(23, 59, 59, 999);
@@ -308,6 +309,10 @@ const App = (() => {
       }
       return true;
     });
+  }
+
+  function applyVisaFilters(data) {
+    return applyDeployFilters(data, _visaFilters);
   }
 
   // Effective status for a record under a visa tab: the module field
@@ -540,11 +545,27 @@ const App = (() => {
     const mc = document.getElementById('main-content');
     mc.innerHTML = skeletonHTML();
 
-    const data = await loadData();
-    if (!data) { mc.innerHTML = errorHTML(); return; }
+    const allData = await loadData();
+    if (!allData) { mc.innerHTML = errorHTML(); return; }
+    // Exclude "Resigned" onboarding status, same as the VISA page.
+    const data = allData.filter(r => String(r.onboardingStatus).trim().toLowerCase() !== 'resigned');
+
+    const offices     = distinctVals(data, 'ctiOffice');
+    const cruiseLines = distinctVals(data, 'cruiseLine');
+    const onboardings = distinctVals(data, 'onboardingStatus');
+    const opts = (arr, sel) =>
+      arr.map(v => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(v)}</option>`).join('');
 
     mc.innerHTML = `
       <div class="page-header"><h1>Records</h1></div>
+      <div class="filter-bar">
+        <select id="rOffice"><option value="">All CTI Offices</option>${opts(offices, _recFilters.office)}</select>
+        <select id="rLine"><option value="">All Cruise Lines</option>${opts(cruiseLines, _recFilters.cruiseLine)}</select>
+        <select id="rOnboard"><option value="">All Onboarding Status</option>${opts(onboardings, _recFilters.onboarding)}</select>
+        <label class="filter-date">Sign On <input type="date" id="rFrom" value="${esc(_recFilters.from)}"></label>
+        <label class="filter-date">to <input type="date" id="rTo" value="${esc(_recFilters.to)}"></label>
+        <button class="btn-sm" id="rClear">Clear</button>
+      </div>
       <div class="toolbar">
         <input type="search" id="recSearch" class="search-input"
                placeholder="Search name, email, city, status…" value="${esc(_search)}">
@@ -559,31 +580,45 @@ const App = (() => {
         </table></div>
       </div>`;
 
-    const input = document.getElementById('recSearch');
-    input.addEventListener('input', e => { _search = e.target.value; paintRows(); });
-    paintRows();
+    const paint = () => paintRows(recFiltered(data));
+
+    const wire = (id, prop) => {
+      const el = mc.querySelector('#' + id);
+      el.addEventListener('change', () => { _recFilters[prop] = el.value; paint(); });
+    };
+    wire('rOffice', 'office'); wire('rLine', 'cruiseLine'); wire('rOnboard', 'onboarding');
+    wire('rFrom', 'from'); wire('rTo', 'to');
+    mc.querySelector('#rClear').addEventListener('click', () => {
+      _recFilters = emptyFilters();
+      renderRecords();
+    });
+    mc.querySelector('#recSearch')
+      .addEventListener('input', e => { _search = e.target.value; paint(); });
+
+    paint();
     updateStatus();
   }
 
-  function filtered() {
+  // Records dataset filtered by the shared deployment filters + the search box.
+  function recFiltered(data) {
+    let rows = applyDeployFilters(data, _recFilters);
     const q = _search.trim().toLowerCase();
-    if (!q) return _records;
-    return _records.filter(r =>
+    if (q) rows = rows.filter(r =>
       [r.name, r.email, r.ctiOffice, r.country, r.position, r.status,
-       r.visaStatus, r.deployCruiseLine, r.deployShip, r.deployStatus]
+       r.visaStatus, r.cruiseLine, r.joiningShip, r.onboardingStatus]
         .some(v => String(v).toLowerCase().includes(q)));
+    return rows;
   }
 
-  function paintRows() {
+  function paintRows(rows) {
     const tbody = document.getElementById('recBody');
     if (!tbody) return;
-    const rows = filtered();
     if (!rows.length) {
       tbody.innerHTML = `<tr><td colspan="7" class="empty-row">No records match.</td></tr>`;
       return;
     }
-    tbody.innerHTML = rows.map((r, i) => {
-      const deployment = [r.deployCruiseLine, r.deployShip]
+    tbody.innerHTML = rows.map(r => {
+      const deployment = [r.cruiseLine, r.joiningShip]
         .filter(v => v && v !== '—').join(' · ') || '—';
       return `
       <tr>
@@ -592,7 +627,7 @@ const App = (() => {
         <td>${esc(r.position)}</td>
         <td>${badge(r.status)}</td>
         <td>${badge(r.visaStatus)}</td>
-        <td>${esc(deployment)}${r.deployStatus && r.deployStatus !== '—' ? `<div class="cell-sub">${esc(r.deployStatus)}</div>` : ''}</td>
+        <td>${esc(deployment)}${r.onboardingStatus && r.onboardingStatus !== '—' ? `<div class="cell-sub">${esc(r.onboardingStatus)}</div>` : ''}</td>
         <td><button class="btn-sm" data-edit="${_records.indexOf(r)}">Edit</button></td>
       </tr>`;
     }).join('');
