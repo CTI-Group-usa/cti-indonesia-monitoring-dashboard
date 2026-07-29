@@ -186,41 +186,93 @@ const App = (() => {
     const mc = document.getElementById('main-content');
     mc.innerHTML = skeletonHTML();
 
-    const data = await loadData();
-    if (!data) { mc.innerHTML = errorHTML(); return; }
+    const allData = await loadData();
+    if (!allData) { mc.innerHTML = errorHTML(); return; }
+    const data = allData.filter(includeRecord);
 
-    const total     = data.length;
-    const visaLogged= data.filter(r => r._sheetRows?.visa).length;
-    const deployed  = data.filter(r => r._sheetRows?.cruise).length;
-    const byStatus  = Zoho.groupBy(data, 'status');
-    const byOffice  = Zoho.groupBy(data, 'ctiOffice');
-    const active    = Object.entries(byStatus)
-      .filter(([k]) => /active|progress|pending|onboard|hired|assigned|deployed|sign/i.test(k))
-      .reduce((n, [, v]) => n + v, 0);
+    // Deployment sheet rows drive the historical deployment chart.
+    let deployRows = [];
+    try { deployRows = await Zoho.getSheetRows('cruise'); } catch { deployRows = []; }
+
+    const offices     = distinctVals(data, 'ctiOffice');
+    const cruiseLines = distinctVals(data, 'cruiseLine');
 
     destroyCharts();
     mc.innerHTML = `
       <div class="page-header"><h1>Overview</h1></div>
-      <div class="stat-grid">
-        ${statCard('Total Seafarers', total)}
-        ${statCard('Visa Logged', visaLogged)}
-        ${statCard('Deployed', deployed)}
-        ${statCard('Active / In Progress', active)}
+      <div class="filter-bar">
+        ${msHTML('ovOffice', 'All CTI Offices', offices, _ovFilters.office)}
+        ${msHTML('ovLine', 'All Cruise Lines', cruiseLines, _ovFilters.cruiseLine)}
       </div>
+      <div class="stat-grid" id="ovStats"></div>
       <div class="chart-row">
         <div class="card chart-card">
-          <div class="card-title">By Status</div>
-          <canvas id="chartStatus" height="220"></canvas>
+          <div class="card-title">Deployments — last 13 months <span class="hint">(sign-on, deployment history)</span></div>
+          <canvas id="chartDeploy" height="240"></canvas>
         </div>
         <div class="card chart-card">
-          <div class="card-title">By CTI Office</div>
-          <canvas id="chartOffice" height="220"></canvas>
+          <div class="card-title">Upcoming Assignments — next 6 months <span class="hint">(by sign-on date)</span></div>
+          <canvas id="chartAssign" height="240"></canvas>
         </div>
       </div>`;
 
-    drawBar('chartStatus', topN(byStatus, 10));
-    drawBar('chartOffice', topN(byOffice, 8));
+    const paint = () => paintOverview(data, deployRows);
+    wireMS(mc, 'ovOffice', sel => { _ovFilters.office = sel;     paint(); });
+    wireMS(mc, 'ovLine',   sel => { _ovFilters.cruiseLine = sel; paint(); });
+
+    paint();
     updateStatus();
+  }
+
+  function paintOverview(data, deployRows) {
+    const f = _ovFilters;
+    const inSet = (arr, v) => !arr.length || arr.includes(v);
+    const monthKey = d => d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+    const base = new Date(); base.setDate(1); base.setHours(0, 0, 0, 0);   // 1st of current month
+
+    // Filtered module records.
+    const recs = data.filter(r => inSet(f.office, r.ctiOffice) && inSet(f.cruiseLine, r.cruiseLine));
+
+    // Stat cards (respect the filter).
+    const byStatus = {};
+    recs.forEach(r => { byStatus[r.status] = (byStatus[r.status] || 0) + 1; });
+    const active = Object.entries(byStatus)
+      .filter(([k]) => /active|progress|pending|onboard|hired|assigned|deployed|sign/i.test(k))
+      .reduce((n, [, v]) => n + v, 0);
+    const stats = document.getElementById('ovStats');
+    if (stats) stats.innerHTML =
+      statCard('Total Seafarers', recs.length.toLocaleString()) +
+      statCard('Visa Logged', recs.filter(r => r._sheetRows?.visa).length.toLocaleString()) +
+      statCard('Deployed', recs.filter(r => r._sheetRows?.cruise).length.toLocaleString()) +
+      statCard('Active / In Progress', active.toLocaleString());
+
+    destroyCharts();
+
+    // Chart 1 — deployments (sheet), last 13 months (current + 12 back).
+    const back = {};
+    for (let i = 12; i >= 0; i--) { const d = new Date(base); d.setMonth(d.getMonth() - i); back[monthKey(d)] = 0; }
+    const minBack = new Date(base); minBack.setMonth(minBack.getMonth() - 12);
+    const maxCur  = new Date(base); maxCur.setMonth(maxCur.getMonth() + 1);
+    deployRows.forEach(row => {
+      if (!inSet(f.office, row['CTI Office']) || !inSet(f.cruiseLine, row['Cruise Line'])) return;
+      const d = parseSheetDate(row['Sign On Date']);
+      if (!d || d < minBack || d >= maxCur) return;
+      const k = monthKey(new Date(d.getFullYear(), d.getMonth(), 1));
+      if (k in back) back[k]++;
+    });
+    drawBar('chartDeploy', back);
+
+    // Chart 2 — upcoming assignments (module sign-on), current + 6 months ahead.
+    const fwd = {};
+    for (let i = 0; i <= 6; i++) { const d = new Date(base); d.setMonth(d.getMonth() + i); fwd[monthKey(d)] = 0; }
+    const maxFwd = new Date(base); maxFwd.setMonth(maxFwd.getMonth() + 7);
+    recs.forEach(r => {
+      const d = parseDate(r.signOnDate);
+      if (!d || d < base || d >= maxFwd) return;
+      const k = monthKey(new Date(d.getFullYear(), d.getMonth(), 1));
+      if (k in fwd) fwd[k]++;
+    });
+    drawBar('chartAssign', fwd);
   }
 
   function statCard(label, value, opts = {}) {
@@ -305,6 +357,7 @@ const App = (() => {
   let _visaFilters = emptyFilters();
   let _recFilters  = emptyFilters();
   let _recSort = { i: -1, dir: 1 };   // Records table sort (col index, direction)
+  let _ovFilters = { office: [DEFAULT_OFFICE], cruiseLine: [] };   // Overview charts
 
   // Sort comparables shared by all sortable tables.
   const txtSort  = v => (v == null || v === '' || v === '—') ? '' : String(v).toLowerCase();

@@ -253,8 +253,16 @@ const Zoho = (() => {
     }, {});
   }
 
+  // Raw rows of one configured sheet (by CONFIG.SHEETS[].key).
+  async function getSheetRows(key) {
+    const sheet = (CONFIG.SHEETS || []).find(s => s.key === key);
+    if (!sheet) throw new Error(`UNKNOWN_SHEET_${key}`);
+    return getSheetRecords(sheet);
+  }
+
   return {
     getAllRecords,
+    getSheetRows,
     updateRecruit,
     updateSheet,
     groupBy,
