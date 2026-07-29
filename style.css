@@ -1058,7 +1058,7 @@ th.sorted {
 /* In the modal the table fills 100% width with fixed columns: each row stays
    on one line and long values ellipsize (hover shows the full text) — so the
    whole table fits on one screen with no horizontal scroll. */
-.modal-detail-body .detail-wrap { overflow-x: hidden; }
+.modal-detail-body .detail-wrap { overflow-x: auto; }
 .modal-detail-body .detail-table { table-layout: fixed; width: 100%; }
 .modal-detail-body .detail-table th,
 .modal-detail-body .detail-table td {
