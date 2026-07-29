@@ -243,6 +243,7 @@ const App = (() => {
     const noAssign = recs.length - assigned;
     const stats = document.getElementById('ovStats');
     if (stats) stats.innerHTML =
+      statCard('Total Seafarers', recs.length.toLocaleString()) +
       statCard('New Hired', newHired.toLocaleString()) +
       statCard('Repeater', repeater.toLocaleString()) +
       statCard('Assigned', assigned.toLocaleString()) +
