@@ -583,6 +583,19 @@ const App = (() => {
     }
     const expiring = expiringRows.length;
 
+    // MCV only: passport-number mismatch (MCV passport no. vs passport no.).
+    let unmatchedRows = [];
+    if (tab.key === 'mcv') {
+      const norm = v => String(v ?? '').trim().toUpperCase();
+      const blank = s => s === '' || s === '—';
+      unmatchedRows = holders.map(x => x.r).filter(r => {
+        const a = norm(r.mcvPassportNumber), b = norm(r.passportNumber);
+        if (blank(a) || blank(b)) return false;   // need both present to compare
+        return a !== b;
+      });
+    }
+    const unmatched = unmatchedRows.length;
+
     const byStatus = {};
     holders.forEach(x => { byStatus[x.s] = (byStatus[x.s] || 0) + 1; });
 
@@ -592,6 +605,7 @@ const App = (() => {
         ${statCard('Valid', valid, { id: 'statValid', clickable: valid > 0 })}
         ${statCard('In Progress', inProgress, { id: 'statProgress', clickable: inProgress > 0 })}
         ${tab.expiryKey ? statCard(`Expiring < ${expiryMonths} months`, expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('No Status', noStatus, { id: 'statNoStatus', clickable: noStatus > 0 })}
+        ${tab.key === 'mcv' ? statCard('Unmatched Passport', unmatched, { id: 'statUnmatched', clickable: unmatched > 0 }) : ''}
       </div>
       <div class="chart-row">
         <div class="card chart-card">
@@ -612,6 +626,20 @@ const App = (() => {
     wireStat('statProgress', progressRows, `${tab.label} — In Progress`);
     wireStat('statExpiring', expiringRows, `${tab.label} — Expiring < ${expiryMonths} months`);
     wireStat('statNoStatus', noStatusRows, `${tab.label} — No Status`);
+
+    // MCV: unmatched passport-number drill-down.
+    const uCard = document.getElementById('statUnmatched');
+    if (uCard && unmatched) {
+      const uCols = [
+        { label: 'ID Number',           render: r => esc(r.crewIdNumber),      sort: r => txtSort(r.crewIdNumber), w: 100 },
+        { label: 'Name',                render: r => esc(r.name),              sort: r => txtSort(r.name),         w: 200, wrap: true },
+        { label: 'Email',               render: r => esc(r.email),             sort: r => txtSort(r.email),        w: 230, wrap: true },
+        { label: 'MCV Passport Number', render: r => esc(r.mcvPassportNumber), sort: r => txtSort(r.mcvPassportNumber), w: 180 },
+        { label: 'Passport Number',     render: r => esc(r.passportNumber),    sort: r => txtSort(r.passportNumber),    w: 160 },
+        { label: 'MCV Status',          render: r => esc(r.mcvStatus),         sort: r => txtSort(r.mcvStatus),    w: 130 },
+      ];
+      uCard.onclick = () => openDetailModal(unmatchedRows, uCols, `${tab.label} — Unmatched Passport Number`);
+    }
   }
 
   // Drill-down: list the seafarers behind a clicked status bar.
