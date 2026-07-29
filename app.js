@@ -314,8 +314,10 @@ const App = (() => {
   async function renderVisa() {
     const mc = document.getElementById('main-content');
     mc.innerHTML = skeletonHTML();
-    const data = await loadData();
-    if (!data) { mc.innerHTML = errorHTML(); return; }
+    const allData = await loadData();
+    if (!allData) { mc.innerHTML = errorHTML(); return; }
+    // Exclude seafarers whose onboarding status is "Resigned" from the VISA page.
+    const data = allData.filter(r => String(r.onboardingStatus).trim().toLowerCase() !== 'resigned');
 
     destroyCharts();
     const offices     = distinctVals(data, 'ctiOffice');
