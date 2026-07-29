@@ -601,7 +601,7 @@ const App = (() => {
 
     // Records columns: label, render(row) -> HTML, sort(row) -> comparable, num.
     const cols = [
-      { label: 'Seafarer ID Number',    render: r => esc(r.crewIdNumber),      sort: r => txtSort(r.crewIdNumber) },
+      { label: 'ID Number',             render: r => esc(r.crewIdNumber),      sort: r => txtSort(r.crewIdNumber) },
       { label: 'Seafarer Name',         render: r => esc(r.name),              sort: r => txtSort(r.name) },
       { label: 'Joining Ship',          render: r => esc(r.joiningShip),      sort: r => txtSort(r.joiningShip) },
       { label: 'Sign On Date',          render: r => formatDate(r.signOnDate), sort: r => dateSort(parseDate(r.signOnDate)), num: true },

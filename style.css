@@ -1170,10 +1170,10 @@ th.sorted {
   position: sticky; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .records-table tbody td.sticky-col { background: var(--card); z-index: 2; }
-.records-table thead th.sticky-col { background: var(--bg); z-index: 4; white-space: normal; }
+.records-table thead th.sticky-col { background: var(--bg); z-index: 4; }
 .records-table tbody tr:hover td.sticky-col { background: var(--bg); }
-.records-table .sticky-col-1 { left: 0;     width: 92px;  min-width: 92px;  max-width: 92px; }
-.records-table .sticky-col-2 { left: 92px;  width: 168px; min-width: 168px; max-width: 168px;
+.records-table .sticky-col-1 { left: 0;     width: 96px;  min-width: 96px;  max-width: 96px; }
+.records-table .sticky-col-2 { left: 96px;  width: 168px; min-width: 168px; max-width: 168px;
   border-right: 1px solid var(--border); }
 
 /* ─── VISA drill-down detail ─── */
