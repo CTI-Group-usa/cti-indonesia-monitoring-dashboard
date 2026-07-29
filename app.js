@@ -756,7 +756,7 @@ const App = (() => {
     const headHtml = () => `<tr>${cols.map((c, i) => {
       const arrow = i === _recSort.i ? `<span class="sort-arrow">${_recSort.dir > 0 ? '▲' : '▼'}</span>` : '';
       return `<th class="sortable${stickyCls(i)}" data-i="${i}">${c.label}${arrow}</th>`;
-    }).join('')}<th></th></tr>`;
+    }).join('')}</tr>`;
 
     mc.innerHTML = `
       <div class="page-header"><h1>Records</h1></div>
@@ -840,7 +840,7 @@ const App = (() => {
     const tbody = document.getElementById('recBody');
     if (!tbody) return;
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="${cols.length + 1}" class="empty-row">No records match.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${cols.length}" class="empty-row">No records match.</td></tr>`;
       return;
     }
     tbody.innerHTML = rows.map(r =>
@@ -848,10 +848,8 @@ const App = (() => {
         const html = c.render(r);
         if (i < 2) return `<td class="sticky-col sticky-col-${i + 1}" title="${String(html).replace(/<[^>]*>/g, '')}">${html}</td>`;
         return `<td>${html}</td>`;
-      }).join('')}<td><button class="btn-sm" data-edit="${_records.indexOf(r)}">Edit</button></td></tr>`
+      }).join('')}</tr>`
     ).join('');
-    tbody.querySelectorAll('[data-edit]').forEach(b =>
-      b.addEventListener('click', () => openEdit(_records[+b.dataset.edit])));
   }
 
   // ── Edit modal → push Recruit status; all detail from the module ────
