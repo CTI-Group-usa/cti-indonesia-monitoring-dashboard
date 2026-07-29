@@ -5,6 +5,7 @@
 const App = (() => {
 
   let _records = null;   // cached merged data
+  let _lastUpdated = null;   // ms timestamp of the data currently shown
   let _charts  = [];      // live Chart.js instances (destroyed on re-render)
   let _search  = '';
 
@@ -79,6 +80,13 @@ const App = (() => {
     el.innerHTML = `<span class="dot"></span> Live Data`;
     el.title = 'Click to refresh';
     el.onclick = () => refresh();
+
+    const stamp = document.getElementById('lastRefresh');
+    if (stamp && _lastUpdated) {
+      const t = new Date(_lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      stamp.textContent = `🔄 Updated ${t}`;
+      stamp.title = `Data last refreshed at ${new Date(_lastUpdated).toLocaleString()}`;
+    }
   }
 
   function skeletonHTML() {
@@ -144,7 +152,8 @@ const App = (() => {
 
   async function fetchFresh() {
     _records = await Zoho.getAllRecords();
-    idbSet(CACHE_KEY, { ts: Date.now(), records: _records });  // fire and forget
+    _lastUpdated = Date.now();
+    idbSet(CACHE_KEY, { ts: _lastUpdated, records: _records });  // fire and forget
     return _records;
   }
 
@@ -158,6 +167,7 @@ const App = (() => {
       const c = await readCache();
       if (c) {
         _records = c.records;
+        _lastUpdated = c.ts;
         // Always pull fresh in the background so a page reload reflects
         // the latest Zoho edits. The cache only avoids a blank-screen wait;
         // it is never the final word within a session.
@@ -698,8 +708,8 @@ const App = (() => {
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && detailModal?.classList.contains('show')) closeDetail();
     });
-    // Auto-refresh every 10 minutes — in the background, no skeleton.
-    setInterval(revalidate, 600000);
+    // Auto-refresh every 5 minutes — in the background, no skeleton.
+    setInterval(revalidate, 300000);
     renderCurrentPage();
   }
 
