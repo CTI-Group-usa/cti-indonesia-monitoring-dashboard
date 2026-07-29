@@ -450,6 +450,8 @@ const App = (() => {
     if (tab.apptKey)   cols.push({ label: 'Appointment', render: r => formatDate(r[tab.apptKey]), sort: r => dateSort(parseDate(r[tab.apptKey])), num: true });
     if (tab.expiryKey) cols.push({ label: 'Expiry',      render: r => formatDate(r[tab.expiryKey]), sort: r => dateSort(parseDate(r[tab.expiryKey])), num: true });
     cols.push({ label: 'Ship',       render: r => esc(r.deployShip),   sort: r => txtSort(r.deployShip) });
+    if (tab.key === 'oktb')
+      cols.push({ label: 'Joining Port', render: r => esc(r.deployPort), sort: r => txtSort(r.deployPort) });
     cols.push({ label: 'Onboarding', render: r => esc(r.deployStatus), sort: r => txtSort(r.deployStatus) });
     cols.push({ label: 'Sign On',    render: r => formatSheetDate(r.deployDate),  sort: r => dateSort(parseSheetDate(r.deployDate)), num: true });
     cols.push({ label: 'Sign Off',   render: r => formatDate(r.signOffDate),      sort: r => dateSort(parseDate(r.signOffDate)),     num: true });
