@@ -1161,6 +1161,21 @@ th.sorted {
 .data-table th.sortable:hover { color: var(--accent); }
 .data-table th .sort-arrow { margin-left: 4px; font-size: 0.7em; color: var(--accent); }
 
+/* ─── Records table: compact + frozen ID/Name columns ─── */
+.records-table { font-size: 0.75rem; }
+.records-table thead th { font-size: 0.64rem; padding: 7px 9px; }
+.records-table tbody td { padding: 5px 9px; }
+/* Freeze the first two columns (Seafarer ID Number, Seafarer Name). */
+.records-table th.sticky-col, .records-table td.sticky-col {
+  position: sticky; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.records-table tbody td.sticky-col { background: var(--card); z-index: 2; }
+.records-table thead th.sticky-col { background: var(--bg); z-index: 4; white-space: normal; }
+.records-table tbody tr:hover td.sticky-col { background: var(--bg); }
+.records-table .sticky-col-1 { left: 0;     width: 92px;  min-width: 92px;  max-width: 92px; }
+.records-table .sticky-col-2 { left: 92px;  width: 168px; min-width: 168px; max-width: 168px;
+  border-right: 1px solid var(--border); }
+
 /* ─── VISA drill-down detail ─── */
 .card-title .hint { font-weight: 400; font-size: 0.76rem; color: var(--muted); margin-left: 6px; }
 .detail-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 0.9rem; color: var(--text); }

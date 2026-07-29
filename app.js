@@ -601,12 +601,12 @@ const App = (() => {
 
     // Records columns: label, render(row) -> HTML, sort(row) -> comparable, num.
     const cols = [
+      { label: 'Seafarer ID Number',    render: r => esc(r.crewIdNumber),      sort: r => txtSort(r.crewIdNumber) },
+      { label: 'Seafarer Name',         render: r => esc(r.name),              sort: r => txtSort(r.name) },
       { label: 'Joining Ship',          render: r => esc(r.joiningShip),      sort: r => txtSort(r.joiningShip) },
       { label: 'Sign On Date',          render: r => formatDate(r.signOnDate), sort: r => dateSort(parseDate(r.signOnDate)), num: true },
       { label: 'Sign On Port',          render: r => esc(r.signOnPort),        sort: r => txtSort(r.signOnPort) },
       { label: 'Onboarding Status',     render: r => esc(r.onboardingStatus),  sort: r => txtSort(r.onboardingStatus) },
-      { label: 'Seafarer Name',         render: r => esc(r.name),              sort: r => txtSort(r.name) },
-      { label: 'Seafarer ID Number',    render: r => esc(r.crewIdNumber),      sort: r => txtSort(r.crewIdNumber) },
       { label: 'Passport Status',       render: r => esc(r.passportStatus),    sort: r => txtSort(r.passportStatus) },
       { label: 'BST Status',            render: r => esc(r.bstStatus),         sort: r => txtSort(r.bstStatus) },
       { label: 'Seaman Book Status',    render: r => esc(r.seamanBookStatus),  sort: r => txtSort(r.seamanBookStatus) },
@@ -621,9 +621,10 @@ const App = (() => {
       { label: 'Other Visa Issued Date',render: r => formatDate(r.otherVisaIssuedDate), sort: r => dateSort(parseDate(r.otherVisaIssuedDate)), num: true },
     ];
 
+    const stickyCls = i => i < 2 ? ` sticky-col sticky-col-${i + 1}` : '';
     const headHtml = () => `<tr>${cols.map((c, i) => {
       const arrow = i === _recSort.i ? `<span class="sort-arrow">${_recSort.dir > 0 ? '▲' : '▼'}</span>` : '';
-      return `<th class="sortable" data-i="${i}">${c.label}${arrow}</th>`;
+      return `<th class="sortable${stickyCls(i)}" data-i="${i}">${c.label}${arrow}</th>`;
     }).join('')}<th></th></tr>`;
 
     mc.innerHTML = `
@@ -642,7 +643,7 @@ const App = (() => {
         <span class="rec-count" id="recCount"></span>
       </div>
       <div class="card table-card">
-        <div class="table-wrap"><table class="data-table">
+        <div class="table-wrap"><table class="data-table records-table">
           <thead id="recHead">${headHtml()}</thead>
           <tbody id="recBody"></tbody>
         </table></div>
@@ -712,7 +713,11 @@ const App = (() => {
       return;
     }
     tbody.innerHTML = rows.map(r =>
-      `<tr>${cols.map(c => `<td>${c.render(r)}</td>`).join('')}<td><button class="btn-sm" data-edit="${_records.indexOf(r)}">Edit</button></td></tr>`
+      `<tr>${cols.map((c, i) => {
+        const html = c.render(r);
+        if (i < 2) return `<td class="sticky-col sticky-col-${i + 1}" title="${String(html).replace(/<[^>]*>/g, '')}">${html}</td>`;
+        return `<td>${html}</td>`;
+      }).join('')}<td><button class="btn-sm" data-edit="${_records.indexOf(r)}">Edit</button></td></tr>`
     ).join('');
     tbody.querySelectorAll('[data-edit]').forEach(b =>
       b.addEventListener('click', () => openEdit(_records[+b.dataset.edit])));
