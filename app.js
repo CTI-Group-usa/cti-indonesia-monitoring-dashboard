@@ -282,6 +282,9 @@ const App = (() => {
   ];
   let _visaTab = 'c1d';
   const DEFAULT_OFFICE = 'CTI Indonesia';
+  // Onboarding statuses hidden from the whole dashboard (VISA + Records).
+  const EXCLUDED_ONBOARDING = ['resigned', 'process by mss philippines'];
+  const includeRecord = r => !EXCLUDED_ONBOARDING.includes(String(r.onboardingStatus).trim().toLowerCase());
   // office / cruiseLine / onboarding are arrays (multi-select). Empty = "all".
   // Office defaults to CTI Indonesia.
   const emptyFilters = () => ({ office: [DEFAULT_OFFICE], cruiseLine: [], onboarding: [], from: '', to: '' });
@@ -377,8 +380,8 @@ const App = (() => {
     mc.innerHTML = skeletonHTML();
     const allData = await loadData();
     if (!allData) { mc.innerHTML = errorHTML(); return; }
-    // Exclude seafarers whose onboarding status is "Resigned" from the VISA page.
-    const data = allData.filter(r => String(r.onboardingStatus).trim().toLowerCase() !== 'resigned');
+    // Hide excluded onboarding statuses (Resigned, Process by MSS Philippines).
+    const data = allData.filter(includeRecord);
 
     destroyCharts();
     const offices     = distinctVals(data, 'ctiOffice');
@@ -589,8 +592,8 @@ const App = (() => {
 
     const allData = await loadData();
     if (!allData) { mc.innerHTML = errorHTML(); return; }
-    // Exclude "Resigned" onboarding status, same as the VISA page.
-    const data = allData.filter(r => String(r.onboardingStatus).trim().toLowerCase() !== 'resigned');
+    // Hide excluded onboarding statuses (Resigned, Process by MSS Philippines).
+    const data = allData.filter(includeRecord);
 
     const offices     = distinctVals(data, 'ctiOffice');
     const cruiseLines = distinctVals(data, 'cruiseLine');
