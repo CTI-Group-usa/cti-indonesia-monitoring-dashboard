@@ -647,7 +647,7 @@ const App = (() => {
       b.addEventListener('click', () => openEdit(_records[+b.dataset.edit])));
   }
 
-  // ── Edit modal → push Recruit status; show merged sheets ────
+  // ── Edit modal → push Recruit status; all detail from the module ────
   function openEdit(rec) {
     const modal = document.getElementById('editModal');
     const body  = document.getElementById('editBody');
@@ -663,22 +663,39 @@ const App = (() => {
       <label>Seafarer Status</label>
       <input id="f_status" value="${esc(rec.status === '—' ? '' : rec.status)}">
 
-      <div class="form-section-label">Visa Registration Log</div>
-      ${info('Visa Type', rec.visaType)}
-      ${info('Visa Status', rec.visaStatus)}
-      ${info('Payment Status', rec.visaPayment)}
-      ${info('Appointment Date', formatSheetDate(rec.visaAppointment))}
-      ${info('Application ID', rec.visaAppId)}
-      ${info('Registered', formatSheetDate(rec.visaRegDate))}
+      <div class="form-section-label">Deployment</div>
+      ${info('Cruise Line', rec.cruiseLine)}
+      ${info('Joining Ship', rec.joiningShip)}
+      ${info('Onboarding Status', rec.onboardingStatus)}
+      ${info('Employment Status', rec.employmentStatus)}
+      ${info('Sign On Date', formatDate(rec.signOnDate))}
+      ${info('Sign On Port', rec.signOnPort)}
+      ${info('Sign Off Date', formatDate(rec.signOffDate))}
 
-      <div class="form-section-label">Cruise Line Deployment</div>
-      ${info('Cruise Line', rec.deployCruiseLine)}
-      ${info('Ship', rec.deployShip)}
-      ${info('Position Hired', rec.deployPosition)}
-      ${info('Onboarding Status', rec.deployStatus)}
-      ${info('Employment Status', rec.deployEmployment)}
-      ${info('Sign On Date', formatSheetDate(rec.deployDate))}
-      ${info('Sign On Port', rec.deployPort)}
+      <div class="form-section-label">Documents</div>
+      ${info('Passport Status', rec.passportStatus)}
+      ${info('Passport Number', rec.passportNumber)}
+      ${info('Passport Expiry', formatDate(rec.passportExpiry))}
+      ${info('Medical Status', rec.medicalStatus)}
+      ${info('Medical Expiry', formatDate(rec.medicalExpiry))}
+      ${info('BST Status', rec.bstStatus)}
+      ${info('Seaman Book Status', rec.seamanBookStatus)}
+      ${info('Completed Vaccination', rec.vaccinesStatus)}
+
+      <div class="form-section-label">Visas</div>
+      ${info('C1/D Visa Status', rec.c1dVisaStatus)}
+      ${info('C1/D Visa Number', rec.c1dVisaNumber)}
+      ${info('C1/D Visa Expiry', formatDate(rec.c1dVisaExpiry))}
+      ${info('MCV Status', rec.mcvStatus)}
+      ${info('MCV Number', rec.mcvNumber)}
+      ${info("MCV's Passport Number", rec.mcvPassportNumber)}
+      ${info('MCV Expiry', formatDate(rec.mcvExpiry))}
+      ${info('OKTB Status', rec.oktbStatus)}
+      ${info('Other Visa Name', rec.otherVisaName)}
+      ${info('Other Visa Status', rec.otherVisaStatus)}
+      ${info('Other Visa Number', rec.otherVisaNumber)}
+      ${info('Other Visa Issued Date', formatDate(rec.otherVisaIssuedDate))}
+      ${info('Other Visa Expiry', formatDate(rec.otherVisaExpiry))}
 
       <div class="modal-actions">
         <button class="btn-secondary" id="cancelEdit">Cancel</button>
