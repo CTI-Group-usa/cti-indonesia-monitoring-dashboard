@@ -1068,6 +1068,8 @@ th.sorted {
 .modal-detail-body .detail-table th:first-child,
 .modal-detail-body .detail-table td:first-child { width: 17%; }
 .modal-detail-body .detail-table .cell-sub { overflow: hidden; text-overflow: ellipsis; }
+/* Priority columns: show the whole value (wrap instead of ellipsis). */
+.modal-detail-body .detail-table td.cell-wrap { white-space: normal; overflow: visible; text-overflow: clip; }
 .modal-detail-body .detail-table th.sortable { cursor: pointer; user-select: none; }
 .modal-detail-body .detail-table th.sortable:hover { color: var(--accent); }
 .modal-detail-body .detail-table th .sort-arrow { margin-left: 4px; font-size: 0.7em; color: var(--accent); }

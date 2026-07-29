@@ -254,13 +254,13 @@ const App = (() => {
     const naCard = document.getElementById('statNoAssign');
     if (naCard && noAssign) {
       const naCols = [
-        { label: 'ID Number',         render: r => esc(r.crewIdNumber),     sort: r => txtSort(r.crewIdNumber) },
-        { label: 'Name',              render: r => esc(r.name),             sort: r => txtSort(r.name) },
-        { label: 'Email',             render: r => esc(r.email),            sort: r => txtSort(r.email) },
-        { label: 'Position Hired',    render: r => esc(r.position),         sort: r => txtSort(r.position) },
-        { label: 'Cruise Line',       render: r => esc(r.cruiseLine),       sort: r => txtSort(r.cruiseLine) },
-        { label: 'Hired Date',        render: r => formatDate(r.hiredDate), sort: r => dateSort(parseDate(r.hiredDate)), num: true },
-        { label: 'Onboarding Status', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus) },
+        { label: 'ID Number',         render: r => esc(r.crewIdNumber),     sort: r => txtSort(r.crewIdNumber), w: 100 },
+        { label: 'Name',              render: r => esc(r.name),             sort: r => txtSort(r.name),         w: 200, wrap: true },
+        { label: 'Email',             render: r => esc(r.email),            sort: r => txtSort(r.email),        w: 250, wrap: true },
+        { label: 'Position Hired',    render: r => esc(r.position),         sort: r => txtSort(r.position),     w: 210, wrap: true },
+        { label: 'Cruise Line',       render: r => esc(r.cruiseLine),       sort: r => txtSort(r.cruiseLine),   w: 130 },
+        { label: 'Hired Date',        render: r => formatDate(r.hiredDate), sort: r => dateSort(parseDate(r.hiredDate)), num: true, w: 110 },
+        { label: 'Onboarding Status', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus), w: 160 },
       ];
       const naTabs = [
         { label: 'New Hire', rows: noAssignRows.filter(isNewHire) },
@@ -649,10 +649,13 @@ const App = (() => {
     const curRows = () => tabs ? tabs[activeTab].rows : rows;
 
     // Fixed-width columns with ellipsis; full value on hover via title.
+    // Columns may set `w` (px width) and `wrap:true` (show full value, wrapping).
     const cell = (c, r) => {
       const html = c.render(r);
       const txt  = String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-      return `<td title="${esc(txt)}">${html}</td>`;
+      const cls = c.wrap ? ' class="cell-wrap"' : '';
+      const st  = c.w ? ` style="width:${c.w}px"` : '';
+      return `<td${cls}${st} title="${esc(txt)}">${html}</td>`;
     };
 
     const sortedRows = () => {
@@ -672,7 +675,8 @@ const App = (() => {
 
     const headHtml = () => `<tr>${cols.map((c, i) => {
       const arrow = i === sortI ? `<span class="sort-arrow">${dir > 0 ? '▲' : '▼'}</span>` : '';
-      return `<th class="sortable" data-i="${i}">${c.label}${arrow}</th>`;
+      const st = c.w ? ` style="width:${c.w}px"` : '';
+      return `<th class="sortable" data-i="${i}"${st}>${c.label}${arrow}</th>`;
     }).join('')}</tr>`;
 
     const render = () => {
