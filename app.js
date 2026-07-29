@@ -636,6 +636,7 @@ const App = (() => {
       <div class="toolbar">
         <input type="search" id="recSearch" class="search-input"
                placeholder="Search name, email, ID, port, status…" value="${esc(_search)}">
+        <span class="rec-count" id="recCount"></span>
       </div>
       <div class="card table-card">
         <div class="table-wrap"><table class="data-table">
@@ -657,6 +658,8 @@ const App = (() => {
           return (c.num ? (x - y) : String(x).localeCompare(String(y))) * _recSort.dir;
         });
       }
+      const cnt = document.getElementById('recCount');
+      if (cnt) cnt.textContent = `${rows.length.toLocaleString()} record${rows.length === 1 ? '' : 's'}`;
       document.getElementById('recHead').innerHTML = headHtml();
       paintRows(rows, cols);
       document.querySelectorAll('#recHead th.sortable').forEach(th =>

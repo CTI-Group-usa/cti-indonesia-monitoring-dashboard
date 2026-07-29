@@ -1153,6 +1153,8 @@ th.sorted {
 .ms-opt:hover { background: var(--bg); }
 .ms-opt input { cursor: pointer; margin: 0; }
 .ms-empty { padding: 8px; color: var(--muted); font-size: 0.8rem; }
+.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rec-count { font-size: 0.82rem; color: var(--muted); font-weight: 500; white-space: nowrap; }
 
 /* Sortable table headers (Records + drill-down) */
 .data-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
