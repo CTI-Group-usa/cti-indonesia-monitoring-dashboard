@@ -406,24 +406,24 @@ const App = (() => {
     // General documents (module-only — no sheet fallback).
     { key: 'passport', label: 'Passport',
       statusKey: 'passportStatus',    numberKey: 'passportNumber',    apptKey: null,
-      expiryKey: 'passportExpiry' },
+      expiryKey: 'passportExpiry',    expectedKey: 'passportExpectedDate' },
     { key: 'bst',      label: 'BST',
       statusKey: 'bstStatus',         numberKey: 'bstNumber',         apptKey: null,
-      expiryKey: 'bstExpiry' },
+      expiryKey: 'bstExpiry',         expectedKey: 'bstExpectedDate' },
     { key: 'seaman',   label: "Seaman's Book",
       statusKey: 'seamanBookStatus',  numberKey: 'seamanBookNumber',  apptKey: null,
-      expiryKey: 'seamanBookExpiry' },
+      expiryKey: 'seamanBookExpiry',  expectedKey: 'seamanBookExpectedDate' },
     { key: 'medical',  label: 'Medical',
       statusKey: 'medicalStatus',     numberKey: null,                apptKey: null,
-      expiryKey: 'medicalExpiry' },
+      expiryKey: 'medicalExpiry',     expectedKey: 'medicalExpectedDate' },
     // Visas.
     { key: 'c1d',      label: 'C1/D',
       statusKey: 'c1dVisaStatus',   numberKey: 'c1dVisaNumber',   apptKey: 'c1dVisaAppointment',
-      expiryKey: 'c1dVisaExpiry',   sheetType: /c1\s*\/?\s*d/i },
+      expiryKey: 'c1dVisaExpiry',   sheetType: /c1\s*\/?\s*d/i,   expectedKey: 'c1dExpectedDate' },
     { key: 'schengen', label: 'Schengen',
       statusKey: 'otherVisaStatus', numberKey: 'otherVisaNumber', apptKey: 'otherVisaAppointment',
       expiryKey: 'otherVisaExpiry', sheetType: /schengen/i,
-      nameKey: 'otherVisaName',     nameMatch: /schengen/i,
+      nameKey: 'otherVisaName',     nameMatch: /schengen/i,       expectedKey: 'otherVisaExpectedDate',
       moduleOnly: true },   // Recruit module only — no Visa Log sheet fallback (excludes payment statuses)
     { key: 'mcv',      label: 'MCV',
       statusKey: 'mcvStatus',       numberKey: 'mcvNumber',       apptKey: null,
@@ -754,13 +754,19 @@ const App = (() => {
     }
 
     // Stat tiles → drill down to the seafarers behind each count.
-    const wireStat = (id, rows, title) => {
+    const wireStat = (id, rows, title, extraCols) => {
       const el = document.getElementById(id);
-      if (el && rows.length) el.onclick = () => renderVisaDetail(rows, tab, title);
+      if (el && rows.length) el.onclick = () => renderVisaDetail(rows, tab, title, extraCols);
     };
+    // In Progress drill-down also shows the admin-recorded Expected Date.
+    const expectedCol = tab.expectedKey ? [{
+      label: 'Expected Date',
+      render: r => formatDate(r[tab.expectedKey]),
+      sort: r => dateSort(parseDate(r[tab.expectedKey])), num: true,
+    }] : null;
     wireStat('statTotal',    totalRows,    `${tab.label} — All`);
     wireStat('statValid',    validRows,    `${tab.label} — Valid`);
-    wireStat('statProgress', progressRows, `${tab.label} — In Progress`);
+    wireStat('statProgress', progressRows, `${tab.label} — In Progress`, expectedCol);
     wireStat('statExpiring', expiringRows, `${tab.label} — Expiring (valid < Sign-off +${soBuffer}mo)`);
     wireStat('statNoStatus', noStatusRows, `${tab.label} — No Status`);
 
@@ -804,7 +810,8 @@ const App = (() => {
   }
 
   // Render a drill-down detail table (in a modal) for a set of seafarer records.
-  function renderVisaDetail(rows, tab, title) {
+  // extraCols: optional column defs appended at the end (e.g. Expected Date).
+  function renderVisaDetail(rows, tab, title, extraCols) {
     // Each column: label, render(row) -> HTML, sort(row) -> comparable, num flag.
     const cols = [
       { label: 'Name',       render: r => `${esc(r.name)}<div class="cell-sub">${esc(r.email)}</div>`, sort: r => txtSort(r.name) },
@@ -821,6 +828,7 @@ const App = (() => {
     cols.push({ label: 'Onboarding', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus) });
     cols.push({ label: 'Sign On',    render: r => formatDate(r.signOnDate),  sort: r => dateSort(parseDate(r.signOnDate)), num: true });
     cols.push({ label: 'Sign Off',   render: r => formatDate(r.signOffDate),      sort: r => dateSort(parseDate(r.signOffDate)),     num: true });
+    if (extraCols) cols.push(...extraCols);
 
     openDetailModal(rows, cols, title);
   }
