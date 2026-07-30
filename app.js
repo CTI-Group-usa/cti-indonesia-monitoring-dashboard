@@ -695,8 +695,7 @@ const App = (() => {
         { label: 'Cruise Line',       render: r => s(r, 'Cruise Line'),     sort: r => txtSort(r['Cruise Line']),   w: 150 },
         { label: 'Payment Status',    render: r => s(r, 'Payment Status'),  sort: r => txtSort(r['Payment Status']), w: 130 },
         { label: 'Visa Status',       render: r => s(r, 'Visa Status'),     sort: r => txtSort(r['Visa Status']),   w: 180 },
-        { label: 'BNIVA Number',      render: r => s(r, 'BNIVA Number'),    sort: r => txtSort(r['BNIVA Number']),  w: 140 },
-        { label: 'Appointment Date',  render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: 150 },
+        { label: 'Added Time',        render: r => formatSheetDate(r['Added Time']), sort: r => dateSort(parseSheetDate(r['Added Time'])), num: true, w: 140 },
         { label: 'Application ID',    render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
       ];
       drawBar('c1dSheetChart', counts, label => {
