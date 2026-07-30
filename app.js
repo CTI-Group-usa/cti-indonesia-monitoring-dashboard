@@ -1156,6 +1156,9 @@ const App = (() => {
       { label: 'Document',       render: x => esc(x.doc),            sort: x => txtSort(x.doc) },
       { label: 'Current Status', render: x => esc(x.status),         sort: x => txtSort(x.status) },
       { label: 'Expected Date',  render: x => formatDate(x.exp),     sort: x => x.exp ? x.exp.getTime() : null, num: true },
+      { label: 'Sign On Date',   render: x => formatDate(x.r.signOnDate), sort: x => dateSort(parseDate(x.r.signOnDate)), num: true },
+      { label: 'Sign On Port',   render: x => esc(x.r.signOnPort),   sort: x => txtSort(x.r.signOnPort) },
+      { label: 'Ship',           render: x => esc(x.r.joiningShip),  sort: x => txtSort(x.r.joiningShip) },
     ];
 
     const headHtml = () => `<tr>${cols.map((c, i) => {
