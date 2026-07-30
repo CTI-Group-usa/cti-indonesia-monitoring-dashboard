@@ -117,7 +117,7 @@ const App = (() => {
   const CACHE_TTL   = 30 * 60 * 1000;  // ignore cache older than 30 min
   // Bump when the record-mapping logic changes so old snapshots are discarded
   // (otherwise a stale snapshot mapped by the previous code is shown first).
-  const CACHE_VERSION = 4;
+  const CACHE_VERSION = 5;
   const DB_NAME = 'cti_indo', STORE = 'cache', CACHE_KEY = 'records';
 
   function idbOpen() {
@@ -430,7 +430,8 @@ const App = (() => {
       expiryKey: 'mcvExpiry',       sheetType: /mcv/i },
     { key: 'oktb',     label: 'OKTB',
       statusKey: 'oktbStatus',      numberKey: null,              apptKey: null,
-      expiryKey: null,              sheetType: /oktb/i },
+      expiryKey: null,              sheetType: /oktb/i,
+      expectedKey: 'oktbRequestedDate', expectedLabel: 'Requested Date' },
   ];
   let _visaTab = 'passport';
   const DEFAULT_OFFICE = 'CTI Indonesia';
@@ -758,9 +759,9 @@ const App = (() => {
       const el = document.getElementById(id);
       if (el && rows.length) el.onclick = () => renderVisaDetail(rows, tab, title, extraCols);
     };
-    // In Progress drill-down also shows the admin-recorded Expected Date.
+    // In Progress drill-down also shows the admin-recorded Expected/Requested Date.
     const expectedCol = tab.expectedKey ? [{
-      label: 'Expected Date',
+      label: tab.expectedLabel || 'Expected Date',
       render: r => formatDate(r[tab.expectedKey]),
       sort: r => dateSort(parseDate(r[tab.expectedKey])), num: true,
     }] : null;
