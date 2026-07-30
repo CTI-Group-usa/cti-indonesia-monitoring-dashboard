@@ -719,8 +719,9 @@ const App = (() => {
       // Pending DS-160 / Pending Application uses "Added Time"; the other two
       // keep BNIVA + Appointment. Schengen's Pending Appointment is special:
       // Added Time (first), Name, Email, Cruise Line, Payment Status, wide Notes.
-      const ds160Cols   = [col.name, col.email, col.line, col.pay, col.vstat, col.added, col.appid];
+      const ds160Cols   = [col.added, col.name, col.email, col.line, col.pay, col.vstat, col.appid];
       const otherCols   = [col.name, col.email, col.line, col.pay, col.vstat, col.bniva, col.appt, col.appid];
+      const c1dApptCols = [col.added, col.name, col.email, col.line, col.pay, col.vstat, col.bniva, col.appt, col.appid];
       const schApptCols = [col.added, col.name, col.email, col.line, col.notes];
       const firstLabel = procGroups[0][0];   // "Pending DS-160" / "Pending Application"
       drawBar('c1dSheetChart', counts, label => {
@@ -728,6 +729,7 @@ const App = (() => {
         if (!g || !g[1].length) return;
         const cols = label === firstLabel ? ds160Cols
           : (tab.key === 'schengen' && label === 'Pending Appointment') ? schApptCols
+          : (tab.key === 'c1d' && label === 'Pending Appointment') ? c1dApptCols
           : otherCols;
         openDetailModal(g[1], cols, `${tab.label} — ${label}`);
       });
