@@ -246,16 +246,15 @@ const App = (() => {
     const noAssignRows = recs.filter(r => !hasSignOn(r));
     const noAssign = noAssignRows.length;
     // Onboard = signed on in the past AND signs off in the future.
-    // At Home = signs on in the future OR has no sign-on date.
+    // At Home = everyone not currently onboard (future/blank sign-on, or a
+    // contract that has already ended).
     const nowT = Date.now();
-    const onboard = recs.filter(r => {
+    const isOnboard = r => {
       const on = parseDate(r.signOnDate), off = parseDate(r.signOffDate);
       return on && on.getTime() <= nowT && off && off.getTime() > nowT;
-    }).length;
-    const atHome = recs.filter(r => {
-      const on = parseDate(r.signOnDate);
-      return !on || on.getTime() > nowT;
-    }).length;
+    };
+    const onboard = recs.filter(isOnboard).length;
+    const atHome = recs.length - onboard;
     const stats = document.getElementById('ovStats');
     if (stats) stats.innerHTML =
       statCard('Total Seafarers', recs.length.toLocaleString()) +
