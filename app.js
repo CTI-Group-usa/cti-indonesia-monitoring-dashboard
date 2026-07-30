@@ -651,8 +651,9 @@ const App = (() => {
         : (t => schengenTypes.includes(low(t)));
       const rows = visaSheet.filter(row => typeMatch(row[typeCol]));
       const nowT = Date.now();
+      const firstLabel = tab.key === 'c1d' ? 'Pending DS-160' : 'Pending Application';
       procGroups = [
-        ['Pending DS-160',      rows.filter(row => low(row['Payment Status']) === 'paid' && norm(row['Visa Status']) === '')],
+        [firstLabel,            rows.filter(row => low(row['Payment Status']) === 'paid' && norm(row['Visa Status']) === '')],
         ['Pending Appointment', rows.filter(row => {
           const vs = low(row['Visa Status']);
           return low(row['Payment Status']) === 'paid' &&
@@ -707,10 +708,11 @@ const App = (() => {
       // Pending DS-160 uses "Added Time"; the other two keep BNIVA + Appointment.
       const ds160Cols = [col.name, col.email, col.line, col.pay, col.vstat, col.added, col.appid];
       const otherCols = [col.name, col.email, col.line, col.pay, col.vstat, col.bniva, col.appt, col.appid];
+      const firstLabel = procGroups[0][0];   // "Pending DS-160" / "Pending Application"
       drawBar('c1dSheetChart', counts, label => {
         const g = procGroups.find(([l]) => l === label);
         if (!g || !g[1].length) return;
-        openDetailModal(g[1], label === 'Pending DS-160' ? ds160Cols : otherCols, `${tab.label} — ${label}`);
+        openDetailModal(g[1], label === firstLabel ? ds160Cols : otherCols, `${tab.label} — ${label}`);
       });
     }
 
