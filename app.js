@@ -657,7 +657,7 @@ const App = (() => {
         ['Pending Appointment', rows.filter(row => {
           if (low(row['Payment Status']) !== 'paid') return false;
           if (norm(row['Appointment Date']) !== '') return false;   // no appointment yet
-          if (tab.key === 'schengen') return norm(row['Notes']) !== '';   // Schengen: Notes not blank
+          if (tab.key === 'schengen') return norm(row['Notes']) !== '' && norm(row['Visa Status']) === '';   // Schengen: Notes not blank, Visa Status blank
           const vs = low(row['Visa Status']);                             // C1/D: visa status processed
           return vs === 'visa payment processed' || vs === 'visa application processed';
         })],
