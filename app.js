@@ -512,6 +512,9 @@ const App = (() => {
     if (!allData) { mc.innerHTML = errorHTML(); return; }
     // Hide excluded onboarding statuses (Resigned, Process by MSS Philippines).
     const data = allData.filter(includeRecord);
+    // Visa Registration Log sheet (drives the C1/D processing chart).
+    let visaSheet = [];
+    try { visaSheet = await Zoho.getSheetRows('visa'); } catch { visaSheet = []; }
 
     destroyCharts();
     const offices     = distinctVals(data, 'ctiOffice');
@@ -533,7 +536,7 @@ const App = (() => {
       </div>
       <div id="visaPanel"></div>`;
 
-    const repaint = () => { destroyCharts(); paintVisaPanel(applyVisaFilters(data)); };
+    const repaint = () => { destroyCharts(); paintVisaPanel(applyVisaFilters(data), visaSheet); };
 
     mc.querySelectorAll('[data-visatab]').forEach(b =>
       b.addEventListener('click', () => {
@@ -560,7 +563,7 @@ const App = (() => {
     updateStatus();
   }
 
-  function paintVisaPanel(data) {
+  function paintVisaPanel(data, visaSheet) {
     const tab = VISA_TABS.find(t => t.key === _visaTab);
     const panel = document.getElementById('visaPanel');
 
@@ -611,6 +614,25 @@ const App = (() => {
     }
     const unmatched = unmatchedRows.length;
 
+    // C1/D only: Visa Registration Log processing groups (from the sheet),
+    // limited to the currently-filtered seafarers (joined by email).
+    let c1dGroups = null;
+    if (tab.key === 'c1d' && Array.isArray(visaSheet) && visaSheet.length) {
+      const emailSet = new Set(data.map(r => String(r.email || '').trim().toLowerCase()).filter(e => e && e !== '—'));
+      const typeCol = 'Please select the type of visa you want to process';
+      const norm = v => String(v ?? '').trim();
+      const low  = v => norm(v).toLowerCase();
+      const c1dRows = visaSheet.filter(row =>
+        /c1\s*\/?\s*d/i.test(String(row[typeCol] || '')) &&
+        emailSet.has(String(row['Email Address'] || '').trim().toLowerCase()));
+      const nowT = Date.now();
+      c1dGroups = [
+        ['Pending DS-160',      c1dRows.filter(row => low(row['Payment Status']) === 'paid' && norm(row['Visa Status']) === '')],
+        ['Pending Appointment', c1dRows.filter(row => low(row['Payment Status']) === 'paid' && low(row['Visa Status']) === 'visa payment processed' && norm(row['BNIVA Number']) === '')],
+        ['Secured Appointment', c1dRows.filter(row => { const d = parseSheetDate(row['Appointment Date']); return d && d.getTime() > nowT; })],
+      ];
+    }
+
     const byStatus = {};
     holders.forEach(x => { byStatus[x.s] = (byStatus[x.s] || 0) + 1; });
 
@@ -627,9 +649,37 @@ const App = (() => {
           <div class="card-title">${tab.label} — By Status ${total ? '<span class="hint">(click a bar to list those seafarers)</span>' : ''}</div>
           ${total ? `<canvas id="visaChart" height="240"></canvas>` : `<p class="empty-row">No ${tab.label} records found.</p>`}
         </div>
-      </div>`;
+      </div>
+      ${c1dGroups ? `
+      <div class="chart-row">
+        <div class="card chart-card">
+          <div class="card-title">C1/D — Visa Processing <span class="hint">(Visa Registration Log · click a bar)</span></div>
+          <canvas id="c1dSheetChart" height="240"></canvas>
+        </div>
+      </div>` : ''}`;
 
     if (total) drawBar('visaChart', topN(byStatus, 8), status => showVisaDetail(holders, tab, status));
+
+    // C1/D processing chart (from the Visa Registration Log), bars clickable.
+    if (c1dGroups) {
+      const counts = {};
+      c1dGroups.forEach(([label, rows]) => { counts[label] = rows.length; });
+      const s = (row, k) => esc(row[k] || '—');
+      const sheetCols = [
+        { label: 'Name',              render: r => s(r, 'Name'),            sort: r => txtSort(r['Name']),          w: 200, wrap: true },
+        { label: 'Email',             render: r => s(r, 'Email Address'),   sort: r => txtSort(r['Email Address']), w: 230, wrap: true },
+        { label: 'Cruise Line',       render: r => s(r, 'Cruise Line'),     sort: r => txtSort(r['Cruise Line']),   w: 150 },
+        { label: 'Payment Status',    render: r => s(r, 'Payment Status'),  sort: r => txtSort(r['Payment Status']), w: 130 },
+        { label: 'Visa Status',       render: r => s(r, 'Visa Status'),     sort: r => txtSort(r['Visa Status']),   w: 180 },
+        { label: 'BNIVA Number',      render: r => s(r, 'BNIVA Number'),    sort: r => txtSort(r['BNIVA Number']),  w: 140 },
+        { label: 'Appointment Date',  render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: 150 },
+        { label: 'Application ID',    render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
+      ];
+      drawBar('c1dSheetChart', counts, label => {
+        const g = c1dGroups.find(([l]) => l === label);
+        if (g && g[1].length) openDetailModal(g[1], sheetCols, `C1/D — ${label}`);
+      });
+    }
 
     // Stat tiles → drill down to the seafarers behind each count.
     const wireStat = (id, rows, title) => {
