@@ -721,7 +721,7 @@ const App = (() => {
       // Added Time (first), Name, Email, Cruise Line, Payment Status, wide Notes.
       const ds160Cols   = [col.name, col.email, col.line, col.pay, col.vstat, col.added, col.appid];
       const otherCols   = [col.name, col.email, col.line, col.pay, col.vstat, col.bniva, col.appt, col.appid];
-      const schApptCols = [col.added, col.name, col.email, col.line, col.pay, col.notes];
+      const schApptCols = [col.added, col.name, col.email, col.line, col.notes];
       const firstLabel = procGroups[0][0];   // "Pending DS-160" / "Pending Application"
       drawBar('c1dSheetChart', counts, label => {
         const g = procGroups.find(([l]) => l === label);
