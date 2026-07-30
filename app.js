@@ -636,17 +636,16 @@ const App = (() => {
     }
     const unmatched = unmatchedRows.length;
 
-    // C1/D only: Visa Registration Log processing groups (from the sheet),
-    // limited to the currently-filtered seafarers (joined by email).
+    // C1/D only: Visa Registration Log processing groups (from the sheet).
+    // NOTE: intentionally NOT filtered by the page filters — always counts
+    // every C1/D application in the log.
     let c1dGroups = null;
     if (tab.key === 'c1d' && Array.isArray(visaSheet) && visaSheet.length) {
-      const emailSet = new Set(data.map(r => String(r.email || '').trim().toLowerCase()).filter(e => e && e !== '—'));
       const typeCol = 'Please select the type of visa you want to process';
       const norm = v => String(v ?? '').trim();
       const low  = v => norm(v).toLowerCase();
       const c1dRows = visaSheet.filter(row =>
-        /c1\s*\/?\s*d/i.test(String(row[typeCol] || '')) &&
-        emailSet.has(String(row['Email Address'] || '').trim().toLowerCase()));
+        /c1\s*\/?\s*d/i.test(String(row[typeCol] || '')));
       const nowT = Date.now();
       c1dGroups = [
         ['Pending DS-160',      c1dRows.filter(row => low(row['Payment Status']) === 'paid' && norm(row['Visa Status']) === '')],
