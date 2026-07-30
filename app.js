@@ -719,10 +719,11 @@ const App = (() => {
       // Pending DS-160 / Pending Application uses "Added Time"; the other two
       // keep BNIVA + Appointment. Schengen's Pending Appointment is special:
       // Added Time (first), Name, Email, Cruise Line, Payment Status, wide Notes.
-      const ds160Cols   = [col.added, col.name, col.email, col.line, col.pay, col.vstat, col.appid];
-      const otherCols   = [col.name, col.email, col.line, col.pay, col.vstat, col.bniva, col.appt, col.appid];
-      const c1dApptCols = [col.added, col.name, col.email, col.line, col.pay, col.vstat, col.bniva, col.appt, col.appid];
-      const schApptCols = [col.added, col.name, col.email, col.line, col.notes];
+      const ds160Cols      = [col.added, col.name, col.email, col.line, col.pay, col.vstat, col.appid];
+      const otherCols      = [col.name, col.email, col.line, col.pay, col.vstat, col.bniva, col.appt, col.appid];
+      const c1dApptCols    = [col.added, col.name, col.email, col.line, col.vstat, col.bniva, col.appt, col.appid];   // no Payment Status
+      const c1dSecuredCols = [col.name, col.email, col.line, col.vstat, col.bniva, col.appt, col.appid];               // no Payment Status
+      const schApptCols    = [col.added, col.name, col.email, col.line, col.notes];
       const firstLabel = procGroups[0][0];   // "Pending DS-160" / "Pending Application"
       drawBar('c1dSheetChart', counts, label => {
         const g = procGroups.find(([l]) => l === label);
@@ -730,6 +731,7 @@ const App = (() => {
         const cols = label === firstLabel ? ds160Cols
           : (tab.key === 'schengen' && label === 'Pending Appointment') ? schApptCols
           : (tab.key === 'c1d' && label === 'Pending Appointment') ? c1dApptCols
+          : (tab.key === 'c1d' && label === 'Secured Appointment') ? c1dSecuredCols
           : otherCols;
         openDetailModal(g[1], cols, `${tab.label} — ${label}`);
       });
