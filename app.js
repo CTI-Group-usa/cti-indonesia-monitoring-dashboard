@@ -655,10 +655,11 @@ const App = (() => {
       procGroups = [
         [firstLabel,            rows.filter(row => low(row['Payment Status']) === 'paid' && norm(row['Visa Status']) === '')],
         ['Pending Appointment', rows.filter(row => {
-          const vs = low(row['Visa Status']);
-          return low(row['Payment Status']) === 'paid' &&
-            (vs === 'visa payment processed' || vs === 'visa application processed') &&
-            norm(row['Appointment Date']) === '';
+          if (low(row['Payment Status']) !== 'paid') return false;
+          if (norm(row['Appointment Date']) !== '') return false;   // no appointment yet
+          if (tab.key === 'schengen') return norm(row['Notes']) !== '';   // Schengen: Notes not blank
+          const vs = low(row['Visa Status']);                             // C1/D: visa status processed
+          return vs === 'visa payment processed' || vs === 'visa application processed';
         })],
         ['Secured Appointment', rows.filter(row => {
           const d = parseSheetDate(row['Appointment Date']);
