@@ -689,18 +689,24 @@ const App = (() => {
       const counts = {};
       c1dGroups.forEach(([label, rows]) => { counts[label] = rows.length; });
       const s = (row, k) => esc(row[k] || '—');
-      const sheetCols = [
-        { label: 'Name',              render: r => s(r, 'Name'),            sort: r => txtSort(r['Name']),          w: 200, wrap: true },
-        { label: 'Email',             render: r => s(r, 'Email Address'),   sort: r => txtSort(r['Email Address']), w: 230, wrap: true },
-        { label: 'Cruise Line',       render: r => s(r, 'Cruise Line'),     sort: r => txtSort(r['Cruise Line']),   w: 150 },
-        { label: 'Payment Status',    render: r => s(r, 'Payment Status'),  sort: r => txtSort(r['Payment Status']), w: 130 },
-        { label: 'Visa Status',       render: r => s(r, 'Visa Status'),     sort: r => txtSort(r['Visa Status']),   w: 180 },
-        { label: 'Added Time',        render: r => formatSheetDate(r['Added Time']), sort: r => dateSort(parseSheetDate(r['Added Time'])), num: true, w: 140 },
-        { label: 'Application ID',    render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
-      ];
+      const col = {
+        name:  { label: 'Name',             render: r => s(r, 'Name'),            sort: r => txtSort(r['Name']),          w: 200, wrap: true },
+        email: { label: 'Email',            render: r => s(r, 'Email Address'),   sort: r => txtSort(r['Email Address']), w: 230, wrap: true },
+        line:  { label: 'Cruise Line',      render: r => s(r, 'Cruise Line'),     sort: r => txtSort(r['Cruise Line']),   w: 150 },
+        pay:   { label: 'Payment Status',   render: r => s(r, 'Payment Status'),  sort: r => txtSort(r['Payment Status']), w: 130 },
+        vstat: { label: 'Visa Status',      render: r => s(r, 'Visa Status'),     sort: r => txtSort(r['Visa Status']),   w: 180 },
+        added: { label: 'Added Time',       render: r => formatSheetDate(r['Added Time']), sort: r => dateSort(parseSheetDate(r['Added Time'])), num: true, w: 140 },
+        bniva: { label: 'BNIVA Number',     render: r => s(r, 'BNIVA Number'),    sort: r => txtSort(r['BNIVA Number']),  w: 140 },
+        appt:  { label: 'Appointment Date', render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: 150 },
+        appid: { label: 'Application ID',   render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
+      };
+      // Pending DS-160 uses "Added Time"; the other two keep BNIVA + Appointment.
+      const ds160Cols = [col.name, col.email, col.line, col.pay, col.vstat, col.added, col.appid];
+      const otherCols = [col.name, col.email, col.line, col.pay, col.vstat, col.bniva, col.appt, col.appid];
       drawBar('c1dSheetChart', counts, label => {
         const g = c1dGroups.find(([l]) => l === label);
-        if (g && g[1].length) openDetailModal(g[1], sheetCols, `C1/D — ${label}`);
+        if (!g || !g[1].length) return;
+        openDetailModal(g[1], label === 'Pending DS-160' ? ds160Cols : otherCols, `C1/D — ${label}`);
       });
     }
 
