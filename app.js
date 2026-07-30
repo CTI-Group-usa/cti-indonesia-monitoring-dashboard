@@ -714,15 +714,22 @@ const App = (() => {
         bniva: { label: 'BNIVA Number',     render: r => s(r, 'BNIVA Number'),    sort: r => txtSort(r['BNIVA Number']),  w: 140 },
         appt:  { label: 'Appointment Date', render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: 150 },
         appid: { label: 'Application ID',   render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
+        notes: { label: 'Notes',            render: r => s(r, 'Notes'),           sort: r => txtSort(r['Notes']),         w: 600, wrap: true },
       };
-      // Pending DS-160 uses "Added Time"; the other two keep BNIVA + Appointment.
-      const ds160Cols = [col.name, col.email, col.line, col.pay, col.vstat, col.added, col.appid];
-      const otherCols = [col.name, col.email, col.line, col.pay, col.vstat, col.bniva, col.appt, col.appid];
+      // Pending DS-160 / Pending Application uses "Added Time"; the other two
+      // keep BNIVA + Appointment. Schengen's Pending Appointment is special:
+      // Added Time (first), Name, Email, Cruise Line, Payment Status, wide Notes.
+      const ds160Cols   = [col.name, col.email, col.line, col.pay, col.vstat, col.added, col.appid];
+      const otherCols   = [col.name, col.email, col.line, col.pay, col.vstat, col.bniva, col.appt, col.appid];
+      const schApptCols = [col.added, col.name, col.email, col.line, col.pay, col.notes];
       const firstLabel = procGroups[0][0];   // "Pending DS-160" / "Pending Application"
       drawBar('c1dSheetChart', counts, label => {
         const g = procGroups.find(([l]) => l === label);
         if (!g || !g[1].length) return;
-        openDetailModal(g[1], label === firstLabel ? ds160Cols : otherCols, `${tab.label} — ${label}`);
+        const cols = label === firstLabel ? ds160Cols
+          : (tab.key === 'schengen' && label === 'Pending Appointment') ? schApptCols
+          : otherCols;
+        openDetailModal(g[1], cols, `${tab.label} — ${label}`);
       });
     }
 
