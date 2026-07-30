@@ -649,14 +649,12 @@ const App = (() => {
           <div class="card-title">${tab.label} — By Status ${total ? '<span class="hint">(click a bar to list those seafarers)</span>' : ''}</div>
           ${total ? `<canvas id="visaChart" height="240"></canvas>` : `<p class="empty-row">No ${tab.label} records found.</p>`}
         </div>
-      </div>
-      ${c1dGroups ? `
-      <div class="chart-row">
+        ${c1dGroups ? `
         <div class="card chart-card">
           <div class="card-title">C1/D — Visa Processing <span class="hint">(Visa Registration Log · click a bar)</span></div>
           <canvas id="c1dSheetChart" height="240"></canvas>
-        </div>
-      </div>` : ''}`;
+        </div>` : ''}
+      </div>`;
 
     if (total) drawBar('visaChart', topN(byStatus, 8), status => showVisaDetail(holders, tab, status));
 
