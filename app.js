@@ -301,15 +301,33 @@ const App = (() => {
     drawBar('chartDeploy', back);
 
     // Chart 2 — upcoming assignments (module sign-on), current + 6 months ahead.
+    const sameMonth = (d, ref) => d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth();
+    const idNorm = v => String(v ?? '').trim();
     const fwd = {};
     for (let i = 0; i <= 6; i++) { const d = new Date(base); d.setMonth(d.getMonth() + i); fwd[monthKey(d)] = 0; }
     const maxFwd = new Date(base); maxFwd.setMonth(maxFwd.getMonth() + 7);
+    const asgCurIds = new Set();   // crew IDs already counted in the current month
     recs.forEach(r => {
       const d = parseDate(r.signOnDate);
       if (!d || d < base || d >= maxFwd) return;
       const k = monthKey(new Date(d.getFullYear(), d.getMonth(), 1));
       if (k in fwd) fwd[k]++;
+      if (sameMonth(d, base)) { const id = idNorm(r.crewIdNumber); if (id && id !== '—') asgCurIds.add(id); }
     });
+    // Current month: add seafarers who deployed this month (deployment sheet)
+    // but whose module sign-on has since moved out of the month — dedupe by
+    // Crew ID, and only count crew present in the filtered dataset.
+    const recIds = new Set(recs.map(r => idNorm(r.crewIdNumber)).filter(x => x && x !== '—'));
+    const extraIds = new Set();
+    deployRows.forEach(row => {
+      if (!inSet(f.office, row['CTI Office']) || !inSet(f.cruiseLine, row['Cruise Line'])) return;
+      const d = parseSheetDate(row['Sign On Date']);
+      if (!d || !sameMonth(d, base)) return;
+      const id = idNorm(row['Crew ID']);
+      if (!id || !recIds.has(id) || asgCurIds.has(id)) return;
+      extraIds.add(id);
+    });
+    fwd[monthKey(base)] += extraIds.size;
     drawBar('chartAssign', fwd);
   }
 
