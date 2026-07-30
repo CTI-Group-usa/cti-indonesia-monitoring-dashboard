@@ -628,7 +628,12 @@ const App = (() => {
       const nowT = Date.now();
       c1dGroups = [
         ['Pending DS-160',      c1dRows.filter(row => low(row['Payment Status']) === 'paid' && norm(row['Visa Status']) === '')],
-        ['Pending Appointment', c1dRows.filter(row => low(row['Payment Status']) === 'paid' && low(row['Visa Status']) === 'visa payment processed' && norm(row['BNIVA Number']) === '')],
+        ['Pending Appointment', c1dRows.filter(row => {
+          const vs = low(row['Visa Status']);
+          return low(row['Payment Status']) === 'paid' &&
+            (vs === 'visa payment processed' || vs === 'visa application processed') &&
+            norm(row['Appointment Date']) === '';
+        })],
         ['Secured Appointment', c1dRows.filter(row => { const d = parseSheetDate(row['Appointment Date']); return d && d.getTime() > nowT; })],
       ];
     }
