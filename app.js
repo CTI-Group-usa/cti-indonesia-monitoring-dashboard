@@ -636,6 +636,19 @@ const App = (() => {
     }
     const unmatched = unmatchedRows.length;
 
+    // Schengen only: Other Visa Issued Date must be at least 2 days before the
+    // Sign On Date — otherwise immigration treats the visa as invalid. Flag any
+    // issued later than (sign-on − 2 days).
+    let issueGapRows = [];
+    if (tab.key === 'schengen') {
+      const TWO_DAYS = 2 * 86400000;
+      issueGapRows = holders.map(x => x.r).filter(r => {
+        const issued = parseDate(r.otherVisaIssuedDate), signOn = parseDate(r.signOnDate);
+        return issued && signOn && issued.getTime() > (signOn.getTime() - TWO_DAYS);
+      });
+    }
+    const issueGap = issueGapRows.length;
+
     // Visa Registration Log processing groups (from the sheet), for C1/D and
     // Schengen. NOTE: intentionally NOT filtered by the page filters — always
     // counts every matching application in the log (matched by the visa-type
@@ -684,6 +697,7 @@ const App = (() => {
         ${statCard('In Progress', inProgress, { id: 'statProgress', clickable: inProgress > 0 })}
         ${tab.expiryKey ? statCard(`Expiring (Sign-off +${soBuffer}mo)`, expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('No Status', noStatus, { id: 'statNoStatus', clickable: noStatus > 0 })}
         ${tab.key === 'mcv' ? statCard('Unmatched Passport', unmatched, { id: 'statUnmatched', clickable: unmatched > 0 }) : ''}
+        ${tab.key === 'schengen' ? statCard('Issued < 2d before Sign On', issueGap, { id: 'statIssueGap', clickable: issueGap > 0 }) : ''}
       </div>
       <div class="chart-row">
         <div class="card chart-card">
@@ -764,6 +778,20 @@ const App = (() => {
         { label: 'Joining Port',        render: r => esc(r.signOnPort),        sort: r => txtSort(r.signOnPort),   w: 140 },
       ];
       uCard.onclick = () => openDetailModal(unmatchedRows, uCols, `${tab.label} — Unmatched Passport Number`);
+    }
+
+    // Schengen: visa-issued-too-late drill-down.
+    const igCard = document.getElementById('statIssueGap');
+    if (igCard && issueGap) {
+      const igCols = [
+        { label: 'ID Number',        render: r => esc(r.crewIdNumber),      sort: r => txtSort(r.crewIdNumber), w: 100 },
+        { label: 'Name',             render: r => esc(r.name),              sort: r => txtSort(r.name),         w: 200, wrap: true },
+        { label: 'Visa Issued Date', render: r => formatDate(r.otherVisaIssuedDate), sort: r => dateSort(parseDate(r.otherVisaIssuedDate)), num: true, w: 150 },
+        { label: 'Sign On',          render: r => formatDate(r.signOnDate), sort: r => dateSort(parseDate(r.signOnDate)), num: true, w: 130 },
+        { label: 'Ship',             render: r => esc(r.joiningShip),       sort: r => txtSort(r.joiningShip),  w: 150 },
+        { label: 'Sign On Port',     render: r => esc(r.signOnPort),        sort: r => txtSort(r.signOnPort),   w: 140 },
+      ];
+      igCard.onclick = () => openDetailModal(issueGapRows, igCols, `${tab.label} — Visa Issued < 2 days before Sign On`);
     }
   }
 
