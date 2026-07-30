@@ -653,7 +653,11 @@ const App = (() => {
       const nowT = Date.now();
       const firstLabel = tab.key === 'c1d' ? 'Pending DS-160' : 'Pending Application';
       procGroups = [
-        [firstLabel,            rows.filter(row => low(row['Payment Status']) === 'paid' && norm(row['Visa Status']) === '')],
+        [firstLabel,            rows.filter(row => {
+          if (low(row['Payment Status']) !== 'paid' || norm(row['Visa Status']) !== '') return false;
+          if (tab.key === 'schengen') return norm(row['Appointment Date']) === '' && norm(row['Notes']) === '';
+          return true;
+        })],
         ['Pending Appointment', rows.filter(row => {
           if (low(row['Payment Status']) !== 'paid') return false;
           if (norm(row['Appointment Date']) !== '') return false;   // no appointment yet
