@@ -245,13 +245,26 @@ const App = (() => {
     const assigned = recs.filter(hasSignOn).length;
     const noAssignRows = recs.filter(r => !hasSignOn(r));
     const noAssign = noAssignRows.length;
+    // Onboard = signed on in the past AND signs off in the future.
+    // At Home = signs on in the future OR has no sign-on date.
+    const nowT = Date.now();
+    const onboard = recs.filter(r => {
+      const on = parseDate(r.signOnDate), off = parseDate(r.signOffDate);
+      return on && on.getTime() <= nowT && off && off.getTime() > nowT;
+    }).length;
+    const atHome = recs.filter(r => {
+      const on = parseDate(r.signOnDate);
+      return !on || on.getTime() > nowT;
+    }).length;
     const stats = document.getElementById('ovStats');
     if (stats) stats.innerHTML =
       statCard('Total Seafarers', recs.length.toLocaleString()) +
       statCard('New Hired', newHired.toLocaleString()) +
       statCard('Repeater', repeater.toLocaleString()) +
       statCard('Assigned', assigned.toLocaleString()) +
-      statCard('No Assignment', noAssign.toLocaleString(), { id: 'statNoAssign', clickable: noAssign > 0 });
+      statCard('No Assignment', noAssign.toLocaleString(), { id: 'statNoAssign', clickable: noAssign > 0 }) +
+      statCard('Onboard', onboard.toLocaleString()) +
+      statCard('At Home', atHome.toLocaleString());
 
     // No Assignment tile → drill down to those seafarers.
     const naCard = document.getElementById('statNoAssign');
