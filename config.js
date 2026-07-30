@@ -98,6 +98,15 @@ const CONFIG = {
     otherVisaExpiry:     'Other_Visa_Expiration_Date',
     otherVisaIssuedDate: 'Other_Visa_Issued_Date',
 
+    // "Expected ready" dates the admin records when a document isn't ready yet
+    // (drives the Pending Action section).
+    passportExpectedDate:   'Passport_Expected_Date',
+    bstExpectedDate:        'BST_Expected_Date',
+    seamanBookExpectedDate: 'Seaman_Book_Expected_Date',
+    medicalExpectedDate:    'Medical_Expected_Date',
+    c1dExpectedDate:        'C1_D_Visa_Expected_Date',
+    otherVisaExpectedDate:  'Other_Visa_Expected_Date',
+
     // Timestamps  (NOTE: Modified Time API name is Updated_On)
     createdDate:      'Created_Time',
     modifiedDate:     'Updated_On',

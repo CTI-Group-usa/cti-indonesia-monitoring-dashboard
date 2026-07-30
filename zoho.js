@@ -129,6 +129,13 @@ const Zoho = (() => {
       otherVisaAppointment: r[F.otherVisaAppointment] || null,
       otherVisaExpiry:      r[F.otherVisaExpiry]      || null,
       otherVisaIssuedDate:  r[F.otherVisaIssuedDate]  || null,
+      // Expected-ready dates (Pending Action section).
+      passportExpectedDate:   r[F.passportExpectedDate]   || null,
+      bstExpectedDate:        r[F.bstExpectedDate]        || null,
+      seamanBookExpectedDate: r[F.seamanBookExpectedDate] || null,
+      medicalExpectedDate:    r[F.medicalExpectedDate]    || null,
+      c1dExpectedDate:        r[F.c1dExpectedDate]        || null,
+      otherVisaExpectedDate:  r[F.otherVisaExpectedDate]  || null,
       // Timestamps
       createdDate:      r[F.createdDate]  || null,
       modifiedDate:     r[F.modifiedDate] || null,

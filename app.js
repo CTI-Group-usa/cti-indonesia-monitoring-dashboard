@@ -117,7 +117,7 @@ const App = (() => {
   const CACHE_TTL   = 30 * 60 * 1000;  // ignore cache older than 30 min
   // Bump when the record-mapping logic changes so old snapshots are discarded
   // (otherwise a stale snapshot mapped by the previous code is shown first).
-  const CACHE_VERSION = 3;
+  const CACHE_VERSION = 4;
   const DB_NAME = 'cti_indo', STORE = 'cache', CACHE_KEY = 'records';
 
   function idbOpen() {
@@ -444,6 +444,8 @@ const App = (() => {
   let _recFilters  = emptyFilters();
   let _recSort = { i: -1, dir: 1 };   // Records table sort (col index, direction)
   let _ovFilters = { office: [DEFAULT_OFFICE], cruiseLine: [] };   // Overview charts
+  let _penFilters = emptyFilters();   // Pending Action page
+  let _penSort = { i: 5, dir: 1 };    // default: Expected Date ascending (closest first)
 
   // Sort comparables shared by all sortable tables.
   const txtSort  = v => (v == null || v === '' || v === '—') ? '' : String(v).toLowerCase();
@@ -1121,9 +1123,126 @@ const App = (() => {
     await refresh();  // re-pull so the table reflects both sources
   }
 
+  // ═══════════════════════════════════════════════════════════
+  //  PAGE: PENDING ACTION  (documents not yet Valid, with an expected date)
+  // ═══════════════════════════════════════════════════════════
+  async function renderPending() {
+    const mc = document.getElementById('main-content');
+    mc.innerHTML = skeletonHTML();
+    const allData = await loadData();
+    if (!allData) { mc.innerHTML = errorHTML(); return; }
+    const data = allData.filter(includeRecord);
+
+    const offices     = distinctVals(data, 'ctiOffice');
+    const cruiseLines = distinctVals(data, 'cruiseLine');
+    const onboardings = distinctVals(data, 'onboardingStatus');
+
+    const isValid = s => /valid|approv|issued|granted|complete|pass|board|ok to/i.test(String(s || ''));
+    // Each document type: label, expected-date field, status field.
+    const DOC_TYPES = [
+      { label: 'Passport',      exp: 'passportExpectedDate',   st: 'passportStatus' },
+      { label: 'BST',           exp: 'bstExpectedDate',        st: 'bstStatus' },
+      { label: "Seaman's Book", exp: 'seamanBookExpectedDate', st: 'seamanBookStatus' },
+      { label: 'Medical',       exp: 'medicalExpectedDate',    st: 'medicalStatus' },
+      { label: 'C1/D Visa',     exp: 'c1dExpectedDate',        st: 'c1dVisaStatus' },
+      { label: 'Other Visa',    exp: 'otherVisaExpectedDate',  st: 'otherVisaStatus' },
+    ];
+
+    // Row = one (seafarer, pending document) pair.
+    const cols = [
+      { label: 'ID Number',      render: x => esc(x.r.crewIdNumber), sort: x => txtSort(x.r.crewIdNumber) },
+      { label: 'Name',           render: x => esc(x.r.name),         sort: x => txtSort(x.r.name) },
+      { label: 'Email',          render: x => esc(x.r.email),        sort: x => txtSort(x.r.email) },
+      { label: 'Document',       render: x => esc(x.doc),            sort: x => txtSort(x.doc) },
+      { label: 'Current Status', render: x => esc(x.status),         sort: x => txtSort(x.status) },
+      { label: 'Expected Date',  render: x => formatDate(x.exp),     sort: x => x.exp ? x.exp.getTime() : null, num: true },
+    ];
+
+    const headHtml = () => `<tr>${cols.map((c, i) => {
+      const arrow = i === _penSort.i ? `<span class="sort-arrow">${_penSort.dir > 0 ? '▲' : '▼'}</span>` : '';
+      return `<th class="sortable" data-i="${i}">${c.label}${arrow}</th>`;
+    }).join('')}</tr>`;
+
+    mc.innerHTML = `
+      <div class="page-header"><h1>Pending Action</h1></div>
+      <div class="filter-bar">
+        ${msHTML('pOffice', 'All CTI Offices', offices, _penFilters.office)}
+        ${msHTML('pLine', 'All Cruise Lines', cruiseLines, _penFilters.cruiseLine)}
+        ${msHTML('pOnboard', 'All Onboarding Status', onboardings, _penFilters.onboarding)}
+        <label class="filter-date">Sign On <input type="date" id="pFrom" value="${esc(_penFilters.from)}"></label>
+        <label class="filter-date">to <input type="date" id="pTo" value="${esc(_penFilters.to)}"></label>
+        <button class="btn-sm" id="pClear">Clear</button>
+      </div>
+      <div class="toolbar">
+        <input type="search" id="penSearch" class="search-input" placeholder="Search name, email, ID, document…" value="${esc(_search)}">
+        <span class="rec-count" id="penCount"></span>
+      </div>
+      <div class="card table-card">
+        <div class="table-wrap"><table class="data-table">
+          <thead id="penHead">${headHtml()}</thead>
+          <tbody id="penBody"></tbody>
+        </table></div>
+      </div>`;
+
+    const buildRows = () => {
+      const filtered = applyDeployFilters(data, _penFilters);
+      const rows = [];
+      filtered.forEach(r => DOC_TYPES.forEach(dt => {
+        const exp = parseDate(r[dt.exp]);
+        if (!exp) return;                // no expected date recorded
+        if (isValid(r[dt.st])) return;   // already Valid → resolved
+        rows.push({ r, doc: dt.label, exp, status: r[dt.st] });
+      }));
+      const q = _search.trim().toLowerCase();
+      let out = q ? rows.filter(x => [x.r.name, x.r.email, x.r.crewIdNumber, x.doc, x.status]
+        .some(v => String(v).toLowerCase().includes(q))) : rows;
+      if (_penSort.i >= 0) {
+        const c = cols[_penSort.i];
+        out = out.slice().sort((a, b) => {
+          const x = c.sort(a), y = c.sort(b);
+          const xe = (x === null || x === ''), ye = (y === null || y === '');
+          if (xe && ye) return 0; if (xe) return 1; if (ye) return -1;
+          return (c.num ? (x - y) : String(x).localeCompare(String(y))) * _penSort.dir;
+        });
+      }
+      return out;
+    };
+
+    const paint = () => {
+      const rows = buildRows();
+      const cnt = document.getElementById('penCount');
+      if (cnt) cnt.textContent = `${rows.length.toLocaleString()} item${rows.length === 1 ? '' : 's'}`;
+      document.getElementById('penHead').innerHTML = headHtml();
+      const tbody = document.getElementById('penBody');
+      if (tbody) tbody.innerHTML = rows.length
+        ? rows.map(x => `<tr>${cols.map(c => `<td>${c.render(x)}</td>`).join('')}</tr>`).join('')
+        : `<tr><td colspan="${cols.length}" class="empty-row">No pending actions.</td></tr>`;
+      document.querySelectorAll('#penHead th.sortable').forEach(th =>
+        th.onclick = () => {
+          const i = +th.dataset.i;
+          if (i === _penSort.i) _penSort.dir = -_penSort.dir; else { _penSort.i = i; _penSort.dir = 1; }
+          paint();
+        });
+    };
+
+    wireMS(mc, 'pOffice',  sel => { _penFilters.office = sel;     paint(); });
+    wireMS(mc, 'pLine',    sel => { _penFilters.cruiseLine = sel; paint(); });
+    wireMS(mc, 'pOnboard', sel => { _penFilters.onboarding = sel; paint(); });
+    const wire = (id, prop) => {
+      const el = mc.querySelector('#' + id);
+      el.addEventListener('change', () => { _penFilters[prop] = el.value; paint(); });
+    };
+    wire('pFrom', 'from'); wire('pTo', 'to');
+    mc.querySelector('#pClear').addEventListener('click', () => { _penFilters = emptyFilters(); renderPending(); });
+    mc.querySelector('#penSearch').addEventListener('input', e => { _search = e.target.value; paint(); });
+
+    paint();
+    updateStatus();
+  }
+
   // ── Router ──────────────────────────────────────────────────
-  const ROUTES = { overview: renderOverview, records: renderRecords, documents: renderVisa, visa: renderVisa };
-  const TITLES = { overview: 'Overview', records: 'Records', documents: 'Documents', visa: 'Documents' };
+  const ROUTES = { overview: renderOverview, records: renderRecords, documents: renderVisa, visa: renderVisa, pending: renderPending };
+  const TITLES = { overview: 'Overview', records: 'Records', documents: 'Documents', visa: 'Documents', pending: 'Pending Action' };
 
   function currentPage() {
     const p = (location.hash || '#overview').slice(1);
