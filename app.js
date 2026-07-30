@@ -406,7 +406,7 @@ const App = (() => {
     // General documents (module-only — no sheet fallback).
     { key: 'passport', label: 'Passport',
       statusKey: 'passportStatus',    numberKey: 'passportNumber',    apptKey: null,
-      expiryKey: 'passportExpiry',    expiryMonths: 18 },
+      expiryKey: 'passportExpiry' },
     { key: 'bst',      label: 'BST',
       statusKey: 'bstStatus',         numberKey: 'bstNumber',         apptKey: null,
       expiryKey: 'bstExpiry' },
@@ -604,19 +604,18 @@ const App = (() => {
     const noStatusRows = data.filter(r => !visaStatusOf(r, tab));
     const noStatus = noStatusRows.length;
 
-    const expiryMonths = tab.expiryMonths || 9;
+    // Cruise-line rule: a document must stay valid through (Sign Off Date + a
+    // buffer) — 6 months for Passport, 1 month for every other document. A
+    // currently-Valid document that expires before that is flagged as expiring.
+    const soBuffer = tab.key === 'passport' ? 6 : 1;
+    const addMonths = (d, n) => { const x = new Date(d); x.setMonth(x.getMonth() + n); return x; };
     let expiringRows = [];
     if (tab.expiryKey) {
-      const now = Date.now();
-      const soonDate = new Date(); soonDate.setMonth(soonDate.getMonth() + expiryMonths);
-      const soon = soonDate.getTime();
-      // Only currently-Valid documents count as "expiring" — in-process /
-      // need-to-process ones are already being worked on.
       expiringRows = holders
         .filter(x => isValid(x.s))
-        .map(x => ({ r: x.r, t: (parseDate(x.r[tab.expiryKey]) || {}).getTime?.() }))
-        .filter(x => x.t && x.t >= now && x.t <= soon)
-        .sort((a, b) => a.t - b.t)   // soonest expiry first
+        .map(x => ({ r: x.r, off: parseDate(x.r.signOffDate), exp: parseDate(x.r[tab.expiryKey]) }))
+        .filter(x => x.off && x.exp && x.exp.getTime() < addMonths(x.off, soBuffer).getTime())
+        .sort((a, b) => a.exp - b.exp)   // soonest expiry first
         .map(x => x.r);
     }
     const expiring = expiringRows.length;
@@ -669,7 +668,7 @@ const App = (() => {
         ${statCard(`Total ${tab.label}`, total, { id: 'statTotal', clickable: total > 0 })}
         ${statCard('Valid', valid, { id: 'statValid', clickable: valid > 0 })}
         ${statCard('In Progress', inProgress, { id: 'statProgress', clickable: inProgress > 0 })}
-        ${tab.expiryKey ? statCard(`Expiring < ${expiryMonths} months`, expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('No Status', noStatus, { id: 'statNoStatus', clickable: noStatus > 0 })}
+        ${tab.expiryKey ? statCard(`Expiring (Sign-off +${soBuffer}mo)`, expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('No Status', noStatus, { id: 'statNoStatus', clickable: noStatus > 0 })}
         ${tab.key === 'mcv' ? statCard('Unmatched Passport', unmatched, { id: 'statUnmatched', clickable: unmatched > 0 }) : ''}
       </div>
       <div class="chart-row">
@@ -715,7 +714,7 @@ const App = (() => {
     wireStat('statTotal',    totalRows,    `${tab.label} — All`);
     wireStat('statValid',    validRows,    `${tab.label} — Valid`);
     wireStat('statProgress', progressRows, `${tab.label} — In Progress`);
-    wireStat('statExpiring', expiringRows, `${tab.label} — Expiring < ${expiryMonths} months`);
+    wireStat('statExpiring', expiringRows, `${tab.label} — Expiring (valid < Sign-off +${soBuffer}mo)`);
     wireStat('statNoStatus', noStatusRows, `${tab.label} — No Status`);
 
     // MCV: unmatched passport-number drill-down.
