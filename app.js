@@ -660,7 +660,12 @@ const App = (() => {
             (vs === 'visa payment processed' || vs === 'visa application processed') &&
             norm(row['Appointment Date']) === '';
         })],
-        ['Secured Appointment', rows.filter(row => { const d = parseSheetDate(row['Appointment Date']); return d && d.getTime() > nowT; })],
+        ['Secured Appointment', rows.filter(row => {
+          const d = parseSheetDate(row['Appointment Date']);
+          if (!d || d.getTime() <= nowT) return false;              // future appointment
+          if (tab.key === 'schengen') return low(row['Payment Status']) === 'paid';  // Schengen also requires Paid
+          return true;
+        })],
       ];
     }
 
