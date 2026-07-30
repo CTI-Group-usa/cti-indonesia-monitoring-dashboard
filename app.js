@@ -636,26 +636,30 @@ const App = (() => {
     }
     const unmatched = unmatchedRows.length;
 
-    // C1/D only: Visa Registration Log processing groups (from the sheet).
-    // NOTE: intentionally NOT filtered by the page filters — always counts
-    // every C1/D application in the log.
-    let c1dGroups = null;
-    if (tab.key === 'c1d' && Array.isArray(visaSheet) && visaSheet.length) {
+    // Visa Registration Log processing groups (from the sheet), for C1/D and
+    // Schengen. NOTE: intentionally NOT filtered by the page filters — always
+    // counts every matching application in the log (matched by the visa-type
+    // column only).
+    let procGroups = null;
+    if ((tab.key === 'c1d' || tab.key === 'schengen') && Array.isArray(visaSheet) && visaSheet.length) {
       const typeCol = 'Please select the type of visa you want to process';
       const norm = v => String(v ?? '').trim();
       const low  = v => norm(v).toLowerCase();
-      const c1dRows = visaSheet.filter(row =>
-        /c1\s*\/?\s*d/i.test(String(row[typeCol] || '')));
+      const schengenTypes = ['schengen visa', 'schengen visa prime time', 'spain visa prime time'];
+      const typeMatch = tab.key === 'c1d'
+        ? (t => low(t) === 'c1/d visa')
+        : (t => schengenTypes.includes(low(t)));
+      const rows = visaSheet.filter(row => typeMatch(row[typeCol]));
       const nowT = Date.now();
-      c1dGroups = [
-        ['Pending DS-160',      c1dRows.filter(row => low(row['Payment Status']) === 'paid' && norm(row['Visa Status']) === '')],
-        ['Pending Appointment', c1dRows.filter(row => {
+      procGroups = [
+        ['Pending DS-160',      rows.filter(row => low(row['Payment Status']) === 'paid' && norm(row['Visa Status']) === '')],
+        ['Pending Appointment', rows.filter(row => {
           const vs = low(row['Visa Status']);
           return low(row['Payment Status']) === 'paid' &&
             (vs === 'visa payment processed' || vs === 'visa application processed') &&
             norm(row['Appointment Date']) === '';
         })],
-        ['Secured Appointment', c1dRows.filter(row => { const d = parseSheetDate(row['Appointment Date']); return d && d.getTime() > nowT; })],
+        ['Secured Appointment', rows.filter(row => { const d = parseSheetDate(row['Appointment Date']); return d && d.getTime() > nowT; })],
       ];
     }
 
@@ -675,19 +679,19 @@ const App = (() => {
           <div class="card-title">${tab.label} — By Status ${total ? '<span class="hint">(click a bar to list those seafarers)</span>' : ''}</div>
           ${total ? `<canvas id="visaChart" height="240"></canvas>` : `<p class="empty-row">No ${tab.label} records found.</p>`}
         </div>
-        ${c1dGroups ? `
+        ${procGroups ? `
         <div class="card chart-card">
-          <div class="card-title">C1/D — Visa Processing <span class="hint">(Visa Registration Log · click a bar)</span></div>
+          <div class="card-title">${tab.label} — Visa Processing <span class="hint">(Visa Registration Log · click a bar)</span></div>
           <canvas id="c1dSheetChart" height="240"></canvas>
         </div>` : ''}
       </div>`;
 
     if (total) drawBar('visaChart', topN(byStatus, 8), status => showVisaDetail(holders, tab, status));
 
-    // C1/D processing chart (from the Visa Registration Log), bars clickable.
-    if (c1dGroups) {
+    // Visa-processing chart (from the Visa Registration Log), bars clickable.
+    if (procGroups) {
       const counts = {};
-      c1dGroups.forEach(([label, rows]) => { counts[label] = rows.length; });
+      procGroups.forEach(([label, rows]) => { counts[label] = rows.length; });
       const s = (row, k) => esc(row[k] || '—');
       const col = {
         name:  { label: 'Name',             render: r => s(r, 'Name'),            sort: r => txtSort(r['Name']),          w: 200, wrap: true },
@@ -704,9 +708,9 @@ const App = (() => {
       const ds160Cols = [col.name, col.email, col.line, col.pay, col.vstat, col.added, col.appid];
       const otherCols = [col.name, col.email, col.line, col.pay, col.vstat, col.bniva, col.appt, col.appid];
       drawBar('c1dSheetChart', counts, label => {
-        const g = c1dGroups.find(([l]) => l === label);
+        const g = procGroups.find(([l]) => l === label);
         if (!g || !g[1].length) return;
-        openDetailModal(g[1], label === 'Pending DS-160' ? ds160Cols : otherCols, `C1/D — ${label}`);
+        openDetailModal(g[1], label === 'Pending DS-160' ? ds160Cols : otherCols, `${tab.label} — ${label}`);
       });
     }
 
