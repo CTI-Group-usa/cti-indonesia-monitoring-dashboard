@@ -1002,7 +1002,7 @@ const App = (() => {
       <div class="page-header"><h1>Records</h1></div>
       <div class="subtabs">
         <button class="subtab ${_recTab === 'all' ? 'active' : ''}" data-rectab="all">All Records</button>
-        <button class="subtab ${_recTab === 'lastmin' ? 'active' : ''}" data-rectab="lastmin">Last Minutes Assignment</button>
+        <button class="subtab ${_recTab === 'lastmin' ? 'active' : ''}" data-rectab="lastmin">Last Minutes Assignment <span class="subtab-count" id="lastminCount"></span></button>
       </div>
       <div class="filter-bar">
         ${msHTML('rOffice', 'All CTI Offices', offices, _recFilters.office)}
@@ -1039,6 +1039,9 @@ const App = (() => {
       }
       const cnt = document.getElementById('recCount');
       if (cnt) cnt.textContent = `${rows.length.toLocaleString()} record${rows.length === 1 ? '' : 's'}`;
+      const lm = document.getElementById('lastminCount');
+      if (lm) lm.textContent = '· ' + applyDeployFilters(data, _recFilters)
+        .filter(r => _lastMinSet.has(String(r.crewIdNumber ?? '').trim())).length;
       document.getElementById('recHead').innerHTML = headHtml();
       paintRows(rows, cols);
       document.querySelectorAll('#recHead th.sortable').forEach(th =>
