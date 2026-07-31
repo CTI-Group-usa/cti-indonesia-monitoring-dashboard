@@ -444,6 +444,7 @@ const App = (() => {
   let _visaFilters = emptyFilters();
   let _recFilters  = emptyFilters();
   let _recSort = { i: -1, dir: 1 };   // Records table sort (col index, direction)
+  let _recTab = 'all';                // Records sub-tab: 'all' | 'lastmin'
   let _ovFilters = { office: [DEFAULT_OFFICE], cruiseLine: [] };   // Overview charts
   let _penFilters = emptyFilters();   // Pending Action page
   let _penSort = { i: 5, dir: 1 };    // default: Expected Date ascending (closest first)
@@ -955,6 +956,10 @@ const App = (() => {
 
     mc.innerHTML = `
       <div class="page-header"><h1>Records</h1></div>
+      <div class="subtabs">
+        <button class="subtab ${_recTab === 'all' ? 'active' : ''}" data-rectab="all">All Records</button>
+        <button class="subtab ${_recTab === 'lastmin' ? 'active' : ''}" data-rectab="lastmin">Last Minutes Assignment</button>
+      </div>
       <div class="filter-bar">
         ${msHTML('rOffice', 'All CTI Offices', offices, _recFilters.office)}
         ${msHTML('rLine', 'All Cruise Lines', cruiseLines, _recFilters.cruiseLine)}
@@ -1000,6 +1005,13 @@ const App = (() => {
         });
     };
 
+    mc.querySelectorAll('[data-rectab]').forEach(b =>
+      b.addEventListener('click', () => {
+        _recTab = b.dataset.rectab;
+        mc.querySelectorAll('[data-rectab]').forEach(x =>
+          x.classList.toggle('active', x.dataset.rectab === _recTab));
+        paint();
+      }));
     wireMS(mc, 'rOffice',  sel => { _recFilters.office = sel;     paint(); });
     wireMS(mc, 'rLine',    sel => { _recFilters.cruiseLine = sel; paint(); });
     wireMS(mc, 'rOnboard', sel => { _recFilters.onboarding = sel; paint(); });
@@ -1022,6 +1034,15 @@ const App = (() => {
   // Records dataset filtered by the shared deployment filters + the search box.
   function recFiltered(data) {
     let rows = applyDeployFilters(data, _recFilters);
+    // Last Minutes Assignment: sign-on date is today..under-4-weeks away.
+    if (_recTab === 'lastmin') {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const nowT = today.getTime(), limit = nowT + 28 * 86400000;
+      rows = rows.filter(r => {
+        const d = parseDate(r.signOnDate);
+        return d && d.getTime() >= nowT && d.getTime() < limit;
+      });
+    }
     const q = _search.trim().toLowerCase();
     if (q) rows = rows.filter(r =>
       [r.name, r.email, r.ctiOffice, r.crewIdNumber, r.joiningShip, r.signOnPort,
