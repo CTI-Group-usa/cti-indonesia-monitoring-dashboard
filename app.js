@@ -445,6 +445,49 @@ const App = (() => {
   let _recFilters  = emptyFilters();
   let _recSort = { i: -1, dir: 1 };   // Records table sort (col index, direction)
   let _recTab = 'all';                // Records sub-tab: 'all' | 'lastmin'
+  let _lastMinSet = new Set();        // crew IDs flagged as last-minute assignments
+
+  // Detect "last-minute" assignments: seafarers who were newly assigned since
+  // the previous day's snapshot AND whose sign-on date is under 4 weeks away.
+  // Snapshots are stored per-browser in localStorage, updated once per day.
+  function lsGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  function refreshLastMinute(records) {
+    const SNAP = 'cti_indo_assign_snap', FLAG = 'cti_indo_lastmin';
+    const idOf = r => String(r.crewIdNumber ?? '').trim();
+    const dayKey = new Date().toDateString();
+    const now0 = new Date(); now0.setHours(0, 0, 0, 0);
+    const nowT = now0.getTime(), FOUR_WK = 28 * 86400000;
+
+    const assignedNow = new Set(), byId = {};
+    records.forEach(r => {
+      const id = idOf(r);
+      if (!id || id === '—') return;
+      byId[id] = r;
+      if (parseDate(r.signOnDate)) assignedNow.add(id);
+    });
+
+    const snap = lsGet(SNAP);
+    let flags = lsGet(FLAG) || {};   // { crewId: detectedDay }
+    if (!snap) {
+      lsSet(SNAP, { day: dayKey, ids: [...assignedNow] });   // first run: baseline only
+    } else if (snap.day !== dayKey) {
+      const prev = new Set(snap.ids || []);
+      assignedNow.forEach(id => {
+        if (prev.has(id)) return;                            // already assigned before → not new
+        const d = parseDate(byId[id]?.signOnDate);
+        if (d && d.getTime() >= nowT && d.getTime() < nowT + FOUR_WK) flags[id] = dayKey;
+      });
+      lsSet(SNAP, { day: dayKey, ids: [...assignedNow] });
+    }
+    // Drop flags once the seafarer has departed (sign-on passed) or unassigned.
+    Object.keys(flags).forEach(id => {
+      const d = parseDate(byId[id]?.signOnDate);
+      if (!d || d.getTime() < nowT) delete flags[id];
+    });
+    lsSet(FLAG, flags);
+    return new Set(Object.keys(flags));
+  }
   let _ovFilters = { office: [DEFAULT_OFFICE], cruiseLine: [] };   // Overview charts
   let _penFilters = emptyFilters();   // Pending Action page
   let _penSort = { i: 5, dir: 1 };    // default: Expected Date ascending (closest first)
@@ -923,6 +966,7 @@ const App = (() => {
     if (!allData) { mc.innerHTML = errorHTML(); return; }
     // Hide excluded onboarding statuses (Resigned, Process by MSS Philippines).
     const data = allData.filter(includeRecord);
+    _lastMinSet = refreshLastMinute(data);   // day-over-day new-assignment detection
 
     const offices     = distinctVals(data, 'ctiOffice');
     const cruiseLines = distinctVals(data, 'cruiseLine');
@@ -1034,15 +1078,10 @@ const App = (() => {
   // Records dataset filtered by the shared deployment filters + the search box.
   function recFiltered(data) {
     let rows = applyDeployFilters(data, _recFilters);
-    // Last Minutes Assignment: sign-on date is today..under-4-weeks away.
-    if (_recTab === 'lastmin') {
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const nowT = today.getTime(), limit = nowT + 28 * 86400000;
-      rows = rows.filter(r => {
-        const d = parseDate(r.signOnDate);
-        return d && d.getTime() >= nowT && d.getTime() < limit;
-      });
-    }
+    // Last Minutes Assignment: newly assigned since the previous day's snapshot,
+    // with a sign-on under 4 weeks away (see refreshLastMinute).
+    if (_recTab === 'lastmin')
+      rows = rows.filter(r => _lastMinSet.has(String(r.crewIdNumber ?? '').trim()));
     const q = _search.trim().toLowerCase();
     if (q) rows = rows.filter(r =>
       [r.name, r.email, r.ctiOffice, r.crewIdNumber, r.joiningShip, r.signOnPort,
