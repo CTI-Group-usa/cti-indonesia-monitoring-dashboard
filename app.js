@@ -480,10 +480,13 @@ const App = (() => {
       });
       lsSet(SNAP, { day: dayKey, ids: [...assignedNow] });
     }
-    // Drop flags once the seafarer has departed (sign-on passed) or unassigned.
+    // A flag stays until the onboarding status becomes Report to Ship /
+    // Rescheduled / Resigned (Resigned rows are already excluded from the data).
+    const DONE = ['report to ship', 'rescheduled', 'resigned'];
     Object.keys(flags).forEach(id => {
-      const d = parseDate(byId[id]?.signOnDate);
-      if (!d || d.getTime() < nowT) delete flags[id];
+      const r = byId[id];
+      if (!r) { delete flags[id]; return; }   // no longer in the dataset
+      if (DONE.includes(String(r.onboardingStatus ?? '').trim().toLowerCase())) delete flags[id];
     });
     lsSet(FLAG, flags);
     return new Set(Object.keys(flags));
