@@ -106,6 +106,7 @@ const CONFIG = {
     medicalExpectedDate:    'Medical_Expected_Date',
     c1dExpectedDate:        'C1_D_Visa_Expected_Date',
     otherVisaExpectedDate:  'Other_Visa_Expected_Date',
+    mcvExpectedDate:        'MCV_Expected_Date',
     oktbRequestedDate:      'OKTB_Requested_Date',
 
     // Timestamps  (NOTE: Modified Time API name is Updated_On)

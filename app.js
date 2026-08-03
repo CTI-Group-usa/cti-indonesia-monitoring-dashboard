@@ -117,7 +117,7 @@ const App = (() => {
   const CACHE_TTL   = 30 * 60 * 1000;  // ignore cache older than 30 min
   // Bump when the record-mapping logic changes so old snapshots are discarded
   // (otherwise a stale snapshot mapped by the previous code is shown first).
-  const CACHE_VERSION = 5;
+  const CACHE_VERSION = 6;
   const DB_NAME = 'cti_indo', STORE = 'cache', CACHE_KEY = 'records';
 
   function idbOpen() {
@@ -427,7 +427,7 @@ const App = (() => {
       moduleOnly: true },   // Recruit module only — no Visa Log sheet fallback (excludes payment statuses)
     { key: 'mcv',      label: 'MCV',
       statusKey: 'mcvStatus',       numberKey: 'mcvNumber',       apptKey: null,
-      expiryKey: 'mcvExpiry',       sheetType: /mcv/i },
+      expiryKey: 'mcvExpiry',       sheetType: /mcv/i,            expectedKey: 'mcvExpectedDate' },
     { key: 'oktb',     label: 'OKTB',
       statusKey: 'oktbStatus',      numberKey: null,              apptKey: null,
       expiryKey: null,              sheetType: /oktb/i,
@@ -1247,6 +1247,7 @@ const App = (() => {
       { label: 'Medical',       exp: 'medicalExpectedDate',    st: 'medicalStatus' },
       { label: 'C1/D Visa',     exp: 'c1dExpectedDate',        st: 'c1dVisaStatus' },
       { label: 'Other Visa',    exp: 'otherVisaExpectedDate',  st: 'otherVisaStatus' },
+      { label: 'MCV',           exp: 'mcvExpectedDate',        st: 'mcvStatus' },
     ];
 
     // Row = one (seafarer, pending document) pair.
