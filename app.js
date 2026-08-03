@@ -445,51 +445,18 @@ const App = (() => {
   let _recFilters  = emptyFilters();
   let _recSort = { i: -1, dir: 1 };   // Records table sort (col index, direction)
   let _recTab = 'all';                // Records sub-tab: 'all' | 'lastmin'
-  let _lastMinSet = new Set();        // crew IDs flagged as last-minute assignments
 
-  // Detect "last-minute" assignments: seafarers who were newly assigned since
-  // the previous day's snapshot AND whose sign-on date is under 4 weeks away.
-  // Snapshots are stored per-browser in localStorage, updated once per day.
-  function lsGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
-  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
-  function refreshLastMinute(records) {
-    const SNAP = 'cti_indo_assign_snap', FLAG = 'cti_indo_lastmin';
-    const idOf = r => String(r.crewIdNumber ?? '').trim();
-    const dayKey = new Date().toDateString();
+  // "Last-minute" assignment (shared, derived purely from Zoho data): sign-on
+  // date is within the next 4 weeks AND onboarding status is not yet Report to
+  // Ship / Rescheduled / Resigned. Identical for every user, no local state.
+  const LASTMIN_DONE = ['report to ship', 'rescheduled', 'resigned'];
+  function isLastMinute(r) {
+    const d = parseDate(r.signOnDate);
+    if (!d) return false;
     const now0 = new Date(); now0.setHours(0, 0, 0, 0);
-    const nowT = now0.getTime(), FOUR_WK = 28 * 86400000;
-
-    const assignedNow = new Set(), byId = {};
-    records.forEach(r => {
-      const id = idOf(r);
-      if (!id || id === '—') return;
-      byId[id] = r;
-      if (parseDate(r.signOnDate)) assignedNow.add(id);
-    });
-
-    const snap = lsGet(SNAP);
-    let flags = lsGet(FLAG) || {};   // { crewId: detectedDay }
-    if (!snap) {
-      lsSet(SNAP, { day: dayKey, ids: [...assignedNow] });   // first run: baseline only
-    } else if (snap.day !== dayKey) {
-      const prev = new Set(snap.ids || []);
-      assignedNow.forEach(id => {
-        if (prev.has(id)) return;                            // already assigned before → not new
-        const d = parseDate(byId[id]?.signOnDate);
-        if (d && d.getTime() >= nowT && d.getTime() < nowT + FOUR_WK) flags[id] = dayKey;
-      });
-      lsSet(SNAP, { day: dayKey, ids: [...assignedNow] });
-    }
-    // A flag stays until the onboarding status becomes Report to Ship /
-    // Rescheduled / Resigned (Resigned rows are already excluded from the data).
-    const DONE = ['report to ship', 'rescheduled', 'resigned'];
-    Object.keys(flags).forEach(id => {
-      const r = byId[id];
-      if (!r) { delete flags[id]; return; }   // no longer in the dataset
-      if (DONE.includes(String(r.onboardingStatus ?? '').trim().toLowerCase())) delete flags[id];
-    });
-    lsSet(FLAG, flags);
-    return new Set(Object.keys(flags));
+    const t = d.getTime(), n = now0.getTime();
+    if (t < n || t >= n + 28 * 86400000) return false;
+    return !LASTMIN_DONE.includes(String(r.onboardingStatus ?? '').trim().toLowerCase());
   }
   let _ovFilters = { office: [DEFAULT_OFFICE], cruiseLine: [] };   // Overview charts
   let _penFilters = emptyFilters();   // Pending Action page
@@ -969,7 +936,6 @@ const App = (() => {
     if (!allData) { mc.innerHTML = errorHTML(); return; }
     // Hide excluded onboarding statuses (Resigned, Process by MSS Philippines).
     const data = allData.filter(includeRecord);
-    _lastMinSet = refreshLastMinute(data);   // day-over-day new-assignment detection
 
     const offices     = distinctVals(data, 'ctiOffice');
     const cruiseLines = distinctVals(data, 'cruiseLine');
@@ -1043,8 +1009,7 @@ const App = (() => {
       const cnt = document.getElementById('recCount');
       if (cnt) cnt.textContent = `${rows.length.toLocaleString()} record${rows.length === 1 ? '' : 's'}`;
       const lm = document.getElementById('lastminCount');
-      if (lm) lm.textContent = '· ' + applyDeployFilters(data, _recFilters)
-        .filter(r => _lastMinSet.has(String(r.crewIdNumber ?? '').trim())).length;
+      if (lm) lm.textContent = '· ' + applyDeployFilters(data, _recFilters).filter(isLastMinute).length;
       document.getElementById('recHead').innerHTML = headHtml();
       paintRows(rows, cols);
       document.querySelectorAll('#recHead th.sortable').forEach(th =>
@@ -1084,10 +1049,8 @@ const App = (() => {
   // Records dataset filtered by the shared deployment filters + the search box.
   function recFiltered(data) {
     let rows = applyDeployFilters(data, _recFilters);
-    // Last Minutes Assignment: newly assigned since the previous day's snapshot,
-    // with a sign-on under 4 weeks away (see refreshLastMinute).
-    if (_recTab === 'lastmin')
-      rows = rows.filter(r => _lastMinSet.has(String(r.crewIdNumber ?? '').trim()));
+    // Last Minutes Assignment: sign-on within 4 weeks & not yet reported/rescheduled.
+    if (_recTab === 'lastmin') rows = rows.filter(isLastMinute);
     const q = _search.trim().toLowerCase();
     if (q) rows = rows.filter(r =>
       [r.name, r.email, r.ctiOffice, r.crewIdNumber, r.joiningShip, r.signOnPort,
