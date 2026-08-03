@@ -1,0 +1,29 @@
+name: Deploy Worker
+
+# Auto-deploys the cti-indo-proxy Worker whenever the Worker source or its
+# config changes on main. The frontend (HTML/CSS/JS) is served by GitHub Pages
+# and is unaffected by this workflow.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker.js'
+      - 'wrangler.jsonc'
+      - 'package.json'
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch: {}   # allow manual runs from the Actions tab
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

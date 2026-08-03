@@ -50,9 +50,20 @@ Browser → Cloudflare Worker (cti-indo-proxy.*.workers.dev)
 - Recruit + Sheet rows are joined in `zoho.js → getAllRecords()` (see Data Flow).
 
 ## Cloudflare Worker (dedicated to this project)
-- **Suggested name:** `cti-indo-proxy`
-- **Source:** `worker.js` in this repo (paste into the dashboard; not auto-deployed).
+- **Name:** `cti-indo-proxy`
+- **Live URL:** `https://cti-indo-proxy.putu-astra.workers.dev` (see `config.js → PROXY`)
+- **⚠️ Deploy account:** the **`putu-astra`** Cloudflare account (workers.dev
+  subdomain `putu-astra`) — this holds the live worker + Zoho secrets. This is a
+  **different** account from `putuastrawijaya@gmail.com` (subdomain
+  `putuastrawijaya`); do not deploy there.
+- **Auto-deploy:** GitHub Actions (`.github/workflows/deploy-worker.yml`) runs
+  `wrangler deploy` on every push to `main` that touches `worker.js`,
+  `wrangler.jsonc`, or `package.json`. Config lives in `wrangler.jsonc`.
+  Requires GitHub repo secret `CLOUDFLARE_API_TOKEN` (scoped to the `putu-astra`
+  account) and the real account ID + `TOKEN_CACHE` KV namespace ID filled into
+  `wrangler.jsonc`.
 - **Secrets:** `ZOHO_CLIENT_ID`, `ZOHO_CLIENT_SECRET`, `ZOHO_REFRESH_TOKEN`
+  (set on the Worker; preserved across deploys — not in `wrangler.jsonc`).
 - **KV binding:** `TOKEN_CACHE`
 - **Routes:** `/recruit/v2/*` → Zoho Recruit, `/sheet/v2/*` → Zoho Sheet
 - **Refresh-token scopes (generate via Zoho Self Client):**
@@ -75,7 +86,9 @@ sheet), and `columns` (app field → exact header text).
 5. `config.js → SHEETS[].worksheet / matchOn / keyColumn / columns` — confirm tab
    names, join keys, and column headers for both sheets. ← still needed
 6. `config.js → USERS` — replace the default `changeme` password hashes. ← still needed
-7. Deploy the worker with the three secrets + KV binding above. ← still needed
+7. ✅ Worker deployed with the three secrets + KV binding (in the `putu-astra` account).
+8. Worker auto-deploy (GitHub Actions): add repo secret `CLOUDFLARE_API_TOKEN`
+   (putu-astra account) + fill the two IDs in `wrangler.jsonc`. ← still needed
 
 ## Pages
 | Page | Route | Description |
@@ -97,10 +110,14 @@ sheet), and `columns` (app field → exact header text).
 git add -A
 git commit -m "Description"
 git push
-# GitHub Pages deploys in ~1-2 min
+# Frontend (HTML/CSS/JS): GitHub Pages deploys in ~1-2 min.
+# Worker (worker.js/wrangler.jsonc): GitHub Actions runs `wrangler deploy`
+#   to the putu-astra account automatically (see Cloudflare Worker section).
 ```
 
 ## Credentials & Logins
 - Dashboard default login: `admin` / `changeme` (⚠️ change before real use)
-- Cloudflare: account `putuastrawijaya`
-- GitHub: PutuAstra
+- Cloudflare (live worker): **`putu-astra`** account (workers.dev subdomain
+  `putu-astra`). NOTE: `putuastrawijaya@gmail.com` is a *separate* account and
+  does NOT host this worker.
+- GitHub: PutuAstra (repo under org `CTI-Group-usa`)

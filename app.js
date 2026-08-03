@@ -879,8 +879,19 @@ const App = (() => {
 
   // Drill-down: list the seafarers behind a clicked status bar.
   function showVisaDetail(holders, tab, status) {
+    // MCV: the "Need to Process" / "In Process" bars also show the
+    // admin-recorded Expected Date column (matching the In Progress chip).
+    let extraCols = null;
+    if (tab.key === 'mcv' && tab.expectedKey &&
+        /need|process|pending|progress|applied|appointment|schedul|await/i.test(status)) {
+      extraCols = [{
+        label: tab.expectedLabel || 'Expected Date',
+        render: r => formatDate(r[tab.expectedKey]),
+        sort: r => dateSort(parseDate(r[tab.expectedKey])), num: true,
+      }];
+    }
     renderVisaDetail(holders.filter(x => x.s === status).map(x => x.r), tab,
-      `${tab.label} — ${status}`);
+      `${tab.label} — ${status}`, extraCols);
   }
 
   // Render a drill-down detail table (in a modal) for a set of seafarer records.

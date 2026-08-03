@@ -1,0 +1,31 @@
+{
+  // Config for the cti-indo-proxy Cloudflare Worker (Zoho proxy).
+  // Deployed automatically by .github/workflows/deploy-worker.yml on every
+  // push to main that touches worker.js or this file.
+  //
+  // TARGET ACCOUNT: the "putu-astra" Cloudflare account (workers.dev subdomain
+  // "putu-astra") — the account that already runs the live worker and holds the
+  // Zoho secrets. The two IDs below belong to THAT account.
+  //
+  // Secrets (ZOHO_CLIENT_ID / ZOHO_CLIENT_SECRET / ZOHO_REFRESH_TOKEN) are NOT
+  // defined here — they are stored encrypted on the Worker and preserved across
+  // deploys. Manage them with `wrangler secret put <NAME>` or the dashboard.
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "cti-indo-proxy",
+  "main": "worker.js",
+  "compatibility_date": "2026-07-28",
+
+  // Account ID of the "putu-astra" (Putu.astra@cti-usa.com) account. Non-secret.
+  "account_id": "e9e538d5b8134729e6cd90a7cb8da53b",
+
+  "kv_namespaces": [
+    // The "cti-indo-token-cache" namespace in the putu-astra account, bound as
+    // TOKEN_CACHE. Fill its ID (Cloudflare → Workers & Pages → KV → copy the ID
+    // next to "cti-indo-token-cache"). Non-secret.
+    { "binding": "TOKEN_CACHE", "id": "FILL_cti-indo-token-cache_KV_ID" }
+  ],
+
+  "observability": {
+    "enabled": true
+  }
+}
