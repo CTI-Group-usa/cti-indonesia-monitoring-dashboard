@@ -464,39 +464,45 @@ const App = (() => {
     } catch { /* ignore */ }
   }
 
-  // Detect "last-minute" assignments: seafarers newly assigned since the previous
-  // day's snapshot whose sign-on date is under 4 weeks away. The snapshot + flags
-  // live in the shared worker KV so every user sees the same list.
+  // Detect "last-minute" assignments by comparing each seafarer's SIGN-ON DATE
+  // against the previous day's snapshot. A seafarer is flagged when their sign-on
+  // date CHANGED to a value under 4 weeks away — this catches both a brand-new
+  // assignment (no date before) AND a reschedule-forward (was >4 weeks, moved to
+  // <4 weeks). The snapshot + flags live in the shared worker KV so every user
+  // sees the same list.
   async function refreshLastMinute(records) {
     const KEY = 'lastmin';
     const idOf = r => String(r.crewIdNumber ?? '').trim();
     const dayKey = new Date().toDateString();
     const now0 = new Date(); now0.setHours(0, 0, 0, 0);
     const nowT = now0.getTime(), FOUR_WK = 28 * 86400000;
+    const signKey = d => d ? `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}` : null;
 
-    const assignedNow = new Set(), byId = {};
+    // Today's sign-on date per assigned seafarer.
+    const byId = {}, todaySign = {};
     records.forEach(r => {
       const id = idOf(r);
       if (!id || id === '—') return;
       byId[id] = r;
-      if (parseDate(r.signOnDate)) assignedNow.add(id);
+      const d = parseDate(r.signOnDate);
+      if (d) todaySign[id] = signKey(d);
     });
 
-    const state = (await stateGet(KEY)) || { day: null, ids: [], flags: {} };
+    const state = (await stateGet(KEY)) || { day: null, signon: {}, flags: {} };
     let flags = state.flags || {};
     let changed = false;
 
     if (state.day !== dayKey) {
-      if (state.day) {                                   // had a previous-day snapshot → detect new
-        const prev = new Set(state.ids || []);
-        assignedNow.forEach(id => {
-          if (prev.has(id)) return;                      // already assigned before → not new
-          const d = parseDate(byId[id]?.signOnDate);
-          if (d && d.getTime() >= nowT && d.getTime() < nowT + FOUR_WK) flags[id] = dayKey;
+      if (state.day) {                          // had a previous-day snapshot → detect changes
+        const prev = state.signon || {};
+        Object.keys(todaySign).forEach(id => {
+          const d = parseDate(byId[id].signOnDate);
+          if (!d || d.getTime() < nowT || d.getTime() >= nowT + FOUR_WK) return;   // not under 4 weeks
+          if (prev[id] !== todaySign[id]) flags[id] = dayKey;   // new date OR rescheduled → now <4 weeks
         });
       }
       state.day = dayKey;
-      state.ids = [...assignedNow];
+      state.signon = todaySign;
       changed = true;
     }
     // A flag stays until onboarding becomes Report to Ship / Rescheduled /
