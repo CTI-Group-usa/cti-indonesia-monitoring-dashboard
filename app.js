@@ -447,13 +447,28 @@ const App = (() => {
   let _recTab = 'all';                // Records sub-tab: 'all' | 'lastmin'
   let _lastMinSet = new Set();        // crew IDs flagged as last-minute assignments
 
-  // Detect "last-minute" assignments: seafarers who were newly assigned since
-  // the previous day's snapshot AND whose sign-on date is under 4 weeks away.
-  // Snapshots are stored per-browser in localStorage, updated once per day.
-  function lsGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
-  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
-  function refreshLastMinute(records) {
-    const SNAP = 'cti_indo_assign_snap', FLAG = 'cti_indo_lastmin';
+  // Shared state via the worker KV endpoint (/state/<key>), so all users see
+  // the same snapshot. Falls back to null if the endpoint isn't deployed yet.
+  async function stateGet(key) {
+    try {
+      const r = await fetch(`${CONFIG.PROXY}/state/${key}`, { cache: 'no-store' });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch { return null; }
+  }
+  async function statePut(key, val) {
+    try {
+      await fetch(`${CONFIG.PROXY}/state/${key}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(val),
+      });
+    } catch { /* ignore */ }
+  }
+
+  // Detect "last-minute" assignments: seafarers newly assigned since the previous
+  // day's snapshot whose sign-on date is under 4 weeks away. The snapshot + flags
+  // live in the shared worker KV so every user sees the same list.
+  async function refreshLastMinute(records) {
+    const KEY = 'lastmin';
     const idOf = r => String(r.crewIdNumber ?? '').trim();
     const dayKey = new Date().toDateString();
     const now0 = new Date(); now0.setHours(0, 0, 0, 0);
@@ -467,28 +482,33 @@ const App = (() => {
       if (parseDate(r.signOnDate)) assignedNow.add(id);
     });
 
-    const snap = lsGet(SNAP);
-    let flags = lsGet(FLAG) || {};   // { crewId: detectedDay }
-    if (!snap) {
-      lsSet(SNAP, { day: dayKey, ids: [...assignedNow] });   // first run: baseline only
-    } else if (snap.day !== dayKey) {
-      const prev = new Set(snap.ids || []);
-      assignedNow.forEach(id => {
-        if (prev.has(id)) return;                            // already assigned before → not new
-        const d = parseDate(byId[id]?.signOnDate);
-        if (d && d.getTime() >= nowT && d.getTime() < nowT + FOUR_WK) flags[id] = dayKey;
-      });
-      lsSet(SNAP, { day: dayKey, ids: [...assignedNow] });
+    const state = (await stateGet(KEY)) || { day: null, ids: [], flags: {} };
+    let flags = state.flags || {};
+    let changed = false;
+
+    if (state.day !== dayKey) {
+      if (state.day) {                                   // had a previous-day snapshot → detect new
+        const prev = new Set(state.ids || []);
+        assignedNow.forEach(id => {
+          if (prev.has(id)) return;                      // already assigned before → not new
+          const d = parseDate(byId[id]?.signOnDate);
+          if (d && d.getTime() >= nowT && d.getTime() < nowT + FOUR_WK) flags[id] = dayKey;
+        });
+      }
+      state.day = dayKey;
+      state.ids = [...assignedNow];
+      changed = true;
     }
-    // A flag stays until the onboarding status becomes Report to Ship /
-    // Rescheduled / Resigned (Resigned rows are already excluded from the data).
+    // A flag stays until onboarding becomes Report to Ship / Rescheduled /
+    // Resigned (Resigned rows are already excluded from the data).
     const DONE = ['report to ship', 'rescheduled', 'resigned'];
     Object.keys(flags).forEach(id => {
       const r = byId[id];
-      if (!r) { delete flags[id]; return; }   // no longer in the dataset
-      if (DONE.includes(String(r.onboardingStatus ?? '').trim().toLowerCase())) delete flags[id];
+      if (!r) { delete flags[id]; changed = true; return; }
+      if (DONE.includes(String(r.onboardingStatus ?? '').trim().toLowerCase())) { delete flags[id]; changed = true; }
     });
-    lsSet(FLAG, flags);
+    state.flags = flags;
+    if (changed) await statePut(KEY, state);
     return new Set(Object.keys(flags));
   }
   let _ovFilters = { office: [DEFAULT_OFFICE], cruiseLine: [] };   // Overview charts
@@ -969,7 +989,7 @@ const App = (() => {
     if (!allData) { mc.innerHTML = errorHTML(); return; }
     // Hide excluded onboarding statuses (Resigned, Process by MSS Philippines).
     const data = allData.filter(includeRecord);
-    _lastMinSet = refreshLastMinute(data);   // day-over-day new-assignment detection
+    _lastMinSet = await refreshLastMinute(data);   // day-over-day (shared via worker KV)
 
     const offices     = distinctVals(data, 'ctiOffice');
     const cruiseLines = distinctVals(data, 'cruiseLine');

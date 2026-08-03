@@ -50,6 +50,25 @@ export default {
     const url  = new URL(request.url);
     const path = url.pathname;
 
+    // ── Shared app state (KV) — GET/PUT small JSON blobs, no Zoho auth ──
+    // Used by the dashboard's "Last Minutes Assignment" so all users share the
+    // same daily snapshot. Stored in the existing TOKEN_CACHE KV under a prefix.
+    if (path.startsWith('/state/')) {
+      const key = 'appstate:' + path.slice('/state/'.length);
+      if (request.method === 'GET') {
+        const v = await env.TOKEN_CACHE.get(key);
+        return new Response(v || 'null', {
+          status: 200,
+          headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        });
+      }
+      if (request.method === 'PUT' || request.method === 'POST') {
+        await env.TOKEN_CACHE.put(key, await request.text());
+        return json({ ok: true }, 200, CORS);
+      }
+      return json({ error: 'Method not allowed' }, 405, CORS);
+    }
+
     try {
       const token = await getAccessToken(env);
 
