@@ -1261,6 +1261,7 @@ const App = (() => {
       { label: 'Sign On Date',   render: x => formatDate(x.r.signOnDate), sort: x => dateSort(parseDate(x.r.signOnDate)), num: true },
       { label: 'Sign On Port',   render: x => esc(x.r.signOnPort),   sort: x => txtSort(x.r.signOnPort) },
       { label: 'Ship',           render: x => esc(x.r.joiningShip),  sort: x => txtSort(x.r.joiningShip) },
+      { label: 'Onboarding Status', render: x => esc(x.r.onboardingStatus), sort: x => txtSort(x.r.onboardingStatus) },
     ];
 
     const headHtml = () => `<tr>${cols.map((c, i) => {
