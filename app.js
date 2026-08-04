@@ -357,13 +357,12 @@ const App = (() => {
 
     // Chart 2 — upcoming assignments.
     //  Future months  = module sign-on dates.
-    //  Current month  = deployed this month (deployment sheet, deduped by Crew
-    //    ID) + remaining to deploy (module sign-on this month, today-or-later,
-    //    not yet in the deployment sheet). This excludes stale module rows dated
-    //    this month with no matching current deployment.
+    //  Current month  = total deployment this month (deployment sheet, deduped
+    //    by Crew ID) + this month's Zoho Recruit assignments whose onboarding
+    //    status is NOT "Report to Ship" (those already reported are counted in
+    //    the deployment sheet, so excluding them avoids double-counting).
     const sameMonth = (d, ref) => d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth();
     const idNorm = v => String(v ?? '').trim();
-    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
     const fwd = {};
     for (let i = 0; i <= 6; i++) { const d = new Date(base); d.setMonth(d.getMonth() + i); fwd[monthKey(d)] = 0; }
     const nextMonth = new Date(base); nextMonth.setMonth(nextMonth.getMonth() + 1);
@@ -374,20 +373,22 @@ const App = (() => {
       const k = monthKey(new Date(d.getFullYear(), d.getMonth(), 1));
       if (k in fwd) fwd[k]++;
     });
-    // Current month = deployment (sheet) + remaining-to-deploy.
+    // Current month = total deployment (sheet) + recruit assignments not yet
+    // reported to ship.
     const deployCurIds = new Set();
     deployRows.forEach(row => {
       if (!inSet(f.office, row['CTI Office']) || !inSet(f.cruiseLine, row['Cruise Line'])) return;
       const d = parseSheetDate(row['Sign On Date']);
       if (d && sameMonth(d, base)) { const id = idNorm(row['Crew ID']); if (id) deployCurIds.add(id); }
     });
-    let remaining = 0;
+    let notReported = 0;
     recs.forEach(r => {
       const d = parseDate(r.signOnDate);
-      if (!d || !sameMonth(d, base) || d < startOfToday) return;   // upcoming this month
-      if (!deployCurIds.has(idNorm(r.crewIdNumber))) remaining++;  // not yet deployed
+      if (!d || !sameMonth(d, base)) return;   // sign-on this month
+      if (String(r.onboardingStatus || '').trim().toLowerCase() === 'report to ship') return;  // already deployed
+      notReported++;
     });
-    fwd[monthKey(base)] = deployCurIds.size + remaining;
+    fwd[monthKey(base)] = deployCurIds.size + notReported;
     drawBar('chartAssign', fwd);
 
     // ── Charts 3 & 4 — Rescheduled records (last 6 months) + their reasons.
