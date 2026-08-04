@@ -9,6 +9,42 @@ const App = (() => {
   let _charts  = [];      // live Chart.js instances (destroyed on re-render)
   let _search  = '';
 
+  // ── Top load bar ───────────────────────────────────────────
+  // A slim progress bar pinned to the top of the viewport, shown during every
+  // data fetch (initial load AND background refresh) so users see work is in
+  // progress and roughly how far along, instead of an unexplained "blink".
+  // It fills with real record-page progress when known, and trickles forward
+  // otherwise; done() completes it to 100% and fades it out.
+  const Progress = (() => {
+    let bar, fill, timer = null, val = 0, active = false;
+    const grab = () => { if (!bar) { bar = document.getElementById('loadBar'); fill = bar && bar.querySelector('.load-bar-fill'); } };
+    const paint = () => { if (fill) fill.style.width = (val * 100).toFixed(1) + '%'; };
+    function start() {
+      grab(); if (!bar) return;
+      active = true; val = 0.08;
+      if (fill) fill.style.opacity = '1';
+      bar.classList.add('active'); paint();
+      clearInterval(timer);
+      // Ease toward 90% while waiting; the final 10% is reserved for done().
+      timer = setInterval(() => { if (active && val < 0.9) { val += (0.9 - val) * 0.08; paint(); } }, 300);
+    }
+    function set(frac) {
+      grab(); if (!active) return;
+      if (typeof frac === 'number' && frac > val) { val = Math.min(frac, 0.97); paint(); }
+    }
+    function done() {
+      grab(); clearInterval(timer); timer = null;
+      if (!active || !bar) { return; }
+      active = false; val = 1; paint();
+      setTimeout(() => {
+        if (fill) fill.style.opacity = '0';
+        if (bar) bar.classList.remove('active');
+        setTimeout(() => { val = 0; paint(); }, 300);
+      }, 250);
+    }
+    return { start, set, done };
+  })();
+
   // ── Helpers ────────────────────────────────────────────────
   function toast(msg, type = 'info') {
     const tc = document.getElementById('toastContainer');
@@ -154,10 +190,15 @@ const App = (() => {
   }
 
   async function fetchFresh() {
-    _records = await Zoho.getAllRecords();
-    _lastUpdated = Date.now();
-    idbSet(CACHE_KEY, { ts: _lastUpdated, v: CACHE_VERSION, records: _records });  // fire and forget
-    return _records;
+    Progress.start();
+    try {
+      _records = await Zoho.getAllRecords(frac => Progress.set(frac));
+      _lastUpdated = Date.now();
+      idbSet(CACHE_KEY, { ts: _lastUpdated, v: CACHE_VERSION, records: _records });  // fire and forget
+      return _records;
+    } finally {
+      Progress.done();
+    }
   }
 
   function revalidate() {
@@ -187,7 +228,7 @@ const App = (() => {
   // ═══════════════════════════════════════════════════════════
   async function renderOverview() {
     const mc = document.getElementById('main-content');
-    mc.innerHTML = skeletonHTML();
+    if (!_records) mc.innerHTML = skeletonHTML();   // skeleton only on cold load; keep current view during background refresh
 
     const allData = await loadData();
     if (!allData) { mc.innerHTML = errorHTML(); return; }
@@ -680,7 +721,7 @@ const App = (() => {
 
   async function renderVisa() {
     const mc = document.getElementById('main-content');
-    mc.innerHTML = skeletonHTML();
+    if (!_records) mc.innerHTML = skeletonHTML();   // skeleton only on cold load; keep current view during background refresh
     const allData = await loadData();
     if (!allData) { mc.innerHTML = errorHTML(); return; }
     // Hide excluded onboarding statuses (Resigned, Process by MSS Philippines).
@@ -1074,7 +1115,7 @@ const App = (() => {
   // ═══════════════════════════════════════════════════════════
   async function renderRecords() {
     const mc = document.getElementById('main-content');
-    mc.innerHTML = skeletonHTML();
+    if (!_records) mc.innerHTML = skeletonHTML();   // skeleton only on cold load; keep current view during background refresh
 
     const allData = await loadData();
     if (!allData) { mc.innerHTML = errorHTML(); return; }
@@ -1314,7 +1355,7 @@ const App = (() => {
   // ═══════════════════════════════════════════════════════════
   async function renderPending() {
     const mc = document.getElementById('main-content');
-    mc.innerHTML = skeletonHTML();
+    if (!_records) mc.innerHTML = skeletonHTML();   // skeleton only on cold load; keep current view during background refresh
     const allData = await loadData();
     if (!allData) { mc.innerHTML = errorHTML(); return; }
     const data = allData.filter(includeRecord);

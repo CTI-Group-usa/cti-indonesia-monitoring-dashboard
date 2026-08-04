@@ -35,20 +35,30 @@ const Zoho = (() => {
   }
 
   // Pull every record from the custom Recruit module (paginated).
-  async function getRecruitRecords() {
+  // onProgress(fraction 0..1) is called after each page so the UI can show a
+  // determinate load bar. The total is unknown up front, so we estimate it from
+  // the last known record count (persisted in localStorage).
+  async function getRecruitRecords(onProgress) {
     const module = CONFIG.RECRUIT_MODULE;
     const F      = CONFIG.FIELDS;
     const fields = Object.values(F).join(',');
+    const PER_PAGE = 200;
+    const known = Number(localStorage.getItem('cti_indo_reccount')) || 0;
+    const estPages = known ? Math.max(1, Math.ceil(known / PER_PAGE)) : 0;
     // Sequential paging — reliable (concurrent paging silently truncated
     // the result). Speed on refresh comes from the IndexedDB cache instead.
     let all = [], page = 1, more = true;
     while (more) {
-      const data = await recruitGet(module, { fields, page, per_page: 200 });
+      const data = await recruitGet(module, { fields, page, per_page: PER_PAGE });
       all  = all.concat(data.data || []);
       more = data.info?.more_records === true;
+      // Report progress: real fraction vs. the estimate, capped below 1 so the
+      // bar never claims "done" before the fetch actually finishes.
+      if (onProgress && estPages) onProgress(Math.min(page / estPages, 0.95));
       page++;
       if (all.length > 50000) break;   // safety cap
     }
+    localStorage.setItem('cti_indo_reccount', String(all.length));
 
     const val = v => {
       if (v == null || v === '') return '—';
@@ -190,10 +200,10 @@ const Zoho = (() => {
   //  MERGE — Recruit records + every sheet in CONFIG.SHEETS
   // ═══════════════════════════════════════════════════════════
 
-  async function getAllRecords() {
+  async function getAllRecords(onProgress) {
     const sheets = CONFIG.SHEETS || [];
     const [recruitRes, ...sheetRes] = await Promise.allSettled([
-      getRecruitRecords(),
+      getRecruitRecords(onProgress),
       ...sheets.map(s => getSheetRecords(s)),
     ]);
 

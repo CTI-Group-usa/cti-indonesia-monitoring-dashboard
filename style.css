@@ -1014,6 +1014,20 @@ th.sorted {
 /* ─── CTI Indonesia Monitoring — added components ─── */
 .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
 @media (max-width: 820px) { .chart-row { grid-template-columns: 1fr; } }
+/* Global top load bar — visible during every data fetch/refresh. */
+.load-bar {
+  position: fixed; top: 0; left: 0; right: 0; height: 3px;
+  z-index: 9999; background: transparent; pointer-events: none;
+  opacity: 0; transition: opacity .2s ease;
+}
+.load-bar.active { opacity: 1; }
+.load-bar-fill {
+  height: 100%; width: 0;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent), 0 0 4px var(--accent);
+  transition: width .25s ease, opacity .3s ease;
+}
+
 .chart-card { padding: 18px; }
 .chart-card canvas { max-height: 240px; }
 /* Second Overview chart row: shorter so both rows fit one screen. */
