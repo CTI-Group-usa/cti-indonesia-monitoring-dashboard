@@ -628,26 +628,29 @@ const App = (() => {
       changed = true;
     }
 
-    if (state.day !== dayKey) {
-      const prev = state.signon || {};
-      // Only detect changes against a real previous-day snapshot that has
-      // entries — otherwise a first run or a reset/empty snapshot would flag
-      // every currently-upcoming seafarer at once.
-      if (state.day && Object.keys(prev).length) {
-        Object.keys(todaySign).forEach(id => {
-          if (prev[id] === todaySign[id]) return;               // sign-on date unchanged
-          const d = parseDate(byId[id].signOnDate);
-          // Last-minute ASSIGNMENT: sign-on changed to a value under 4 weeks away
-          // (brand-new assignment OR a reschedule into the 4-week window).
-          if (d && d.getTime() >= nowT && d.getTime() < nowT + FOUR_WK) flags[id] = dayKey;
-          // Last-minute RESCHEDULE: a sign-on that was imminent (≤4 days away)
-          // has MOVED to a different date — e.g. a seafarer already at the
-          // airport pushed to a later date. Requires a prior imminent date, so
-          // brand-new assignments don't count.
-          const pd = parseSignKey(prev[id]);
-          if (pd && pd.getTime() >= nowT && pd.getTime() <= nowT + FOUR_DAYS) reschedFlags[id] = dayKey;
-        });
-      }
+    // Detect changes on EVERY load against the stored baseline snapshot — so a
+    // reschedule surfaces on the next dashboard load / 5-min auto-refresh rather
+    // than only the next day. The baseline itself is advanced at most once per
+    // day (below), so it stays a stable "earlier" reference through the day.
+    // The empty-baseline guard prevents a first run / reset from flagging
+    // everyone at once.
+    const prev = state.signon || {};
+    if (Object.keys(prev).length) {
+      Object.keys(todaySign).forEach(id => {
+        if (prev[id] === todaySign[id]) return;                 // sign-on date unchanged
+        const d = parseDate(byId[id].signOnDate);
+        // Last-minute ASSIGNMENT: sign-on changed to a value under 4 weeks away
+        // (brand-new assignment OR a reschedule into the 4-week window).
+        if (d && d.getTime() >= nowT && d.getTime() < nowT + FOUR_WK && !flags[id]) { flags[id] = dayKey; changed = true; }
+        // Last-minute RESCHEDULE: a sign-on that was imminent (≤4 days away) has
+        // MOVED to a different date — e.g. a seafarer already at the airport
+        // pushed to a later date. Requires a prior imminent date, so brand-new
+        // assignments don't count.
+        const pd = parseSignKey(prev[id]);
+        if (pd && pd.getTime() >= nowT && pd.getTime() <= nowT + FOUR_DAYS && !reschedFlags[id]) { reschedFlags[id] = dayKey; changed = true; }
+      });
+    }
+    if (state.day !== dayKey) {   // roll the baseline forward once per day
       state.day = dayKey;
       state.signon = todaySign;
       changed = true;
