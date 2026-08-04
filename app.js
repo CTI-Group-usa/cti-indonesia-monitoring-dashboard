@@ -414,16 +414,18 @@ const App = (() => {
     });
 
     // Drill-down columns shared by both rescheduled charts.
+    // Percentage widths (sum = 100%) so the table fills the modal exactly with
+    // no horizontal scroll; long values ellipsize (Name/Reason wrap instead).
     const reschedCols = [
-      { label: 'ID Number',         render: r => esc(r.crewIdNumber),           sort: r => txtSort(r.crewIdNumber), w: 100 },
-      { label: 'Name',              render: r => esc(r.name),                   sort: r => txtSort(r.name),         w: 200, wrap: true },
-      { label: 'Cruise Line',       render: r => esc(r.cruiseLine),             sort: r => txtSort(r.cruiseLine),   w: 140 },
-      { label: 'Joining Ship',      render: r => esc(r.joiningShip),            sort: r => txtSort(r.joiningShip),  w: 150 },
-      { label: 'Sign On Date',      render: r => formatDate(r.signOnDate),      sort: r => dateSort(parseDate(r.signOnDate)), num: true, w: 120 },
-      { label: 'Rescheduled Date',  render: r => formatDate(r.rescheduledDate), sort: r => dateSort(parseDate(r.rescheduledDate)), num: true, w: 130 },
-      { label: 'Reason',            render: r => esc(r.delayReason),            sort: r => txtSort(r.delayReason),  w: 320, wrap: true },
-      { label: 'Onboarding Status', render: r => esc(r.onboardingStatus),       sort: r => txtSort(r.onboardingStatus), w: 160 },
-      { label: 'Mistral Status',    render: r => esc(r.mistralStatus),          sort: r => txtSort(r.mistralStatus), w: 140 },
+      { label: 'ID Number',         render: r => esc(r.crewIdNumber),           sort: r => txtSort(r.crewIdNumber), w: '8%' },
+      { label: 'Name',              render: r => esc(r.name),                   sort: r => txtSort(r.name),         w: '16%', wrap: true },
+      { label: 'Cruise Line',       render: r => esc(r.cruiseLine),             sort: r => txtSort(r.cruiseLine),   w: '11%' },
+      { label: 'Joining Ship',      render: r => esc(r.joiningShip),            sort: r => txtSort(r.joiningShip),  w: '11%' },
+      { label: 'Sign On Date',      render: r => formatDate(r.signOnDate),      sort: r => dateSort(parseDate(r.signOnDate)), num: true, w: '9%' },
+      { label: 'Rescheduled Date',  render: r => formatDate(r.rescheduledDate), sort: r => dateSort(parseDate(r.rescheduledDate)), num: true, w: '9%' },
+      { label: 'Reason',            render: r => esc(r.delayReason),            sort: r => txtSort(r.delayReason),  w: '15%', wrap: true },
+      { label: 'Onboarding Status', render: r => esc(r.onboardingStatus),       sort: r => txtSort(r.onboardingStatus), w: '12%' },
+      { label: 'Mistral Status',    render: r => esc(r.mistralStatus),          sort: r => txtSort(r.mistralStatus), w: '9%' },
     ];
     drawBar('chartResched', resched, month => {
       const rows = reschedRows[month] || [];
@@ -1055,7 +1057,9 @@ const App = (() => {
       const html = c.render(r);
       const txt  = String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
       const cls = c.wrap ? ' class="cell-wrap"' : '';
-      const st  = c.w ? ` style="width:${c.w}px"` : '';
+      // `w` as a number → px; as a string (e.g. '12%') → used verbatim, so a
+      // column set can be sized to fit the modal exactly (no horizontal scroll).
+      const st  = c.w ? ` style="width:${typeof c.w === 'number' ? c.w + 'px' : c.w}"` : '';
       return `<td${cls}${st} title="${esc(txt)}">${html}</td>`;
     };
 
@@ -1076,7 +1080,7 @@ const App = (() => {
 
     const headHtml = () => `<tr>${cols.map((c, i) => {
       const arrow = i === sortI ? `<span class="sort-arrow">${dir > 0 ? '▲' : '▼'}</span>` : '';
-      const st = c.w ? ` style="width:${c.w}px"` : '';
+      const st = c.w ? ` style="width:${typeof c.w === 'number' ? c.w + 'px' : c.w}"` : '';
       return `<th class="sortable" data-i="${i}"${st}>${c.label}${arrow}</th>`;
     }).join('')}</tr>`;
 
