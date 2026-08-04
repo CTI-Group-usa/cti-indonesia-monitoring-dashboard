@@ -50,6 +50,7 @@ const CONFIG = {
     complianceNotes:  'Compliance_Notes',
     rescheduledDate:  'Rescheduled_Date',
     delayReason:      'Reasons_for_Delayed_Assignment_or_Resignation',
+    mistralStatus:    'Mistral_Status',
 
     // Role / placement
     department:       'Department',

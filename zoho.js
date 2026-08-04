@@ -97,6 +97,7 @@ const Zoho = (() => {
       onboardingStatus: val(r[F.onboardingStatus]),
       rescheduledDate:  r[F.rescheduledDate] || null,
       delayReason:      val(r[F.delayReason]),
+      mistralStatus:    val(r[F.mistralStatus]),
       // Role / placement
       department:       val(r[F.department]),
       position:         val(r[F.position]),

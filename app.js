@@ -423,6 +423,7 @@ const App = (() => {
       { label: 'Rescheduled Date',  render: r => formatDate(r.rescheduledDate), sort: r => dateSort(parseDate(r.rescheduledDate)), num: true, w: 130 },
       { label: 'Reason',            render: r => esc(r.delayReason),            sort: r => txtSort(r.delayReason),  w: 320, wrap: true },
       { label: 'Onboarding Status', render: r => esc(r.onboardingStatus),       sort: r => txtSort(r.onboardingStatus), w: 160 },
+      { label: 'Mistral Status',    render: r => esc(r.mistralStatus),          sort: r => txtSort(r.mistralStatus), w: 140 },
     ];
     drawBar('chartResched', resched, month => {
       const rows = reschedRows[month] || [];
