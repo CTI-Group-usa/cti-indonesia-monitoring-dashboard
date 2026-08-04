@@ -434,7 +434,7 @@ const App = (() => {
     drawBar('chartReschedReason', topN(reasons, 8), reason => {
       const rows = reasonRows[reason] || [];
       if (rows.length) openDetailModal(rows, reschedCols, `Rescheduled Reason — ${reason}`);
-    });
+    }, { wrapLabels: true });
   }
 
   function statCard(label, value, opts = {}) {
@@ -477,10 +477,27 @@ const App = (() => {
     },
   };
 
-  function drawBar(canvasId, obj, onClick) {
+  // Split a label into up to 2 balanced lines (by words) for the x-axis, so
+  // long category names sit horizontally under each bar instead of tilting.
+  // Single-word labels stay on one line. Returns a string or [line1, line2];
+  // Chart.js renders an array of strings as stacked lines.
+  function wrapLabel2(str) {
+    const words = String(str).trim().split(/\s+/);
+    if (words.length < 2) return str;
+    const mid = Math.ceil(words.length / 2);
+    return [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
+  }
+
+  function drawBar(canvasId, obj, onClick, opts = {}) {
     const el = document.getElementById(canvasId);
     if (!el || typeof Chart === 'undefined') return;
     const accent = CONFIG.ACCENT_COLOR || '#B01A18';
+    // Wrapped labels are display-only (via the tick callback); data.labels keeps
+    // the original strings so onClick still resolves the right bucket.
+    const xScale = opts.wrapLabels
+      ? { ticks: { autoSkip: false, maxRotation: 0, minRotation: 0,
+                   callback(v) { return wrapLabel2(this.getLabelForValue(v)); } } }
+      : {};
     const c = new Chart(el, {
       type: 'bar',
       data: {
@@ -489,7 +506,7 @@ const App = (() => {
       },
       options: {
         plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, grace: '8%', ticks: { precision: 0 } } },
+        scales: { y: { beginAtZero: true, grace: '8%', ticks: { precision: 0 } }, x: xScale },
         responsive: true, maintainAspectRatio: false,
         onClick: onClick ? (evt, els) => { if (els.length) onClick(c.data.labels[els[0].index]); } : undefined,
         onHover: onClick ? (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; } : undefined,
