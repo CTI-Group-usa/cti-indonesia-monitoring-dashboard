@@ -493,8 +493,11 @@ const App = (() => {
     let changed = false;
 
     if (state.day !== dayKey) {
-      if (state.day) {                          // had a previous-day snapshot → detect changes
-        const prev = state.signon || {};
+      const prev = state.signon || {};
+      // Only detect changes against a real previous-day snapshot that has
+      // entries — otherwise a first run or a reset/empty snapshot would flag
+      // every currently-upcoming seafarer at once.
+      if (state.day && Object.keys(prev).length) {
         Object.keys(todaySign).forEach(id => {
           const d = parseDate(byId[id].signOnDate);
           if (!d || d.getTime() < nowT || d.getTime() >= nowT + FOUR_WK) return;   // not under 4 weeks
@@ -505,13 +508,17 @@ const App = (() => {
       state.signon = todaySign;
       changed = true;
     }
-    // A flag stays until onboarding becomes Report to Ship / Rescheduled /
-    // Resigned (Resigned rows are already excluded from the data).
+    // A flag is cleared once the assignment is handled (onboarding = Report to
+    // Ship / Rescheduled / Resigned), the record is gone, OR its sign-on date
+    // has already passed — a past sign-on is no longer a last-minute assignment
+    // to act on, so it must drop off the list instead of accumulating forever.
     const DONE = ['report to ship', 'rescheduled', 'resigned'];
     Object.keys(flags).forEach(id => {
       const r = byId[id];
       if (!r) { delete flags[id]; changed = true; return; }
-      if (DONE.includes(String(r.onboardingStatus ?? '').trim().toLowerCase())) { delete flags[id]; changed = true; }
+      const d = parseDate(r.signOnDate);
+      const done = DONE.includes(String(r.onboardingStatus ?? '').trim().toLowerCase());
+      if (done || !d || d.getTime() < nowT) { delete flags[id]; changed = true; }
     });
     state.flags = flags;
     if (changed) await statePut(KEY, state);
