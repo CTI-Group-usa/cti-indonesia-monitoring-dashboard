@@ -48,6 +48,8 @@ const CONFIG = {
     employmentStatus: 'Employment_Status',
     onboardingStatus: 'Onboarding_Status',
     complianceNotes:  'Compliance_Notes',
+    rescheduledDate:  'Rescheduled_Date',
+    delayReason:      'Reasons_for_Delayed_Assignment_or_Resignation',
 
     // Role / placement
     department:       'Department',

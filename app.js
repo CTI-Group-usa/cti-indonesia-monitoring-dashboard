@@ -217,6 +217,16 @@ const App = (() => {
           <div class="card-title">Upcoming Assignments — next 6 months <span class="hint">(by sign-on date)</span></div>
           <canvas id="chartAssign" height="240"></canvas>
         </div>
+      </div>
+      <div class="chart-row compact">
+        <div class="card chart-card">
+          <div class="card-title">Rescheduled — last 6 months <span class="hint">(by Rescheduled Date · click a bar)</span></div>
+          <canvas id="chartResched" height="200"></canvas>
+        </div>
+        <div class="card chart-card">
+          <div class="card-title">Rescheduled Reason <span class="hint">(last 6 months · click a bar)</span></div>
+          <canvas id="chartReschedReason" height="200"></canvas>
+        </div>
       </div>`;
 
     const paint = () => paintOverview(data, deployRows);
@@ -334,6 +344,49 @@ const App = (() => {
     });
     fwd[monthKey(base)] = deployCurIds.size + remaining;
     drawBar('chartAssign', fwd);
+
+    // ── Charts 3 & 4 — Rescheduled records (last 6 months) + their reasons.
+    // Uses the module field Rescheduled_Date; reasons from
+    // Reasons_for_Delayed_Assignment_or_Resignation. Resigned onboarding status
+    // is excluded (already dropped from `data`, guarded here too for safety).
+    const notResigned = r => String(r.onboardingStatus || '').trim().toLowerCase() !== 'resigned';
+    const minResched = new Date(base); minResched.setMonth(minResched.getMonth() - 5);   // 6 months incl. current
+    const maxResched = new Date(base); maxResched.setMonth(maxResched.getMonth() + 1);
+
+    const resched = {}, reschedRows = {};
+    for (let i = 5; i >= 0; i--) { const d = new Date(base); d.setMonth(d.getMonth() - i); const k = monthKey(d); resched[k] = 0; reschedRows[k] = []; }
+    const reasons = {}, reasonRows = {};
+    recs.forEach(r => {
+      if (!notResigned(r)) return;
+      const d = parseDate(r.rescheduledDate);
+      if (!d || d < minResched || d >= maxResched) return;
+      const k = monthKey(new Date(d.getFullYear(), d.getMonth(), 1));
+      if (k in resched) { resched[k]++; reschedRows[k].push(r); }
+      const reason = String(r.delayReason || '').trim();
+      const rk = (!reason || reason === '—') ? '(No reason given)' : reason;
+      reasons[rk] = (reasons[rk] || 0) + 1;
+      (reasonRows[rk] = reasonRows[rk] || []).push(r);
+    });
+
+    // Drill-down columns shared by both rescheduled charts.
+    const reschedCols = [
+      { label: 'ID Number',         render: r => esc(r.crewIdNumber),           sort: r => txtSort(r.crewIdNumber), w: 100 },
+      { label: 'Name',              render: r => esc(r.name),                   sort: r => txtSort(r.name),         w: 200, wrap: true },
+      { label: 'Cruise Line',       render: r => esc(r.cruiseLine),             sort: r => txtSort(r.cruiseLine),   w: 140 },
+      { label: 'Joining Ship',      render: r => esc(r.joiningShip),            sort: r => txtSort(r.joiningShip),  w: 150 },
+      { label: 'Sign On Date',      render: r => formatDate(r.signOnDate),      sort: r => dateSort(parseDate(r.signOnDate)), num: true, w: 120 },
+      { label: 'Rescheduled Date',  render: r => formatDate(r.rescheduledDate), sort: r => dateSort(parseDate(r.rescheduledDate)), num: true, w: 130 },
+      { label: 'Reason',            render: r => esc(r.delayReason),            sort: r => txtSort(r.delayReason),  w: 320, wrap: true },
+      { label: 'Onboarding Status', render: r => esc(r.onboardingStatus),       sort: r => txtSort(r.onboardingStatus), w: 160 },
+    ];
+    drawBar('chartResched', resched, month => {
+      const rows = reschedRows[month] || [];
+      if (rows.length) openDetailModal(rows, reschedCols, `Rescheduled — ${month}`);
+    });
+    drawBar('chartReschedReason', topN(reasons, 8), reason => {
+      const rows = reasonRows[reason] || [];
+      if (rows.length) openDetailModal(rows, reschedCols, `Rescheduled Reason — ${reason}`);
+    });
   }
 
   function statCard(label, value, opts = {}) {

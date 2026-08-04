@@ -1016,6 +1016,10 @@ th.sorted {
 @media (max-width: 820px) { .chart-row { grid-template-columns: 1fr; } }
 .chart-card { padding: 18px; }
 .chart-card canvas { max-height: 240px; }
+/* Second Overview chart row: shorter so both rows fit one screen. */
+.chart-row.compact { margin-top: 12px; }
+.chart-row.compact .chart-card { padding: 14px 18px; }
+.chart-row.compact .chart-card canvas { max-height: 200px; }
 
 .table-card { padding: 0; overflow: hidden; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
