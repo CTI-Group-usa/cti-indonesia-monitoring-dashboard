@@ -563,8 +563,9 @@ const App = (() => {
   let _visaFilters = emptyFilters();
   let _recFilters  = emptyFilters();
   let _recSort = { i: -1, dir: 1 };   // Records table sort (col index, direction)
-  let _recTab = 'all';                // Records sub-tab: 'all' | 'lastmin'
+  let _recTab = 'all';                // Records sub-tab: 'all' | 'lastmin' | 'lastresched'
   let _lastMinSet = new Set();        // crew IDs flagged as last-minute assignments
+  let _lastReschedSet = new Set();    // crew IDs flagged as last-minute RESCHEDULED (imminent sign-on moved)
 
   // Shared state via the worker KV endpoint (/state/<key>), so all users see
   // the same snapshot. Falls back to null if the endpoint isn't deployed yet.
@@ -594,8 +595,9 @@ const App = (() => {
     const idOf = r => String(r.crewIdNumber ?? '').trim();
     const dayKey = new Date().toDateString();
     const now0 = new Date(); now0.setHours(0, 0, 0, 0);
-    const nowT = now0.getTime(), FOUR_WK = 28 * 86400000;
+    const nowT = now0.getTime(), FOUR_WK = 28 * 86400000, FOUR_DAYS = 4 * 86400000;
     const signKey = d => d ? `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}` : null;
+    const parseSignKey = k => { if (!k) return null; const [y, m, d] = String(k).split('-').map(Number); return new Date(y, m - 1, d); };
 
     // Today's sign-on date per assigned seafarer.
     const byId = {}, todaySign = {};
@@ -607,8 +609,9 @@ const App = (() => {
       if (d) todaySign[id] = signKey(d);
     });
 
-    const state = (await stateGet(KEY)) || { day: null, signon: {}, flags: {} };
+    const state = (await stateGet(KEY)) || { day: null, signon: {}, flags: {}, reschedFlags: {} };
     let flags = state.flags || {};
+    let reschedFlags = state.reschedFlags || {};
     let changed = false;
 
     // One-time self-heal: an earlier version stored a legacy `ids` key and, on
@@ -619,8 +622,8 @@ const App = (() => {
     // day). This cannot re-trigger once healed.
     if ('ids' in state) {
       delete state.ids;
-      flags = {};
-      state.flags = flags;
+      flags = {};        state.flags = flags;
+      reschedFlags = {}; state.reschedFlags = reschedFlags;
       state.day = null;     // force a clean snapshot rebuild below
       changed = true;
     }
@@ -632,9 +635,17 @@ const App = (() => {
       // every currently-upcoming seafarer at once.
       if (state.day && Object.keys(prev).length) {
         Object.keys(todaySign).forEach(id => {
+          if (prev[id] === todaySign[id]) return;               // sign-on date unchanged
           const d = parseDate(byId[id].signOnDate);
-          if (!d || d.getTime() < nowT || d.getTime() >= nowT + FOUR_WK) return;   // not under 4 weeks
-          if (prev[id] !== todaySign[id]) flags[id] = dayKey;   // new date OR rescheduled → now <4 weeks
+          // Last-minute ASSIGNMENT: sign-on changed to a value under 4 weeks away
+          // (brand-new assignment OR a reschedule into the 4-week window).
+          if (d && d.getTime() >= nowT && d.getTime() < nowT + FOUR_WK) flags[id] = dayKey;
+          // Last-minute RESCHEDULE: a sign-on that was imminent (≤4 days away)
+          // has MOVED to a different date — e.g. a seafarer already at the
+          // airport pushed to a later date. Requires a prior imminent date, so
+          // brand-new assignments don't count.
+          const pd = parseSignKey(prev[id]);
+          if (pd && pd.getTime() >= nowT && pd.getTime() <= nowT + FOUR_DAYS) reschedFlags[id] = dayKey;
         });
       }
       state.day = dayKey;
@@ -653,9 +664,18 @@ const App = (() => {
       const done = DONE.includes(String(r.onboardingStatus ?? '').trim().toLowerCase());
       if (done || !d || d.getTime() < nowT) { delete flags[id]; changed = true; }
     });
+    // Reschedule flags clear ONLY once the seafarer reports to ship (or the
+    // record is gone / resigned → already filtered out). Being "Rescheduled" is
+    // the trigger here, so — unlike assignment flags — it must NOT clear them.
+    Object.keys(reschedFlags).forEach(id => {
+      const r = byId[id];
+      if (!r) { delete reschedFlags[id]; changed = true; return; }
+      if (String(r.onboardingStatus ?? '').trim().toLowerCase() === 'report to ship') { delete reschedFlags[id]; changed = true; }
+    });
     state.flags = flags;
+    state.reschedFlags = reschedFlags;
     if (changed) await statePut(KEY, state);
-    return new Set(Object.keys(flags));
+    return { assign: new Set(Object.keys(flags)), resched: new Set(Object.keys(reschedFlags)) };
   }
   let _ovFilters = { office: [DEFAULT_OFFICE], cruiseLine: [] };   // Overview charts
   let _penFilters = emptyFilters();   // Pending Action page
@@ -1148,7 +1168,9 @@ const App = (() => {
     if (!allData) { mc.innerHTML = errorHTML(); return; }
     // Hide excluded onboarding statuses (Resigned, Process by MSS Philippines).
     const data = allData.filter(includeRecord);
-    _lastMinSet = await refreshLastMinute(data);   // day-over-day (shared via worker KV)
+    const _lm = await refreshLastMinute(data);     // day-over-day (shared via worker KV)
+    _lastMinSet = _lm.assign;
+    _lastReschedSet = _lm.resched;
 
     const offices     = distinctVals(data, 'ctiOffice');
     const cruiseLines = distinctVals(data, 'cruiseLine');
@@ -1185,6 +1207,7 @@ const App = (() => {
       <div class="subtabs">
         <button class="subtab ${_recTab === 'all' ? 'active' : ''}" data-rectab="all">All Records</button>
         <button class="subtab ${_recTab === 'lastmin' ? 'active' : ''}" data-rectab="lastmin">Last Minutes Assignment <span class="subtab-count" id="lastminCount"></span></button>
+        <button class="subtab ${_recTab === 'lastresched' ? 'active' : ''}" data-rectab="lastresched">Last Minutes Rescheduled <span class="subtab-count" id="lastreschedCount"></span></button>
       </div>
       <div class="filter-bar">
         ${msHTML('rOffice', 'All CTI Offices', offices, _recFilters.office)}
@@ -1224,6 +1247,9 @@ const App = (() => {
       const lm = document.getElementById('lastminCount');
       if (lm) lm.textContent = '· ' + applyDeployFilters(data, _recFilters)
         .filter(r => _lastMinSet.has(String(r.crewIdNumber ?? '').trim())).length;
+      const lr = document.getElementById('lastreschedCount');
+      if (lr) lr.textContent = '· ' + applyDeployFilters(data, _recFilters)
+        .filter(r => _lastReschedSet.has(String(r.crewIdNumber ?? '').trim())).length;
       document.getElementById('recHead').innerHTML = headHtml();
       paintRows(rows, cols);
       document.querySelectorAll('#recHead th.sortable').forEach(th =>
@@ -1267,6 +1293,10 @@ const App = (() => {
     // with a sign-on under 4 weeks away (see refreshLastMinute).
     if (_recTab === 'lastmin')
       rows = rows.filter(r => _lastMinSet.has(String(r.crewIdNumber ?? '').trim()));
+    // Last Minutes Rescheduled: an imminent (≤4-day) sign-on that moved to a
+    // new date; stays until onboarding = Report to Ship (see refreshLastMinute).
+    else if (_recTab === 'lastresched')
+      rows = rows.filter(r => _lastReschedSet.has(String(r.crewIdNumber ?? '').trim()));
     const q = _search.trim().toLowerCase();
     if (q) rows = rows.filter(r =>
       [r.name, r.email, r.ctiOffice, r.crewIdNumber, r.joiningShip, r.signOnPort,
