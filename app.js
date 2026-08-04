@@ -42,7 +42,11 @@ const App = (() => {
         setTimeout(() => { val = 0; paint(); }, 300);
       }, 250);
     }
-    return { start, set, done };
+    // Quick 0→100% sweep — used on a warm-cache reload where the data is
+    // already available, so the user gets clear "refreshed" feedback that
+    // always completes (the real refresh then runs silently in the background).
+    function sweep() { start(); setTimeout(done, 450); }
+    return { start, set, done, sweep };
   })();
 
   // ── Helpers ────────────────────────────────────────────────
@@ -189,16 +193,11 @@ const App = (() => {
     return c;
   }
 
-  async function fetchFresh() {
-    Progress.start();
-    try {
-      _records = await Zoho.getAllRecords(frac => Progress.set(frac));
-      _lastUpdated = Date.now();
-      idbSet(CACHE_KEY, { ts: _lastUpdated, v: CACHE_VERSION, records: _records });  // fire and forget
-      return _records;
-    } finally {
-      Progress.done();
-    }
+  async function fetchFresh(onProgress) {
+    _records = await Zoho.getAllRecords(onProgress);
+    _lastUpdated = Date.now();
+    idbSet(CACHE_KEY, { ts: _lastUpdated, v: CACHE_VERSION, records: _records });  // fire and forget
+    return _records;
   }
 
   function revalidate() {
@@ -212,15 +211,20 @@ const App = (() => {
       if (c) {
         _records = c.records;
         _lastUpdated = c.ts;
-        // Always pull fresh in the background so a page reload reflects
-        // the latest Zoho edits. The cache only avoids a blank-screen wait;
-        // it is never the final word within a session.
+        // Data is already available from cache — give a quick completing sweep
+        // for feedback, then pull fresh SILENTLY in the background so a reload
+        // reflects the latest Zoho edits without a long-lingering bar.
+        Progress.sweep();
         revalidate();
         return _records;
       }
     }
-    try { return await fetchFresh(); }
+    // Cold load (or forced): the user is genuinely waiting on this fetch, so
+    // show the real, page-by-page progress and complete it when the data lands.
+    Progress.start();
+    try { return await fetchFresh(frac => Progress.set(frac)); }
     catch (err) { toast(`Failed to load: ${err.message}`, 'error'); return null; }
+    finally { Progress.done(); }
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -1493,8 +1497,10 @@ const App = (() => {
   // Manual/post-save refresh: refetch in the background, keeping the
   // current data on screen (no skeleton flash), then repaint.
   async function refresh() {
-    try { await fetchFresh(); renderCurrentPage(); }
+    Progress.start();
+    try { await fetchFresh(frac => Progress.set(frac)); renderCurrentPage(); }
     catch (err) { toast(`Refresh failed: ${err.message}`, 'error'); }
+    finally { Progress.done(); }
   }
 
   function init() {
