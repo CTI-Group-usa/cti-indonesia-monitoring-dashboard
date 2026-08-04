@@ -492,6 +492,20 @@ const App = (() => {
     let flags = state.flags || {};
     let changed = false;
 
+    // One-time self-heal: an earlier version stored a legacy `ids` key and, on
+    // the snapshot-format change, mass-flagged ~10% of all seafarers in a single
+    // day (the "234"/"390" blow-up). Its presence proves the state predates the
+    // current logic, so drop the bogus flag batch and rebuild the snapshot from
+    // scratch (no detection this run; genuine day-over-day flagging resumes next
+    // day). This cannot re-trigger once healed.
+    if ('ids' in state) {
+      delete state.ids;
+      flags = {};
+      state.flags = flags;
+      state.day = null;     // force a clean snapshot rebuild below
+      changed = true;
+    }
+
     if (state.day !== dayKey) {
       const prev = state.signon || {};
       // Only detect changes against a real previous-day snapshot that has
