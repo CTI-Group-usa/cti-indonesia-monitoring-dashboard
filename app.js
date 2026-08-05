@@ -1600,8 +1600,12 @@ const App = (() => {
 
   // Sub-tab 1 — Visa Performance: J1_Participants table.
   function paintJ1Performance(panel, allParticipants) {
-    // Only participants with a Hosting Company set ('—' is the blank placeholder).
-    const participants = allParticipants.filter(p => p.hostingCompany && p.hostingCompany !== '—');
+    // Only participants with a real Hosting Company set — exclude blank ('—' is
+    // the blank placeholder) and the "Application Process On Hold" value.
+    const participants = allParticipants.filter(p => {
+      const hc = String(p.hostingCompany ?? '').trim();
+      return hc && hc !== '—' && hc.toLowerCase() !== 'application process on hold';
+    });
     // "Current Visa Appointment" = 3rd appt, else 2nd, else 1st.
     const lastAppt = p => p.appt3 || p.appt2 || p.appt1 || null;
     const cols = [
