@@ -1193,7 +1193,7 @@ th.sorted {
 .j1-perf-head .j1-perf-left { max-width: 55%; }
 .j1-perf-head .j1-perf-left .toolbar { margin-top: 8px; }
 .j1-perf-head .j1-perf-chart {
-  position: absolute; top: -105px; right: 0;
+  position: absolute; top: -88px; right: 0;
   width: 460px; max-width: 42%; margin: 0; padding: 10px 14px;
 }
 .j1-perf-head .j1-perf-chart .card-title { font-size: 0.78rem; margin-bottom: 2px; }
