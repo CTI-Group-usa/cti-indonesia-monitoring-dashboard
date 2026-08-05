@@ -1631,18 +1631,19 @@ const App = (() => {
       return true;
     });
     let participants = applyFilters();
-    // Percentage widths (sum 100) so all 9 columns fit with no horizontal scroll.
+    // Auto layout: every column sizes to its content (nowrap); Hosting Company
+    // (cls j1-host, width:100% in CSS) soaks up any leftover horizontal space.
     const cols = [
-      { label: 'Full Name',          w: '150px', render: p => esc(p.fullName),            sort: p => txtSort(p.fullName) },
-      { label: 'Email',              w: '190px', render: p => esc(p.email),               sort: p => txtSort(p.email) },
-      { label: 'J1 Program Sources', w: '110px', render: p => esc(p.programSources),      sort: p => txtSort(p.programSources) },
-      { label: 'Hosting Company',    w: null,    render: p => esc(p.hostingCompany),      sort: p => txtSort(p.hostingCompany) },   // flexes to fill remaining width
-      { label: 'Program Start',      w: '95px',  render: p => formatDate(p.programStart), sort: p => dateSort(parseDate(p.programStart)), num: true },
-      { label: 'J1 Visa Status',     w: '105px', render: p => badge(p.visaStatus),        sort: p => txtSort(p.visaStatus) },
-      { label: '1st Appt',           w: '90px',  render: p => formatDate(p.appt1),        sort: p => dateSort(parseDate(p.appt1)), num: true },
-      { label: '2nd Appt',           w: '90px',  render: p => formatDate(p.appt2),        sort: p => dateSort(parseDate(p.appt2)), num: true },
-      { label: '3rd Appt',           w: '90px',  render: p => formatDate(p.appt3),        sort: p => dateSort(parseDate(p.appt3)), num: true },
-      { label: 'Current Appt',       w: '95px',  render: p => formatDate(lastAppt(p)),    sort: p => dateSort(parseDate(lastAppt(p))), num: true },
+      { label: 'Full Name',          render: p => esc(p.fullName),            sort: p => txtSort(p.fullName) },
+      { label: 'Email',              render: p => esc(p.email),               sort: p => txtSort(p.email) },
+      { label: 'J1 Program Sources', render: p => esc(p.programSources),      sort: p => txtSort(p.programSources) },
+      { label: 'Hosting Company',    cls: 'j1-host', render: p => esc(p.hostingCompany), sort: p => txtSort(p.hostingCompany) },
+      { label: 'Program Start',      render: p => formatDate(p.programStart), sort: p => dateSort(parseDate(p.programStart)), num: true },
+      { label: 'J1 Visa Status',     render: p => badge(p.visaStatus),        sort: p => txtSort(p.visaStatus) },
+      { label: '1st Appt',           render: p => formatDate(p.appt1),        sort: p => dateSort(parseDate(p.appt1)), num: true },
+      { label: '2nd Appt',           render: p => formatDate(p.appt2),        sort: p => dateSort(parseDate(p.appt2)), num: true },
+      { label: '3rd Appt',           render: p => formatDate(p.appt3),        sort: p => dateSort(parseDate(p.appt3)), num: true },
+      { label: 'Current Appt',       render: p => formatDate(lastAppt(p)),    sort: p => dateSort(parseDate(lastAppt(p))), num: true },
     ];
     const cellTitle = html => String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     const bodyHtml = () => {
@@ -1654,10 +1655,10 @@ const App = (() => {
         return (c.num ? (x - y) : String(x).localeCompare(String(y))) * _j1Sort.dir;
       });
       if (!rows.length) return `<tr><td colspan="${cols.length}" class="empty-row">No J1 participants found.</td></tr>`;
-      return rows.map(p => `<tr>${cols.map(c => { const h = c.render(p); return `<td title="${esc(cellTitle(h))}">${h}</td>`; }).join('')}</tr>`).join('');
+      return rows.map(p => `<tr>${cols.map(c => { const h = c.render(p); return `<td class="${c.cls || ''}" title="${esc(cellTitle(h))}">${h}</td>`; }).join('')}</tr>`).join('');
     };
     const headHtml = () => `<tr>${cols.map((c, i) =>
-      `<th class="sortable" data-i="${i}"${c.w ? ` style="width:${c.w}"` : ''}>${c.label}${i === _j1Sort.i ? `<span class="sort-arrow">${_j1Sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')}</tr>`;
+      `<th class="sortable ${c.cls || ''}" data-i="${i}">${c.label}${i === _j1Sort.i ? `<span class="sort-arrow">${_j1Sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')}</tr>`;
     panel.innerHTML = `
       <div class="filter-bar">
         ${msHTML('j1Source', 'All Program Sources', sources, _j1Filters.source)}
