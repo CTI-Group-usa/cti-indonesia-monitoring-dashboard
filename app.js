@@ -585,6 +585,7 @@ const App = (() => {
   let _lastComparedAt = null;         // epoch ms of the last daily comparison (6 AM WITA)
   let _j1Tab  = 'performance';        // J1 Program sub-tab: 'performance' | 'progress'
   let _j1Sort = { i: 0, dir: 1 };     // J1 Visa Performance table sort
+  let _j1Filters = { source: ['CTI Indonesia'], apptRange: 'all' };   // J1 Visa Performance filters
 
   // Shared state via the worker KV endpoint (/state/<key>), so all users see
   // the same snapshot. Falls back to null if the endpoint isn't deployed yet.
@@ -1600,14 +1601,27 @@ const App = (() => {
 
   // Sub-tab 1 — Visa Performance: J1_Participants table.
   function paintJ1Performance(panel, allParticipants) {
-    // Only participants with a real Hosting Company set — exclude blank ('—' is
-    // the blank placeholder) and the "Application Process On Hold" value.
-    const participants = allParticipants.filter(p => {
-      const hc = String(p.hostingCompany ?? '').trim();
-      return hc && hc !== '—' && hc.toLowerCase() !== 'application process on hold';
-    });
-    // "Current Visa Appointment" = 3rd appt, else 2nd, else 1st.
+    // "Current Appt" = 3rd appt, else 2nd, else 1st.
     const lastAppt = p => p.appt3 || p.appt2 || p.appt1 || null;
+    const nowT = Date.now();
+    const sources = distinctVals(allParticipants, 'programSources');
+    const inSel = (arr, v) => !arr.length || arr.includes(v);
+    // Filters: only real Hosting Company (exclude blank + "Application Process
+    // On Hold"), J1 Program Sources multi-select, and Appointment record range
+    // (past / upcoming relative to the Current Appt date).
+    const applyFilters = () => allParticipants.filter(p => {
+      const hc = String(p.hostingCompany ?? '').trim();
+      if (!hc || hc === '—' || hc.toLowerCase() === 'application process on hold') return false;
+      if (!inSel(_j1Filters.source, p.programSources)) return false;
+      if (_j1Filters.apptRange !== 'all') {
+        const d = parseDate(lastAppt(p));
+        if (!d) return false;   // no current appointment → not past nor upcoming
+        if (_j1Filters.apptRange === 'past'     && !(d.getTime() <  nowT)) return false;
+        if (_j1Filters.apptRange === 'upcoming' && !(d.getTime() >= nowT)) return false;
+      }
+      return true;
+    });
+    let participants = applyFilters();
     // Percentage widths (sum 100) so all 9 columns fit with no horizontal scroll.
     const cols = [
       { label: 'Full Name',          w: '13%', render: p => esc(p.fullName),            sort: p => txtSort(p.fullName) },
@@ -1635,10 +1649,40 @@ const App = (() => {
     const headHtml = () => `<tr>${cols.map((c, i) =>
       `<th class="sortable" data-i="${i}" style="width:${c.w}">${c.label}${i === _j1Sort.i ? `<span class="sort-arrow">${_j1Sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')}</tr>`;
     panel.innerHTML = `
-      <div class="toolbar"><span class="rec-count">${participants.length.toLocaleString()} participant${participants.length === 1 ? '' : 's'}</span></div>
+      <div class="filter-bar">
+        ${msHTML('j1Source', 'All Program Sources', sources, _j1Filters.source)}
+        <select id="j1ApptRange" class="filter-select">
+          <option value="all">All Appointment Records</option>
+          <option value="past">Past Records</option>
+          <option value="upcoming">Upcoming Records</option>
+        </select>
+        <button class="btn-sm" id="j1Clear">Clear</button>
+      </div>
+      <div class="toolbar"><span class="rec-count" id="j1Count"></span></div>
       <div class="card table-card"><div class="table-wrap"><table class="data-table j1-table">
         <thead id="j1Head">${headHtml()}</thead><tbody id="j1Body">${bodyHtml()}</tbody>
       </table></div></div>`;
+
+    const apptSel = panel.querySelector('#j1ApptRange');
+    apptSel.value = _j1Filters.apptRange;
+    const updateCount = () => {
+      const c = panel.querySelector('#j1Count');
+      if (c) c.textContent = `${participants.length.toLocaleString()} participant${participants.length === 1 ? '' : 's'}`;
+    };
+    const refresh = () => {
+      participants = applyFilters();
+      panel.querySelector('#j1Body').innerHTML = bodyHtml();
+      updateCount();
+    };
+    updateCount();
+
+    wireMS(panel, 'j1Source', sel => { _j1Filters.source = sel; refresh(); });
+    apptSel.onchange = () => { _j1Filters.apptRange = apptSel.value; refresh(); };
+    panel.querySelector('#j1Clear').onclick = () => {
+      _j1Filters = { source: [], apptRange: 'all' };
+      paintJ1Performance(panel, allParticipants);
+    };
+
     const wire = () => panel.querySelectorAll('#j1Head th.sortable').forEach(th => th.onclick = () => {
       const i = +th.dataset.i;
       if (i === _j1Sort.i) _j1Sort.dir = -_j1Sort.dir; else { _j1Sort.i = i; _j1Sort.dir = 1; }

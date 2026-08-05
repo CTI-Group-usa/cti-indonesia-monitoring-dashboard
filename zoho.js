@@ -315,6 +315,7 @@ const Zoho = (() => {
       id:             r.id,
       fullName:       val(r[F.fullName]),
       email:          val(r[F.email]),
+      programSources: val(r[F.programSources]),
       hostingCompany: val(r[F.hostingCompany]),
       programStart:   r[F.programStart] || null,
       visaStatus:     val(r[F.visaStatus]),

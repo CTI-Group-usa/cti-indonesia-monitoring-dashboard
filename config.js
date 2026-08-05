@@ -182,6 +182,7 @@ const CONFIG = {
   J1_FIELDS: {
     fullName:       'Full_Name',
     email:          'Email',
+    programSources: 'J1_Program_Sources',
     hostingCompany: 'Hosting_Company_2',
     programStart:   'Program_Start_Date',
     visaStatus:     'J1_Visa_Status',
