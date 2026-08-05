@@ -1177,6 +1177,12 @@ th.sorted {
 .rec-count { font-size: 0.82rem; color: var(--muted); font-weight: 500; white-space: nowrap; }
 .subtab-count { color: var(--accent); font-weight: 700; margin-left: 2px; }
 /* "Last compared" timestamp shown alongside the Records sub-tabs. */
+/* J1 Visa Performance table: fixed layout + small font so all columns fit
+   one screen with no horizontal scroll; long values ellipsize (hover = title). */
+.j1-table { table-layout: fixed; width: 100%; font-size: 0.72rem; }
+.j1-table th, .j1-table td { padding: 6px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.j1-table .badge { font-size: 0.66rem; padding: 1px 6px; }
+
 .compare-stamp { margin-left: auto; align-self: center; font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
 @media (max-width: 768px) { .compare-stamp { margin-left: 0; width: 100%; padding-top: 4px; } }
 

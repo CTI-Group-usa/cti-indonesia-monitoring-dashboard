@@ -1608,17 +1608,19 @@ const App = (() => {
     });
     // "Current Visa Appointment" = 3rd appt, else 2nd, else 1st.
     const lastAppt = p => p.appt3 || p.appt2 || p.appt1 || null;
+    // Percentage widths (sum 100) so all 9 columns fit with no horizontal scroll.
     const cols = [
-      { label: 'Full Name',                render: p => esc(p.fullName),               sort: p => txtSort(p.fullName) },
-      { label: 'Email',                    render: p => esc(p.email),                  sort: p => txtSort(p.email) },
-      { label: 'Hosting Company',          render: p => esc(p.hostingCompany),         sort: p => txtSort(p.hostingCompany) },
-      { label: 'Program Start Date',       render: p => formatDate(p.programStart),    sort: p => dateSort(parseDate(p.programStart)), num: true },
-      { label: 'J1 Visa Status',           render: p => badge(p.visaStatus),           sort: p => txtSort(p.visaStatus) },
-      { label: '1st Appt Date',            render: p => formatDate(p.appt1),           sort: p => dateSort(parseDate(p.appt1)), num: true },
-      { label: '2nd Appt Date',            render: p => formatDate(p.appt2),           sort: p => dateSort(parseDate(p.appt2)), num: true },
-      { label: '3rd Appt Date',            render: p => formatDate(p.appt3),           sort: p => dateSort(parseDate(p.appt3)), num: true },
-      { label: 'Current Appt',             render: p => formatDate(lastAppt(p)),       sort: p => dateSort(parseDate(lastAppt(p))), num: true },
+      { label: 'Full Name',          w: '13%', render: p => esc(p.fullName),            sort: p => txtSort(p.fullName) },
+      { label: 'Email',              w: '17%', render: p => esc(p.email),               sort: p => txtSort(p.email) },
+      { label: 'Hosting Company',    w: '15%', render: p => esc(p.hostingCompany),      sort: p => txtSort(p.hostingCompany) },
+      { label: 'Program Start',      w: '10%', render: p => formatDate(p.programStart), sort: p => dateSort(parseDate(p.programStart)), num: true },
+      { label: 'J1 Visa Status',     w: '12%', render: p => badge(p.visaStatus),        sort: p => txtSort(p.visaStatus) },
+      { label: '1st Appt',           w: '8%',  render: p => formatDate(p.appt1),        sort: p => dateSort(parseDate(p.appt1)), num: true },
+      { label: '2nd Appt',           w: '8%',  render: p => formatDate(p.appt2),        sort: p => dateSort(parseDate(p.appt2)), num: true },
+      { label: '3rd Appt',           w: '8%',  render: p => formatDate(p.appt3),        sort: p => dateSort(parseDate(p.appt3)), num: true },
+      { label: 'Current Appt',       w: '9%',  render: p => formatDate(lastAppt(p)),    sort: p => dateSort(parseDate(lastAppt(p))), num: true },
     ];
+    const cellTitle = html => String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     const bodyHtml = () => {
       const c = cols[_j1Sort.i];
       const rows = participants.slice().sort((a, b) => {
@@ -1628,13 +1630,13 @@ const App = (() => {
         return (c.num ? (x - y) : String(x).localeCompare(String(y))) * _j1Sort.dir;
       });
       if (!rows.length) return `<tr><td colspan="${cols.length}" class="empty-row">No J1 participants found.</td></tr>`;
-      return rows.map(p => `<tr>${cols.map(c => `<td>${c.render(p)}</td>`).join('')}</tr>`).join('');
+      return rows.map(p => `<tr>${cols.map(c => { const h = c.render(p); return `<td title="${esc(cellTitle(h))}">${h}</td>`; }).join('')}</tr>`).join('');
     };
     const headHtml = () => `<tr>${cols.map((c, i) =>
-      `<th class="sortable" data-i="${i}">${c.label}${i === _j1Sort.i ? `<span class="sort-arrow">${_j1Sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')}</tr>`;
+      `<th class="sortable" data-i="${i}" style="width:${c.w}">${c.label}${i === _j1Sort.i ? `<span class="sort-arrow">${_j1Sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')}</tr>`;
     panel.innerHTML = `
       <div class="toolbar"><span class="rec-count">${participants.length.toLocaleString()} participant${participants.length === 1 ? '' : 's'}</span></div>
-      <div class="card table-card"><div class="table-wrap"><table class="data-table">
+      <div class="card table-card"><div class="table-wrap"><table class="data-table j1-table">
         <thead id="j1Head">${headHtml()}</thead><tbody id="j1Body">${bodyHtml()}</tbody>
       </table></div></div>`;
     const wire = () => panel.querySelectorAll('#j1Head th.sortable').forEach(th => th.onclick = () => {
