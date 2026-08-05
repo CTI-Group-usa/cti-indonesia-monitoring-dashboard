@@ -93,6 +93,22 @@ const App = (() => {
     return (str && str !== '—') ? String(str) : '—';
   }
 
+  // Seafarer "business day" key, with the day boundary at 06:00 WITA (UTC+8) —
+  // the daily last-minute comparison/baseline aligns to 6 AM WITA. 06:00 WITA
+  // == 22:00 UTC the previous day, so shifting the instant by +2h maps it to
+  // UTC-midnight of the seafarer day; the UTC date is then the day key.
+  function seafarerDayKey(t = Date.now()) {
+    return new Date(t + 2 * 3600000).toISOString().slice(0, 10);   // "YYYY-MM-DD"
+  }
+  // Format an epoch (ms) as a WITA date + time stamp for display.
+  function fmtWITA(ms) {
+    if (!ms) return null;
+    return new Date(ms).toLocaleString('en-US', {
+      timeZone: 'Asia/Makassar', year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true,
+    }) + ' WITA';
+  }
+
   // Zoho SHEET dates are DD/MM/YYYY (Indonesian). Unlike module dates,
   // day comes first — parse day-first for slash/dash dates, else native
   // (handles ISO / datetime strings). Use this for any Sheet-sourced date.
@@ -566,6 +582,7 @@ const App = (() => {
   let _recTab = 'all';                // Records sub-tab: 'all' | 'lastmin' | 'lastresched'
   let _lastMinSet = new Set();        // crew IDs flagged as last-minute assignments
   let _lastReschedSet = new Set();    // crew IDs flagged as last-minute RESCHEDULED (imminent sign-on moved)
+  let _lastComparedAt = null;         // epoch ms of the last daily comparison (6 AM WITA)
 
   // Shared state via the worker KV endpoint (/state/<key>), so all users see
   // the same snapshot. Falls back to null if the endpoint isn't deployed yet.
@@ -593,7 +610,7 @@ const App = (() => {
   async function refreshLastMinute(records) {
     const KEY = 'lastmin';
     const idOf = r => String(r.crewIdNumber ?? '').trim();
-    const dayKey = new Date().toDateString();
+    const dayKey = seafarerDayKey();   // day boundary = 06:00 WITA
     const now0 = new Date(); now0.setHours(0, 0, 0, 0);
     const nowT = now0.getTime(), FOUR_WK = 28 * 86400000, FOUR_DAYS = 4 * 86400000;
     const signKey = d => d ? `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}` : null;
@@ -628,31 +645,32 @@ const App = (() => {
       changed = true;
     }
 
-    // Detect changes on EVERY load against the stored baseline snapshot — so a
-    // reschedule surfaces on the next dashboard load / 5-min auto-refresh rather
-    // than only the next day. The baseline itself is advanced at most once per
-    // day (below), so it stays a stable "earlier" reference through the day.
-    // The empty-baseline guard prevents a first run / reset from flagging
-    // everyone at once.
-    const prev = state.signon || {};
-    if (Object.keys(prev).length) {
-      Object.keys(todaySign).forEach(id => {
-        if (prev[id] === todaySign[id]) return;                 // sign-on date unchanged
-        const d = parseDate(byId[id].signOnDate);
-        // Last-minute ASSIGNMENT: sign-on changed to a value under 4 weeks away
-        // (brand-new assignment OR a reschedule into the 4-week window).
-        if (d && d.getTime() >= nowT && d.getTime() < nowT + FOUR_WK && !flags[id]) { flags[id] = dayKey; changed = true; }
-        // Last-minute RESCHEDULE: a sign-on that was imminent (≤4 days away) has
-        // MOVED to a different date — e.g. a seafarer already at the airport
-        // pushed to a later date. Requires a prior imminent date, so brand-new
-        // assignments don't count.
-        const pd = parseSignKey(prev[id]);
-        if (pd && pd.getTime() >= nowT && pd.getTime() <= nowT + FOUR_DAYS && !reschedFlags[id]) { reschedFlags[id] = dayKey; changed = true; }
-      });
-    }
-    if (state.day !== dayKey) {   // roll the baseline forward once per day
+    // Run the comparison ONCE per seafarer-day (boundary = 06:00 WITA). A
+    // Cloudflare Cron runs this at exactly 6 AM WITA (authoritative); if it
+    // hasn't (not deployed, or the day hasn't been compared yet), the first
+    // dashboard load after 6 AM does it as a fallback. Either way the baseline,
+    // flags, and comparedAt timestamp advance only once per day — so the list
+    // and the "last compared" time stay stable through the day.
+    if (state.day !== dayKey) {
+      const prev = state.signon || {};
+      // Skip the very first run (empty baseline) so it can't flag everyone.
+      if (Object.keys(prev).length) {
+        Object.keys(todaySign).forEach(id => {
+          if (prev[id] === todaySign[id]) return;               // sign-on unchanged
+          const d = parseDate(byId[id].signOnDate);
+          // Last-minute ASSIGNMENT: sign-on changed to under 4 weeks away.
+          if (d && d.getTime() >= nowT && d.getTime() < nowT + FOUR_WK) flags[id] = dayKey;
+          // Last-minute RESCHEDULE: a sign-on that was imminent (≤4 days away)
+          // moved to a different date — e.g. a seafarer already at the airport
+          // pushed to a later date. Needs a prior imminent date, so brand-new
+          // assignments don't count.
+          const pd = parseSignKey(prev[id]);
+          if (pd && pd.getTime() >= nowT && pd.getTime() <= nowT + FOUR_DAYS) reschedFlags[id] = dayKey;
+        });
+      }
       state.day = dayKey;
       state.signon = todaySign;
+      state.comparedAt = Date.now();    // stamp when this day's comparison ran
       changed = true;
     }
     // A flag is cleared once the assignment is handled (onboarding = Report to
@@ -678,7 +696,7 @@ const App = (() => {
     state.flags = flags;
     state.reschedFlags = reschedFlags;
     if (changed) await statePut(KEY, state);
-    return { assign: new Set(Object.keys(flags)), resched: new Set(Object.keys(reschedFlags)) };
+    return { assign: new Set(Object.keys(flags)), resched: new Set(Object.keys(reschedFlags)), comparedAt: state.comparedAt || null };
   }
   let _ovFilters = { office: [DEFAULT_OFFICE], cruiseLine: [] };   // Overview charts
   let _penFilters = emptyFilters();   // Pending Action page
@@ -1174,6 +1192,7 @@ const App = (() => {
     const _lm = await refreshLastMinute(data);     // day-over-day (shared via worker KV)
     _lastMinSet = _lm.assign;
     _lastReschedSet = _lm.resched;
+    _lastComparedAt = _lm.comparedAt;
 
     const offices     = distinctVals(data, 'ctiOffice');
     const cruiseLines = distinctVals(data, 'cruiseLine');
@@ -1211,6 +1230,7 @@ const App = (() => {
         <button class="subtab ${_recTab === 'all' ? 'active' : ''}" data-rectab="all">All Records</button>
         <button class="subtab ${_recTab === 'lastmin' ? 'active' : ''}" data-rectab="lastmin">Last Minutes Assignment <span class="subtab-count" id="lastminCount"></span></button>
         <button class="subtab ${_recTab === 'lastresched' ? 'active' : ''}" data-rectab="lastresched">Last Minutes Rescheduled <span class="subtab-count" id="lastreschedCount"></span></button>
+        <span class="compare-stamp" id="compareStamp"></span>
       </div>
       <div class="filter-bar">
         ${msHTML('rOffice', 'All CTI Offices', offices, _recFilters.office)}
@@ -1253,6 +1273,8 @@ const App = (() => {
       const lr = document.getElementById('lastreschedCount');
       if (lr) lr.textContent = '· ' + applyDeployFilters(data, _recFilters)
         .filter(r => _lastReschedSet.has(String(r.crewIdNumber ?? '').trim())).length;
+      const cs = document.getElementById('compareStamp');
+      if (cs) cs.textContent = _lastComparedAt ? `Last compared: ${fmtWITA(_lastComparedAt)}` : 'Last compared: not yet run';
       document.getElementById('recHead').innerHTML = headHtml();
       paintRows(rows, cols);
       document.querySelectorAll('#recHead th.sortable').forEach(th =>

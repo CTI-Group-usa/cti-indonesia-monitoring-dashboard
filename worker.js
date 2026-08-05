@@ -90,7 +90,97 @@ export default {
       return json({ error: String(err && err.message || err) }, 500, CORS);
     }
   },
+
+  // ── Cron: fixed daily "last-minute" comparison at 06:00 WITA ──────────
+  // Configured in wrangler.jsonc as "0 22 * * *" (22:00 UTC = 06:00 WITA).
+  // Pulls current sign-on dates, compares them to the stored baseline, updates
+  // the shared last-minute assignment + reschedule flags, then advances the
+  // baseline and stamps comparedAt — so the dashboard shows a stable daily list
+  // with a "Last compared" time, independent of who opens it.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runDailyComparison(env));
+  },
 };
+
+// Seafarer "business day" key (boundary 06:00 WITA); matches the frontend.
+function seafarerDayKey(t = Date.now()) {
+  return new Date(t + 2 * 3600000).toISOString().slice(0, 10);   // "YYYY-MM-DD"
+}
+
+async function runDailyComparison(env) {
+  const token = await getAccessToken(env);
+  const FIELDS = ['Crew_ID_Number', 'Sign_On_Date', 'Onboarding_Status'].join(',');
+  let all = [], page = 1, more = true;
+  while (more) {
+    const url = `${RECRUIT_BASE}/Candidates?fields=${FIELDS}&page=${page}&per_page=200`;
+    const r = await fetch(url, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
+    if (r.status === 204) break;
+    if (!r.ok) throw new Error('RECRUIT_' + r.status);
+    const j = await r.json();
+    all = all.concat(j.data || []);
+    more = j.info && j.info.more_records === true;
+    page++;
+    if (all.length > 50000) break;
+  }
+
+  const DAY = 86400000, FOUR_WK = 28 * DAY, FOUR_DAYS = 4 * DAY;
+  // "Today" = current WITA calendar date at midnight, as a UTC-anchored epoch.
+  const w = new Date(Date.now() + 8 * 3600000);
+  const nowT = Date.UTC(w.getUTCFullYear(), w.getUTCMonth(), w.getUTCDate());
+  const parseDate = v => { if (v == null || v === '' || v === '—') return null; const d = new Date(String(v).trim()); return isNaN(d) ? null : d; };
+  // UTC getters so date-only strings key identically to the WITA frontend.
+  const signKey = d => d ? `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}` : null;
+  const parseSignKey = k => { if (!k) return null; const [y, m, dd] = String(k).split('-').map(Number); return new Date(Date.UTC(y, m - 1, dd)); };
+
+  const EXCL = ['resigned', 'process by mss philippines'];
+  const byId = {}, todaySign = {};
+  for (const rec of all) {
+    const id = String(rec['Crew_ID_Number'] ?? '').trim();
+    if (!id) continue;
+    if (EXCL.includes(String(rec['Onboarding_Status'] ?? '').trim().toLowerCase())) continue;
+    byId[id] = rec;
+    const d = parseDate(rec['Sign_On_Date']);
+    if (d) todaySign[id] = signKey(d);
+  }
+
+  const KEY = 'appstate:lastmin';
+  const state = JSON.parse((await env.TOKEN_CACHE.get(KEY)) || 'null') || { day: null, signon: {}, flags: {}, reschedFlags: {} };
+  let flags = state.flags || {}, reschedFlags = state.reschedFlags || {};
+  const dayKey = seafarerDayKey();
+  const prev = state.signon || {};
+
+  if (Object.keys(prev).length) {   // skip first run (empty baseline)
+    for (const id of Object.keys(todaySign)) {
+      if (prev[id] === todaySign[id]) continue;                 // sign-on unchanged
+      const d = parseDate(byId[id]['Sign_On_Date']);
+      if (d && d.getTime() >= nowT && d.getTime() < nowT + FOUR_WK) flags[id] = dayKey;
+      const pd = parseSignKey(prev[id]);
+      if (pd && pd.getTime() >= nowT && pd.getTime() <= nowT + FOUR_DAYS) reschedFlags[id] = dayKey;
+    }
+  }
+  // Assignment flags clear when handled / gone / sign-on passed.
+  const DONE = ['report to ship', 'rescheduled', 'resigned'];
+  for (const id of Object.keys(flags)) {
+    const r = byId[id];
+    if (!r) { delete flags[id]; continue; }
+    const d = parseDate(r['Sign_On_Date']);
+    const done = DONE.includes(String(r['Onboarding_Status'] ?? '').trim().toLowerCase());
+    if (done || !d || d.getTime() < nowT) delete flags[id];
+  }
+  // Reschedule flags clear ONLY once reported to ship (or the record is gone).
+  for (const id of Object.keys(reschedFlags)) {
+    const r = byId[id];
+    if (!r) { delete reschedFlags[id]; continue; }
+    if (String(r['Onboarding_Status'] ?? '').trim().toLowerCase() === 'report to ship') delete reschedFlags[id];
+  }
+
+  state.signon = todaySign;
+  state.day = dayKey;
+  state.flags = flags;
+  state.reschedFlags = reschedFlags;
+  state.comparedAt = Date.now();
+  await env.TOKEN_CACHE.put(KEY, JSON.stringify(state));
+}
 
 // Forward a request to Zoho with the OAuth header, preserving
 // method / body / content-type. Adds CORS to the response.

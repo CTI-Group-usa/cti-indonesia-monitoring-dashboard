@@ -15,6 +15,9 @@
   "main": "worker.js",
   "compatibility_date": "2026-07-28",
 
+  // Daily "last-minute" comparison at 06:00 WITA (22:00 UTC).
+  "triggers": { "crons": ["0 22 * * *"] },
+
   // Account ID of the "putu-astra" (Putu.astra@cti-usa.com) account. Non-secret.
   "account_id": "e9e538d5b8134729e6cd90a7cb8da53b",
 
