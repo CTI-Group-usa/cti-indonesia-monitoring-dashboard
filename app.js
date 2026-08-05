@@ -585,7 +585,7 @@ const App = (() => {
   let _lastComparedAt = null;         // epoch ms of the last daily comparison (6 AM WITA)
   let _j1Tab  = 'performance';        // J1 Program sub-tab: 'performance' | 'progress'
   let _j1Sort = { i: 0, dir: 1 };     // J1 Visa Performance table sort
-  let _j1Filters = { source: ['CTI Indonesia'], apptRange: 'all' };   // J1 Visa Performance filters
+  let _j1Filters = { source: ['CTI Indonesia'], apptRange: 'upcoming' };   // J1 Visa Performance filters
 
   // Shared state via the worker KV endpoint (/state/<key>), so all users see
   // the same snapshot. Falls back to null if the endpoint isn't deployed yet.
