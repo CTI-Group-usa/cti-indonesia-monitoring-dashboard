@@ -1233,6 +1233,7 @@ const App = (() => {
         <button class="subtab ${_recTab === 'all' ? 'active' : ''}" data-rectab="all">All Records</button>
         <button class="subtab ${_recTab === 'lastmin' ? 'active' : ''}" data-rectab="lastmin">Last Minutes Assignment <span class="subtab-count" id="lastminCount"></span></button>
         <button class="subtab ${_recTab === 'lastresched' ? 'active' : ''}" data-rectab="lastresched">Last Minutes Rescheduled <span class="subtab-count" id="lastreschedCount"></span></button>
+        <button class="subtab ${_recTab === 'reassigned' ? 'active' : ''}" data-rectab="reassigned">Re-Assigned <span class="subtab-count" id="reassignedCount"></span></button>
         <span class="compare-stamp" id="compareStamp"></span>
       </div>
       <div class="filter-bar">
@@ -1276,6 +1277,8 @@ const App = (() => {
       const lr = document.getElementById('lastreschedCount');
       if (lr) lr.textContent = '· ' + applyDeployFilters(data, _recFilters)
         .filter(r => _lastReschedSet.has(String(r.crewIdNumber ?? '').trim())).length;
+      const ra = document.getElementById('reassignedCount');
+      if (ra) ra.textContent = '· ' + applyDeployFilters(data, _recFilters).filter(isReassigned).length;
       const cs = document.getElementById('compareStamp');
       if (cs) cs.textContent = _lastComparedAt ? `Last compared: ${fmtWITA(_lastComparedAt)}` : 'Last compared: not yet run';
       document.getElementById('recHead').innerHTML = headHtml();
@@ -1314,6 +1317,17 @@ const App = (() => {
     updateStatus();
   }
 
+  // Re-Assigned: onboarding is "Rescheduled" but the current Sign On Date no
+  // longer matches Rescheduled_Date (a new join date was set without updating
+  // the status). Dates compared by day; needs a Sign On Date to be present.
+  function isReassigned(r) {
+    if (String(r.onboardingStatus ?? '').trim().toLowerCase() !== 'rescheduled') return false;
+    const dayKeyOf = v => { const d = parseDate(v); return d ? `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}` : ''; };
+    const so = dayKeyOf(r.signOnDate);
+    if (!so) return false;                         // no new join date yet
+    return so !== dayKeyOf(r.rescheduledDate);     // unmatched
+  }
+
   // Records dataset filtered by the shared deployment filters + the search box.
   function recFiltered(data) {
     let rows = applyDeployFilters(data, _recFilters);
@@ -1325,6 +1339,11 @@ const App = (() => {
     // new date; stays until onboarding = Report to Ship (see refreshLastMinute).
     else if (_recTab === 'lastresched')
       rows = rows.filter(r => _lastReschedSet.has(String(r.crewIdNumber ?? '').trim()));
+    // Re-Assigned: onboarding still "Rescheduled" but the Sign On Date no longer
+    // matches Rescheduled_Date — i.e. a new join date was set but the status was
+    // never updated. Drops off once onboarding changes away from Rescheduled.
+    else if (_recTab === 'reassigned')
+      rows = rows.filter(isReassigned);
     const q = _search.trim().toLowerCase();
     if (q) rows = rows.filter(r =>
       [r.name, r.email, r.ctiOffice, r.crewIdNumber, r.joiningShip, r.signOnPort,
