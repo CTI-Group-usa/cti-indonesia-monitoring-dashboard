@@ -1202,7 +1202,7 @@ const App = (() => {
     const onboardings = distinctVals(data, 'onboardingStatus');
 
     // Records columns: label, render(row) -> HTML, sort(row) -> comparable, num.
-    const cols = [
+    const baseCols = [
       { label: 'ID Number',             render: r => esc(r.crewIdNumber),      sort: r => txtSort(r.crewIdNumber) },
       { label: 'Seafarer Name',         render: r => esc(r.name),              sort: r => txtSort(r.name) },
       { label: 'Joining Ship',          render: r => esc(r.joiningShip),      sort: r => txtSort(r.joiningShip) },
@@ -1220,9 +1220,19 @@ const App = (() => {
       { label: 'Other Visa Status',     render: r => esc(r.otherVisaStatus),   sort: r => txtSort(r.otherVisaStatus) },
       { label: 'Other Visa Name',      render: r => esc(r.otherVisaName),     sort: r => txtSort(r.otherVisaName) },
     ];
+    // Re-Assigned tab: show Rescheduled Sign On Date next to Sign On Date (to
+    // compare), and drop Other Visa Name to make room.
+    const reschedCol = { label: 'Rescheduled Sign On Date', render: r => formatDate(r.rescheduledDate), sort: r => dateSort(parseDate(r.rescheduledDate)), num: true };
+    const viewCols = () => {
+      if (_recTab !== 'reassigned') return baseCols;
+      const c = baseCols.filter(col => col.label !== 'Other Visa Name');
+      const i = c.findIndex(col => col.label === 'Sign On Date');
+      c.splice(i + 1, 0, reschedCol);
+      return c;
+    };
 
     const stickyCls = i => i < 2 ? ` sticky-col sticky-col-${i + 1}` : '';
-    const headHtml = () => `<tr>${cols.map((c, i) => {
+    const headHtml = (cols) => `<tr>${cols.map((c, i) => {
       const arrow = i === _recSort.i ? `<span class="sort-arrow">${_recSort.dir > 0 ? '▲' : '▼'}</span>` : '';
       return `<th class="sortable${stickyCls(i)}" data-i="${i}">${c.label}${arrow}</th>`;
     }).join('')}</tr>`;
@@ -1251,14 +1261,15 @@ const App = (() => {
       </div>
       <div class="card table-card">
         <div class="table-wrap"><table class="data-table records-table">
-          <thead id="recHead">${headHtml()}</thead>
+          <thead id="recHead">${headHtml(viewCols())}</thead>
           <tbody id="recBody"></tbody>
         </table></div>
       </div>`;
 
     const paint = () => {
+      const cols = viewCols();
       let rows = recFiltered(data);
-      if (_recSort.i >= 0) {
+      if (_recSort.i >= 0 && cols[_recSort.i]) {
         const c = cols[_recSort.i];
         rows = rows.slice().sort((a, b) => {
           const x = c.sort(a), y = c.sort(b);
@@ -1281,7 +1292,7 @@ const App = (() => {
       if (ra) ra.textContent = '· ' + applyDeployFilters(data, _recFilters).filter(isReassigned).length;
       const cs = document.getElementById('compareStamp');
       if (cs) cs.textContent = _lastComparedAt ? `Last compared: ${fmtWITA(_lastComparedAt)}` : 'Last compared: not yet run';
-      document.getElementById('recHead').innerHTML = headHtml();
+      document.getElementById('recHead').innerHTML = headHtml(cols);
       paintRows(rows, cols);
       document.querySelectorAll('#recHead th.sortable').forEach(th =>
         th.onclick = () => {
