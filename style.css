@@ -1193,14 +1193,15 @@ th.sorted {
 .j1-perf-head .j1-perf-left { max-width: 55%; }
 .j1-perf-head .j1-perf-left .toolbar { margin-top: 8px; }
 .j1-perf-head .j1-perf-chart {
-  position: absolute; top: -48px; right: 0;
-  width: 460px; max-width: 42%; margin: 0; padding: 12px 14px;
+  position: absolute; top: -92px; right: 0;
+  width: 460px; max-width: 42%; margin: 0; padding: 10px 14px;
 }
-.j1-perf-head .j1-perf-chart .card-title { font-size: 0.78rem; margin-bottom: 4px; }
-.j1-perf-head .j1-perf-chart canvas { max-height: 120px; }
+.j1-perf-head .j1-perf-chart .card-title { font-size: 0.78rem; margin-bottom: 2px; }
+.j1-perf-head .j1-perf-chart canvas { max-height: 95px; }
 @media (max-width: 768px) {
   .j1-perf-head .j1-perf-left { max-width: 100%; }
   .j1-perf-head .j1-perf-chart { position: static; width: 100%; max-width: 100%; margin-top: 12px; }
+  .j1-perf-head .j1-perf-chart canvas { max-height: 120px; }
 }
 
 .compare-stamp { margin-left: auto; align-self: center; font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
