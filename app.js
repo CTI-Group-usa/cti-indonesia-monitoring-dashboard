@@ -1222,7 +1222,7 @@ const App = (() => {
     ];
     // Re-Assigned tab: show Rescheduled Sign On Date next to Sign On Date (to
     // compare), and drop Other Visa Name to make room.
-    const reschedCol = { label: 'Rescheduled Sign On Date', render: r => formatDate(r.rescheduledDate), sort: r => dateSort(parseDate(r.rescheduledDate)), num: true };
+    const reschedCol = { label: 'Rescheduled Date', render: r => formatDate(r.rescheduledDate), sort: r => dateSort(parseDate(r.rescheduledDate)), num: true };
     const viewCols = () => {
       if (_recTab !== 'reassigned') return baseCols;
       const c = baseCols.filter(col => col.label !== 'Other Visa Name');
