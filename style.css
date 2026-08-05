@@ -1179,7 +1179,7 @@ th.sorted {
 /* "Last compared" timestamp shown alongside the Records sub-tabs. */
 /* J1 Visa Performance table: fixed layout + small font so all columns fit
    one screen with no horizontal scroll; long values ellipsize (hover = title). */
-.j1-table { table-layout: fixed; width: auto; font-size: 0.72rem; }
+.j1-table { table-layout: fixed; width: 100%; font-size: 0.72rem; }
 .j1-table th, .j1-table td { padding: 6px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .j1-table .badge { font-size: 0.66rem; padding: 1px 6px; }
 

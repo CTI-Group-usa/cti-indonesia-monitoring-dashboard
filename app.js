@@ -1636,7 +1636,7 @@ const App = (() => {
       { label: 'Full Name',          w: '150px', render: p => esc(p.fullName),            sort: p => txtSort(p.fullName) },
       { label: 'Email',              w: '190px', render: p => esc(p.email),               sort: p => txtSort(p.email) },
       { label: 'J1 Program Sources', w: '110px', render: p => esc(p.programSources),      sort: p => txtSort(p.programSources) },
-      { label: 'Hosting Company',    w: '200px', render: p => esc(p.hostingCompany),      sort: p => txtSort(p.hostingCompany) },
+      { label: 'Hosting Company',    w: null,    render: p => esc(p.hostingCompany),      sort: p => txtSort(p.hostingCompany) },   // flexes to fill remaining width
       { label: 'Program Start',      w: '95px',  render: p => formatDate(p.programStart), sort: p => dateSort(parseDate(p.programStart)), num: true },
       { label: 'J1 Visa Status',     w: '105px', render: p => badge(p.visaStatus),        sort: p => txtSort(p.visaStatus) },
       { label: '1st Appt',           w: '90px',  render: p => formatDate(p.appt1),        sort: p => dateSort(parseDate(p.appt1)), num: true },
@@ -1657,7 +1657,7 @@ const App = (() => {
       return rows.map(p => `<tr>${cols.map(c => { const h = c.render(p); return `<td title="${esc(cellTitle(h))}">${h}</td>`; }).join('')}</tr>`).join('');
     };
     const headHtml = () => `<tr>${cols.map((c, i) =>
-      `<th class="sortable" data-i="${i}" style="width:${c.w}">${c.label}${i === _j1Sort.i ? `<span class="sort-arrow">${_j1Sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')}</tr>`;
+      `<th class="sortable" data-i="${i}"${c.w ? ` style="width:${c.w}"` : ''}>${c.label}${i === _j1Sort.i ? `<span class="sort-arrow">${_j1Sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')}</tr>`;
     panel.innerHTML = `
       <div class="filter-bar">
         ${msHTML('j1Source', 'All Program Sources', sources, _j1Filters.source)}
