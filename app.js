@@ -1218,7 +1218,7 @@ const App = (() => {
       { label: 'MCV Status',            render: r => esc(r.mcvStatus),         sort: r => txtSort(r.mcvStatus) },
       { label: 'Completed Vaccination', render: r => esc(r.vaccinesStatus),    sort: r => txtSort(r.vaccinesStatus) },
       { label: 'Other Visa Status',     render: r => esc(r.otherVisaStatus),   sort: r => txtSort(r.otherVisaStatus) },
-      { label: 'Other Visa Issued Date',render: r => formatDate(r.otherVisaIssuedDate), sort: r => dateSort(parseDate(r.otherVisaIssuedDate)), num: true },
+      { label: 'Other Visa Name',      render: r => esc(r.otherVisaName),     sort: r => txtSort(r.otherVisaName) },
     ];
 
     const stickyCls = i => i < 2 ? ` sticky-col sticky-col-${i + 1}` : '';
