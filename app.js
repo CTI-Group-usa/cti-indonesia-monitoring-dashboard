@@ -1604,15 +1604,24 @@ const App = (() => {
     // "Current Appt" = 3rd appt, else 2nd, else 1st.
     const lastAppt = p => p.appt3 || p.appt2 || p.appt1 || null;
     const nowT = Date.now();
-    const sources = distinctVals(allParticipants, 'programSources');
+    // Program Source is bucketed into 4 fixed options; anything that isn't
+    // MCSI / Bangkok / Vietnam is treated as CTI Indonesia.
+    const sources = ['CTI MCSI', 'CTI Bangkok', 'CTI Vietnam', 'CTI Indonesia'];
+    const sourceBucket = p => {
+      const s = String(p.programSources ?? '').trim().toLowerCase();
+      if (s === 'cti mcsi')    return 'CTI MCSI';
+      if (s === 'cti bangkok') return 'CTI Bangkok';
+      if (s === 'cti vietnam') return 'CTI Vietnam';
+      return 'CTI Indonesia';   // all other sources
+    };
     const inSel = (arr, v) => !arr.length || arr.includes(v);
     // Filters: only real Hosting Company (exclude blank + "Application Process
-    // On Hold"), J1 Program Sources multi-select, and Appointment record range
+    // On Hold"), J1 Program Sources (4 buckets), and Appointment record range
     // (past / upcoming relative to the Current Appt date).
     const applyFilters = () => allParticipants.filter(p => {
       const hc = String(p.hostingCompany ?? '').trim();
       if (!hc || hc === '—' || hc.toLowerCase() === 'application process on hold') return false;
-      if (!inSel(_j1Filters.source, p.programSources)) return false;
+      if (!inSel(_j1Filters.source, sourceBucket(p))) return false;
       if (_j1Filters.apptRange !== 'all') {
         const d = parseDate(lastAppt(p));
         if (!d) return false;   // no current appointment → not past nor upcoming
