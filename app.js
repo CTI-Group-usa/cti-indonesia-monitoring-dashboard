@@ -1595,8 +1595,7 @@ const App = (() => {
     mc.innerHTML = `
       <div class="page-header"><h1>J1 Program</h1></div>
       <div class="subtabs">
-        <button class="subtab ${_j1Tab === 'performance' ? 'active' : ''}" data-j1tab="performance">Visa Performance</button>
-        <button class="subtab ${_j1Tab === 'progress' ? 'active' : ''}" data-j1tab="progress">Visa Progress</button>
+        <button class="subtab active" data-j1tab="performance">Visa Performance</button>
       </div>
       <div id="j1Panel"></div>`;
 
@@ -1613,9 +1612,7 @@ const App = (() => {
   function paintJ1(participants, j1rows) {
     destroyCharts();
     const panel = document.getElementById('j1Panel');
-    if (!panel) return;
-    if (_j1Tab === 'progress') paintJ1Progress(panel, j1rows);
-    else paintJ1Performance(panel, participants, j1rows);
+    if (panel) paintJ1Performance(panel, participants, j1rows);
   }
 
   // Shared J1 "Visa Processing" grouping (mirrors the C1/D logic) + chart with
@@ -1784,19 +1781,6 @@ const App = (() => {
       wire();
     });
     wire();
-  }
-
-  // Sub-tab 2 — Visa Progress: full-size J1 Visa Log processing chart.
-  function paintJ1Progress(panel, rows) {
-    const total = Array.isArray(rows) && rows.length;
-    panel.innerHTML = `
-      <div class="chart-row">
-        <div class="card chart-card">
-          <div class="card-title">J1 Visa — Visa Processing <span class="hint">(J1 Visa Log · click a bar)</span></div>
-          ${total ? `<canvas id="j1Chart" height="260"></canvas>` : `<p class="empty-row">No J1 Visa Log records found.</p>`}
-        </div>
-      </div>`;
-    if (total) drawJ1ProcessingChart('j1Chart', rows);
   }
 
   const ROUTES = { overview: renderOverview, records: renderRecords, documents: renderVisa, visa: renderVisa, pending: renderPending, j1: renderJ1 };
