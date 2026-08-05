@@ -1633,15 +1633,16 @@ const App = (() => {
     let participants = applyFilters();
     // Percentage widths (sum 100) so all 9 columns fit with no horizontal scroll.
     const cols = [
-      { label: 'Full Name',          w: '13%', render: p => esc(p.fullName),            sort: p => txtSort(p.fullName) },
-      { label: 'Email',              w: '17%', render: p => esc(p.email),               sort: p => txtSort(p.email) },
-      { label: 'Hosting Company',    w: '15%', render: p => esc(p.hostingCompany),      sort: p => txtSort(p.hostingCompany) },
-      { label: 'Program Start',      w: '10%', render: p => formatDate(p.programStart), sort: p => dateSort(parseDate(p.programStart)), num: true },
-      { label: 'J1 Visa Status',     w: '12%', render: p => badge(p.visaStatus),        sort: p => txtSort(p.visaStatus) },
-      { label: '1st Appt',           w: '8%',  render: p => formatDate(p.appt1),        sort: p => dateSort(parseDate(p.appt1)), num: true },
-      { label: '2nd Appt',           w: '8%',  render: p => formatDate(p.appt2),        sort: p => dateSort(parseDate(p.appt2)), num: true },
-      { label: '3rd Appt',           w: '8%',  render: p => formatDate(p.appt3),        sort: p => dateSort(parseDate(p.appt3)), num: true },
-      { label: 'Current Appt',       w: '9%',  render: p => formatDate(lastAppt(p)),    sort: p => dateSort(parseDate(lastAppt(p))), num: true },
+      { label: 'Full Name',          w: '12%', render: p => esc(p.fullName),            sort: p => txtSort(p.fullName) },
+      { label: 'Email',              w: '15%', render: p => esc(p.email),               sort: p => txtSort(p.email) },
+      { label: 'J1 Program Sources', w: '11%', render: p => esc(p.programSources),      sort: p => txtSort(p.programSources) },
+      { label: 'Hosting Company',    w: '13%', render: p => esc(p.hostingCompany),      sort: p => txtSort(p.hostingCompany) },
+      { label: 'Program Start',      w: '9%',  render: p => formatDate(p.programStart), sort: p => dateSort(parseDate(p.programStart)), num: true },
+      { label: 'J1 Visa Status',     w: '11%', render: p => badge(p.visaStatus),        sort: p => txtSort(p.visaStatus) },
+      { label: '1st Appt',           w: '7%',  render: p => formatDate(p.appt1),        sort: p => dateSort(parseDate(p.appt1)), num: true },
+      { label: '2nd Appt',           w: '7%',  render: p => formatDate(p.appt2),        sort: p => dateSort(parseDate(p.appt2)), num: true },
+      { label: '3rd Appt',           w: '7%',  render: p => formatDate(p.appt3),        sort: p => dateSort(parseDate(p.appt3)), num: true },
+      { label: 'Current Appt',       w: '8%',  render: p => formatDate(lastAppt(p)),    sort: p => dateSort(parseDate(lastAppt(p))), num: true },
     ];
     const cellTitle = html => String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     const bodyHtml = () => {
