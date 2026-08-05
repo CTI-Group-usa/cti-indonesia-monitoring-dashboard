@@ -1613,7 +1613,7 @@ const App = (() => {
       { label: '1st Appt Date',            render: p => formatDate(p.appt1),           sort: p => dateSort(parseDate(p.appt1)), num: true },
       { label: '2nd Appt Date',            render: p => formatDate(p.appt2),           sort: p => dateSort(parseDate(p.appt2)), num: true },
       { label: '3rd Appt Date',            render: p => formatDate(p.appt3),           sort: p => dateSort(parseDate(p.appt3)), num: true },
-      { label: 'Current Visa Appointment', render: p => formatDate(lastAppt(p)),       sort: p => dateSort(parseDate(lastAppt(p))), num: true },
+      { label: 'Current Appt',             render: p => formatDate(lastAppt(p)),       sort: p => dateSort(parseDate(lastAppt(p))), num: true },
     ];
     const bodyHtml = () => {
       const c = cols[_j1Sort.i];
