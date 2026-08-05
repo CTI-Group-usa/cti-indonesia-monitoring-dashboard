@@ -1610,7 +1610,7 @@ const App = (() => {
     const sourceBucket = p => {
       const s = String(p.programSources ?? '').trim().toLowerCase();
       if (s === 'cti mcsi')    return 'CTI MCSI';
-      if (s === 'cti bangkok') return 'CTI Bangkok';
+      if (s === 'cti bangkok' || s === 'bangkok career fair') return 'CTI Bangkok';
       if (s === 'cti vietnam') return 'CTI Vietnam';
       return 'CTI Indonesia';   // all other sources
     };
