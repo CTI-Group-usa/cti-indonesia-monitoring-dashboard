@@ -175,6 +175,28 @@ const CONFIG = {
   ],
 
   // ─────────────────────────────────────────────────────────────
+  //  J1 PROGRAM  (separate Recruit module + its own Zoho Sheet)
+  //  Not merged into the Seafarer records — used only by the J1 page.
+  // ─────────────────────────────────────────────────────────────
+  J1_MODULE: 'J1_Participants',
+  J1_FIELDS: {
+    fullName:       'Full_Name',
+    email:          'Email',
+    hostingCompany: 'Hosting_Company_2',
+    programStart:   'Program_Start_Date',
+    visaStatus:     'J1_Visa_Status',
+    appt1:          'J1_Visa_Appointment_Date',        // 1st appointment
+    appt2:          'J1_Visa_2nd_Appointment_Date',
+    appt3:          'J1_Visa_3rd_Appointment_Date',
+  },
+  // J1 Visa Log sheet (drives the J1 Visa Processing chart).
+  J1_SHEET: {
+    resourceId: '2lr3n52a29b81f88c47618df49092afd2b286',
+    worksheet:  'J1 Visa Log',
+    headerRow:  1,
+  },
+
+  // ─────────────────────────────────────────────────────────────
   //  Local dashboard users (SHA-256 hashed passwords)
   // ─────────────────────────────────────────────────────────────
   //   Generate a hash in the browser console:

@@ -8,9 +8,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="style.css?v=20260804d">
-  <script src="config.js?v=20260804c"></script>
+  <script src="config.js?v=20260805a"></script>
   <script src="auth.js?v=20260729bt"></script>
-  <script src="zoho.js?v=20260804c"></script>
+  <script src="zoho.js?v=20260805a"></script>
 </head>
 <body>
   <!-- Auth guard -->
@@ -50,6 +50,10 @@
         <a href="#" class="nav-link" data-page="pending">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
           Pending Action
+        </a>
+        <a href="#" class="nav-link" data-page="j1">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1 2 3 6 3s6-2 6-3v-5"/></svg>
+          J1 Program
         </a>
       </nav>
 
@@ -103,7 +107,7 @@
   <!-- Toast container -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="app.js?v=20260804j"></script>
+  <script src="app.js?v=20260805a"></script>
   <script>
     const sess = Auth.getSession();
     if (sess) {

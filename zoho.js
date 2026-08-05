@@ -289,9 +289,56 @@ const Zoho = (() => {
     return getSheetRecords(sheet);
   }
 
+  // ═══════════════════════════════════════════════════════════
+  //  J1 PROGRAM — separate Recruit module + its own sheet
+  //  (standalone; NOT merged into the Seafarer records).
+  // ═══════════════════════════════════════════════════════════
+  async function getJ1Participants() {
+    const module = CONFIG.J1_MODULE;
+    const F = CONFIG.J1_FIELDS || {};
+    if (!module) return [];
+    const fields = Object.values(F).join(',');
+    const val = v => {
+      if (v == null || v === '') return '—';
+      if (Array.isArray(v)) return v.filter(x => x != null && x !== '').join(', ') || '—';
+      return (typeof v === 'object' ? (v.name ?? v.value ?? '—') : v);
+    };
+    let all = [], page = 1, more = true;
+    while (more) {
+      const data = await recruitGet(module, { fields, page, per_page: 200 });
+      all = all.concat(data.data || []);
+      more = data.info?.more_records === true;
+      page++;
+      if (all.length > 50000) break;
+    }
+    return all.map(r => ({
+      id:             r.id,
+      fullName:       val(r[F.fullName]),
+      email:          val(r[F.email]),
+      hostingCompany: val(r[F.hostingCompany]),
+      programStart:   r[F.programStart] || null,
+      visaStatus:     val(r[F.visaStatus]),
+      appt1:          r[F.appt1] || null,
+      appt2:          r[F.appt2] || null,
+      appt3:          r[F.appt3] || null,
+    }));
+  }
+
+  // Raw rows of the standalone J1 Visa Log sheet (CONFIG.J1_SHEET).
+  async function getJ1VisaRows() {
+    const s = CONFIG.J1_SHEET;
+    if (!s || !s.resourceId) return [];
+    const json = await sheetCall(
+      { resourceId: s.resourceId, worksheet: s.worksheet, headerRow: s.headerRow ?? 1 },
+      'worksheet.records.fetch');
+    return json.records || [];
+  }
+
   return {
     getAllRecords,
     getSheetRows,
+    getJ1Participants,
+    getJ1VisaRows,
     updateRecruit,
     updateSheet,
     groupBy,

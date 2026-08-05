@@ -583,6 +583,8 @@ const App = (() => {
   let _lastMinSet = new Set();        // crew IDs flagged as last-minute assignments
   let _lastReschedSet = new Set();    // crew IDs flagged as last-minute RESCHEDULED (imminent sign-on moved)
   let _lastComparedAt = null;         // epoch ms of the last daily comparison (6 AM WITA)
+  let _j1Tab  = 'performance';        // J1 Program sub-tab: 'performance' | 'progress'
+  let _j1Sort = { i: 0, dir: 1 };     // J1 Visa Performance table sort
 
   // Shared state via the worker KV endpoint (/state/<key>), so all users see
   // the same snapshot. Falls back to null if the endpoint isn't deployed yet.
@@ -1555,8 +1557,137 @@ const App = (() => {
   }
 
   // ── Router ──────────────────────────────────────────────────
-  const ROUTES = { overview: renderOverview, records: renderRecords, documents: renderVisa, visa: renderVisa, pending: renderPending };
-  const TITLES = { overview: 'Overview', records: 'Records', documents: 'Documents', visa: 'Documents', pending: 'Pending Action' };
+  // ═══════════════════════════════════════════════════════════
+  //  PAGE: J1 PROGRAM  (standalone module + sheet, own sub-tabs)
+  // ═══════════════════════════════════════════════════════════
+  async function renderJ1() {
+    const mc = document.getElementById('main-content');
+    mc.innerHTML = skeletonHTML();
+    Progress.start();
+    let participants = [], j1rows = [];
+    try {
+      [participants, j1rows] = await Promise.all([
+        Zoho.getJ1Participants().catch(() => []),
+        Zoho.getJ1VisaRows().catch(() => []),
+      ]);
+    } finally { Progress.done(); }
+
+    mc.innerHTML = `
+      <div class="page-header"><h1>J1 Program</h1></div>
+      <div class="subtabs">
+        <button class="subtab ${_j1Tab === 'performance' ? 'active' : ''}" data-j1tab="performance">Visa Performance</button>
+        <button class="subtab ${_j1Tab === 'progress' ? 'active' : ''}" data-j1tab="progress">Visa Progress</button>
+      </div>
+      <div id="j1Panel"></div>`;
+
+    const paint = () => paintJ1(participants, j1rows);
+    mc.querySelectorAll('[data-j1tab]').forEach(b => b.addEventListener('click', () => {
+      _j1Tab = b.dataset.j1tab;
+      mc.querySelectorAll('[data-j1tab]').forEach(x => x.classList.toggle('active', x.dataset.j1tab === _j1Tab));
+      paint();
+    }));
+    paint();
+    updateStatus();
+  }
+
+  function paintJ1(participants, j1rows) {
+    destroyCharts();
+    const panel = document.getElementById('j1Panel');
+    if (!panel) return;
+    if (_j1Tab === 'progress') paintJ1Progress(panel, j1rows);
+    else paintJ1Performance(panel, participants);
+  }
+
+  // Sub-tab 1 — Visa Performance: J1_Participants table.
+  function paintJ1Performance(panel, participants) {
+    // "Current Visa Appointment" = 3rd appt, else 2nd, else 1st.
+    const lastAppt = p => p.appt3 || p.appt2 || p.appt1 || null;
+    const cols = [
+      { label: 'Full Name',                render: p => esc(p.fullName),               sort: p => txtSort(p.fullName) },
+      { label: 'Email',                    render: p => esc(p.email),                  sort: p => txtSort(p.email) },
+      { label: 'Hosting Company',          render: p => esc(p.hostingCompany),         sort: p => txtSort(p.hostingCompany) },
+      { label: 'Program Start Date',       render: p => formatDate(p.programStart),    sort: p => dateSort(parseDate(p.programStart)), num: true },
+      { label: 'J1 Visa Status',           render: p => badge(p.visaStatus),           sort: p => txtSort(p.visaStatus) },
+      { label: '1st Appt Date',            render: p => formatDate(p.appt1),           sort: p => dateSort(parseDate(p.appt1)), num: true },
+      { label: '2nd Appt Date',            render: p => formatDate(p.appt2),           sort: p => dateSort(parseDate(p.appt2)), num: true },
+      { label: '3rd Appt Date',            render: p => formatDate(p.appt3),           sort: p => dateSort(parseDate(p.appt3)), num: true },
+      { label: 'Current Visa Appointment', render: p => formatDate(lastAppt(p)),       sort: p => dateSort(parseDate(lastAppt(p))), num: true },
+    ];
+    const bodyHtml = () => {
+      const c = cols[_j1Sort.i];
+      const rows = participants.slice().sort((a, b) => {
+        const x = c.sort(a), y = c.sort(b);
+        const xe = (x === null || x === ''), ye = (y === null || y === '');
+        if (xe && ye) return 0; if (xe) return 1; if (ye) return -1;
+        return (c.num ? (x - y) : String(x).localeCompare(String(y))) * _j1Sort.dir;
+      });
+      if (!rows.length) return `<tr><td colspan="${cols.length}" class="empty-row">No J1 participants found.</td></tr>`;
+      return rows.map(p => `<tr>${cols.map(c => `<td>${c.render(p)}</td>`).join('')}</tr>`).join('');
+    };
+    const headHtml = () => `<tr>${cols.map((c, i) =>
+      `<th class="sortable" data-i="${i}">${c.label}${i === _j1Sort.i ? `<span class="sort-arrow">${_j1Sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')}</tr>`;
+    panel.innerHTML = `
+      <div class="toolbar"><span class="rec-count">${participants.length.toLocaleString()} participant${participants.length === 1 ? '' : 's'}</span></div>
+      <div class="card table-card"><div class="table-wrap"><table class="data-table">
+        <thead id="j1Head">${headHtml()}</thead><tbody id="j1Body">${bodyHtml()}</tbody>
+      </table></div></div>`;
+    const wire = () => panel.querySelectorAll('#j1Head th.sortable').forEach(th => th.onclick = () => {
+      const i = +th.dataset.i;
+      if (i === _j1Sort.i) _j1Sort.dir = -_j1Sort.dir; else { _j1Sort.i = i; _j1Sort.dir = 1; }
+      panel.querySelector('#j1Head').innerHTML = headHtml();
+      panel.querySelector('#j1Body').innerHTML = bodyHtml();
+      wire();
+    });
+    wire();
+  }
+
+  // Sub-tab 2 — Visa Progress: J1 Visa Log processing chart (mirrors C1/D).
+  function paintJ1Progress(panel, rows) {
+    const norm = v => String(v ?? '').trim();
+    const low  = v => norm(v).toLowerCase();
+    const nowT = Date.now();
+    const groups = [
+      ['Pending DS-160', rows.filter(r => low(r['Payment Status']) === 'paid' && norm(r['Visa Status']) === '')],
+      ['Pending Appointment', rows.filter(r => {
+        if (low(r['Payment Status']) !== 'paid') return false;
+        if (norm(r['Appointment Date']) !== '') return false;           // no appointment yet
+        const vs = low(r['Visa Status']);
+        return vs === 'visa payment processed' || vs === 'visa application processed';
+      })],
+      ['Secured Appointment', rows.filter(r => {
+        const d = parseSheetDate(r['Appointment Date']);
+        return d && d.getTime() > nowT;                                 // future appointment
+      })],
+    ];
+    const total = rows.length;
+    panel.innerHTML = `
+      <div class="chart-row">
+        <div class="card chart-card">
+          <div class="card-title">J1 Visa — Visa Processing <span class="hint">(J1 Visa Log · click a bar)</span></div>
+          ${total ? `<canvas id="j1Chart" height="260"></canvas>` : `<p class="empty-row">No J1 Visa Log records found.</p>`}
+        </div>
+      </div>`;
+    if (!total) return;
+    const s = (row, k) => esc(row[k] || '—');
+    const cols = [
+      { label: 'Name',             render: r => s(r, 'Name'),                sort: r => txtSort(r['Name']),                w: '20%' },
+      { label: 'Email',            render: r => s(r, 'Email Address'),       sort: r => txtSort(r['Email Address']),       w: '22%' },
+      { label: 'Program Number',   render: r => s(r, 'Program Number'),      sort: r => txtSort(r['Program Number']),      w: '11%' },
+      { label: 'Payment Status',   render: r => s(r, 'Payment Status'),      sort: r => txtSort(r['Payment Status']),      w: '11%' },
+      { label: 'Visa Status',      render: r => s(r, 'Visa Status'),         sort: r => txtSort(r['Visa Status']),         w: '14%' },
+      { label: 'Appointment Date', render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: '12%' },
+      { label: 'BNIVA Number',     render: r => s(r, 'BNIVA Number'),        sort: r => txtSort(r['BNIVA Number']),        w: '10%' },
+    ];
+    const counts = {};
+    groups.forEach(([label, rs]) => { counts[label] = rs.length; });
+    drawBar('j1Chart', counts, label => {
+      const g = groups.find(([l]) => l === label);
+      if (g && g[1].length) openDetailModal(g[1], cols, `J1 Visa — ${label}`);
+    });
+  }
+
+  const ROUTES = { overview: renderOverview, records: renderRecords, documents: renderVisa, visa: renderVisa, pending: renderPending, j1: renderJ1 };
+  const TITLES = { overview: 'Overview', records: 'Records', documents: 'Documents', visa: 'Documents', pending: 'Pending Action', j1: 'J1 Program' };
 
   function currentPage() {
     const p = (location.hash || '#overview').slice(1);
