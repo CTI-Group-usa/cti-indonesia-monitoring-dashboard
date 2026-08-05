@@ -1731,21 +1731,32 @@ const App = (() => {
         </div>
       </div>`;
     if (!total) return;
+    // Per-bar drill-down columns, mirroring the C1/D "Visa Processing" chart.
+    // (J1 Visa Log has no Cruise Line, so Program Number takes that slot.)
     const s = (row, k) => esc(row[k] || '—');
-    const cols = [
-      { label: 'Name',             render: r => s(r, 'Name'),                sort: r => txtSort(r['Name']),                w: '20%' },
-      { label: 'Email',            render: r => s(r, 'Email Address'),       sort: r => txtSort(r['Email Address']),       w: '22%' },
-      { label: 'Program Number',   render: r => s(r, 'Program Number'),      sort: r => txtSort(r['Program Number']),      w: '11%' },
-      { label: 'Payment Status',   render: r => s(r, 'Payment Status'),      sort: r => txtSort(r['Payment Status']),      w: '11%' },
-      { label: 'Visa Status',      render: r => s(r, 'Visa Status'),         sort: r => txtSort(r['Visa Status']),         w: '14%' },
-      { label: 'Appointment Date', render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: '12%' },
-      { label: 'BNIVA Number',     render: r => s(r, 'BNIVA Number'),        sort: r => txtSort(r['BNIVA Number']),        w: '10%' },
-    ];
+    const col = {
+      name:  { label: 'Name',             render: r => s(r, 'Name'),            sort: r => txtSort(r['Name']),           w: 200, wrap: true },
+      email: { label: 'Email',            render: r => s(r, 'Email Address'),   sort: r => txtSort(r['Email Address']),  w: 230, wrap: true },
+      prog:  { label: 'Program Number',   render: r => s(r, 'Program Number'),  sort: r => txtSort(r['Program Number']), w: 150 },
+      pay:   { label: 'Payment Status',   render: r => s(r, 'Payment Status'),  sort: r => txtSort(r['Payment Status']), w: 130 },
+      vstat: { label: 'Visa Status',      render: r => s(r, 'Visa Status'),     sort: r => txtSort(r['Visa Status']),    w: 180 },
+      added: { label: 'Added Time',       render: r => formatSheetDate(r['Added Time']), sort: r => dateSort(parseSheetDate(r['Added Time'])), num: true, w: 140 },
+      bniva: { label: 'BNIVA Number',     render: r => s(r, 'BNIVA Number'),    sort: r => txtSort(r['BNIVA Number']),   w: 140 },
+      appt:  { label: 'Appointment Date', render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: 150 },
+      appid: { label: 'Application ID',   render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
+    };
+    const ds160Cols   = [col.added, col.name, col.email, col.prog, col.pay, col.vstat, col.appid];
+    const apptCols    = [col.added, col.name, col.email, col.prog, col.vstat, col.bniva, col.appt, col.appid];   // no Payment Status
+    const securedCols = [col.name, col.email, col.prog, col.vstat, col.bniva, col.appt, col.appid];               // no Payment Status / Added Time
     const counts = {};
     groups.forEach(([label, rs]) => { counts[label] = rs.length; });
     drawBar('j1Chart', counts, label => {
       const g = groups.find(([l]) => l === label);
-      if (g && g[1].length) openDetailModal(g[1], cols, `J1 Visa — ${label}`);
+      if (!g || !g[1].length) return;
+      const cols = label === 'Pending DS-160' ? ds160Cols
+        : label === 'Pending Appointment' ? apptCols
+        : securedCols;   // Secured Appointment
+      openDetailModal(g[1], cols, `J1 Visa — ${label}`);
     });
   }
 
