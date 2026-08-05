@@ -1615,11 +1615,63 @@ const App = (() => {
     const panel = document.getElementById('j1Panel');
     if (!panel) return;
     if (_j1Tab === 'progress') paintJ1Progress(panel, j1rows);
-    else paintJ1Performance(panel, participants);
+    else paintJ1Performance(panel, participants, j1rows);
   }
 
-  // Sub-tab 1 — Visa Performance: J1_Participants table.
-  function paintJ1Performance(panel, allParticipants) {
+  // Shared J1 "Visa Processing" grouping (mirrors the C1/D logic) + chart with
+  // per-bar drill-downs. Used by both the Progress tab and the mini-chart shown
+  // on the Performance tab.
+  function j1ProcessingGroups(rows) {
+    const norm = v => String(v ?? '').trim();
+    const low  = v => norm(v).toLowerCase();
+    const nowT = Date.now();
+    return [
+      ['Pending DS-160', rows.filter(r => low(r['Payment Status']) === 'paid' && norm(r['Visa Status']) === '')],
+      ['Pending Appointment', rows.filter(r => {
+        if (low(r['Payment Status']) !== 'paid') return false;
+        if (norm(r['Appointment Date']) !== '') return false;
+        const vs = low(r['Visa Status']);
+        return vs === 'visa payment processed' || vs === 'visa application processed';
+      })],
+      ['Secured Appointment', rows.filter(r => {
+        const d = parseSheetDate(r['Appointment Date']);
+        return d && d.getTime() > nowT;
+      })],
+    ];
+  }
+  function drawJ1ProcessingChart(canvasId, rows) {
+    const groups = j1ProcessingGroups(rows);
+    const s = (row, k) => esc(row[k] || '—');
+    const col = {
+      name:  { label: 'Name',             render: r => s(r, 'Name'),            sort: r => txtSort(r['Name']),           w: 200, wrap: true },
+      email: { label: 'Email',            render: r => s(r, 'Email Address'),   sort: r => txtSort(r['Email Address']),  w: 230, wrap: true },
+      prog:  { label: 'Program Number',   render: r => s(r, 'Program Number'),  sort: r => txtSort(r['Program Number']), w: 150 },
+      pay:   { label: 'Payment Status',   render: r => s(r, 'Payment Status'),  sort: r => txtSort(r['Payment Status']), w: 130 },
+      vstat: { label: 'Visa Status',      render: r => s(r, 'Visa Status'),     sort: r => txtSort(r['Visa Status']),    w: 180 },
+      added: { label: 'Added Time',       render: r => formatSheetDate(r['Added Time']), sort: r => dateSort(parseSheetDate(r['Added Time'])), num: true, w: 140 },
+      bniva: { label: 'BNIVA Number',     render: r => s(r, 'BNIVA Number'),    sort: r => txtSort(r['BNIVA Number']),   w: 140 },
+      appt:  { label: 'Appointment Date', render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: 150 },
+      appid: { label: 'Application ID',   render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
+    };
+    const ds160Cols   = [col.added, col.name, col.email, col.prog, col.pay, col.vstat, col.appid];
+    const apptCols    = [col.added, col.name, col.email, col.prog, col.vstat, col.bniva, col.appt, col.appid];
+    const securedCols = [col.name, col.email, col.prog, col.vstat, col.bniva, col.appt, col.appid];
+    const counts = {};
+    groups.forEach(([label, rs]) => { counts[label] = rs.length; });
+    drawBar(canvasId, counts, label => {
+      const g = groups.find(([l]) => l === label);
+      if (!g || !g[1].length) return;
+      const cols = label === 'Pending DS-160' ? ds160Cols
+        : label === 'Pending Appointment' ? apptCols
+        : securedCols;
+      openDetailModal(g[1], cols, `J1 Visa — ${label}`);
+    });
+  }
+
+  // Sub-tab 1 — Visa Performance: J1_Participants table (+ Visa Processing
+  // chart in the top-right space, sharing the drill-downs).
+  function paintJ1Performance(panel, allParticipants, j1rows) {
+    // "Current Appt" = 3rd appt, else 2nd, else 1st.
     // "Current Appt" = 3rd appt, else 2nd, else 1st.
     const lastAppt = p => p.appt3 || p.appt2 || p.appt1 || null;
     const nowT = Date.now();
@@ -1678,20 +1730,30 @@ const App = (() => {
     };
     const headHtml = () => `<tr>${cols.map((c, i) =>
       `<th class="sortable ${c.cls || ''}" data-i="${i}">${c.label}${i === _j1Sort.i ? `<span class="sort-arrow">${_j1Sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')}</tr>`;
+    const hasChart = Array.isArray(j1rows) && j1rows.length;
     panel.innerHTML = `
-      <div class="filter-bar">
-        ${msHTML('j1Source', 'All Program Sources', sources, _j1Filters.source)}
-        <select id="j1ApptRange" class="filter-select">
-          <option value="all">All Appointment Records</option>
-          <option value="past">Past Records</option>
-          <option value="upcoming">Upcoming Records</option>
-        </select>
-        <button class="btn-sm" id="j1Clear">Clear</button>
+      <div class="j1-perf-head">
+        <div class="j1-perf-left">
+          <div class="filter-bar">
+            ${msHTML('j1Source', 'All Program Sources', sources, _j1Filters.source)}
+            <select id="j1ApptRange" class="filter-select">
+              <option value="all">All Appointment Records</option>
+              <option value="past">Past Records</option>
+              <option value="upcoming">Upcoming Records</option>
+            </select>
+            <button class="btn-sm" id="j1Clear">Clear</button>
+          </div>
+          <div class="toolbar"><span class="rec-count" id="j1Count"></span></div>
+        </div>
+        ${hasChart ? `<div class="card chart-card j1-perf-chart">
+          <div class="card-title">J1 Visa — Visa Processing <span class="hint">(click a bar)</span></div>
+          <canvas id="j1ChartPerf" height="150"></canvas>
+        </div>` : ''}
       </div>
-      <div class="toolbar"><span class="rec-count" id="j1Count"></span></div>
       <div class="card table-card"><div class="table-wrap"><table class="data-table j1-table">
         <thead id="j1Head">${headHtml()}</thead><tbody id="j1Body">${bodyHtml()}</tbody>
       </table></div></div>`;
+    if (hasChart) drawJ1ProcessingChart('j1ChartPerf', j1rows);
 
     const apptSel = panel.querySelector('#j1ApptRange');
     apptSel.value = _j1Filters.apptRange;
@@ -1710,7 +1772,8 @@ const App = (() => {
     apptSel.onchange = () => { _j1Filters.apptRange = apptSel.value; refresh(); };
     panel.querySelector('#j1Clear').onclick = () => {
       _j1Filters = { source: [], apptRange: 'all' };
-      paintJ1Performance(panel, allParticipants);
+      destroyCharts();
+      paintJ1Performance(panel, allParticipants, j1rows);
     };
 
     const wire = () => panel.querySelectorAll('#j1Head th.sortable').forEach(th => th.onclick = () => {
@@ -1723,25 +1786,9 @@ const App = (() => {
     wire();
   }
 
-  // Sub-tab 2 — Visa Progress: J1 Visa Log processing chart (mirrors C1/D).
+  // Sub-tab 2 — Visa Progress: full-size J1 Visa Log processing chart.
   function paintJ1Progress(panel, rows) {
-    const norm = v => String(v ?? '').trim();
-    const low  = v => norm(v).toLowerCase();
-    const nowT = Date.now();
-    const groups = [
-      ['Pending DS-160', rows.filter(r => low(r['Payment Status']) === 'paid' && norm(r['Visa Status']) === '')],
-      ['Pending Appointment', rows.filter(r => {
-        if (low(r['Payment Status']) !== 'paid') return false;
-        if (norm(r['Appointment Date']) !== '') return false;           // no appointment yet
-        const vs = low(r['Visa Status']);
-        return vs === 'visa payment processed' || vs === 'visa application processed';
-      })],
-      ['Secured Appointment', rows.filter(r => {
-        const d = parseSheetDate(r['Appointment Date']);
-        return d && d.getTime() > nowT;                                 // future appointment
-      })],
-    ];
-    const total = rows.length;
+    const total = Array.isArray(rows) && rows.length;
     panel.innerHTML = `
       <div class="chart-row">
         <div class="card chart-card">
@@ -1749,34 +1796,7 @@ const App = (() => {
           ${total ? `<canvas id="j1Chart" height="260"></canvas>` : `<p class="empty-row">No J1 Visa Log records found.</p>`}
         </div>
       </div>`;
-    if (!total) return;
-    // Per-bar drill-down columns, mirroring the C1/D "Visa Processing" chart.
-    // (J1 Visa Log has no Cruise Line, so Program Number takes that slot.)
-    const s = (row, k) => esc(row[k] || '—');
-    const col = {
-      name:  { label: 'Name',             render: r => s(r, 'Name'),            sort: r => txtSort(r['Name']),           w: 200, wrap: true },
-      email: { label: 'Email',            render: r => s(r, 'Email Address'),   sort: r => txtSort(r['Email Address']),  w: 230, wrap: true },
-      prog:  { label: 'Program Number',   render: r => s(r, 'Program Number'),  sort: r => txtSort(r['Program Number']), w: 150 },
-      pay:   { label: 'Payment Status',   render: r => s(r, 'Payment Status'),  sort: r => txtSort(r['Payment Status']), w: 130 },
-      vstat: { label: 'Visa Status',      render: r => s(r, 'Visa Status'),     sort: r => txtSort(r['Visa Status']),    w: 180 },
-      added: { label: 'Added Time',       render: r => formatSheetDate(r['Added Time']), sort: r => dateSort(parseSheetDate(r['Added Time'])), num: true, w: 140 },
-      bniva: { label: 'BNIVA Number',     render: r => s(r, 'BNIVA Number'),    sort: r => txtSort(r['BNIVA Number']),   w: 140 },
-      appt:  { label: 'Appointment Date', render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: 150 },
-      appid: { label: 'Application ID',   render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
-    };
-    const ds160Cols   = [col.added, col.name, col.email, col.prog, col.pay, col.vstat, col.appid];
-    const apptCols    = [col.added, col.name, col.email, col.prog, col.vstat, col.bniva, col.appt, col.appid];   // no Payment Status
-    const securedCols = [col.name, col.email, col.prog, col.vstat, col.bniva, col.appt, col.appid];               // no Payment Status / Added Time
-    const counts = {};
-    groups.forEach(([label, rs]) => { counts[label] = rs.length; });
-    drawBar('j1Chart', counts, label => {
-      const g = groups.find(([l]) => l === label);
-      if (!g || !g[1].length) return;
-      const cols = label === 'Pending DS-160' ? ds160Cols
-        : label === 'Pending Appointment' ? apptCols
-        : securedCols;   // Secured Appointment
-      openDetailModal(g[1], cols, `J1 Visa — ${label}`);
-    });
+    if (total) drawJ1ProcessingChart('j1Chart', rows);
   }
 
   const ROUTES = { overview: renderOverview, records: renderRecords, documents: renderVisa, visa: renderVisa, pending: renderPending, j1: renderJ1 };

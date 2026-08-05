@@ -1186,6 +1186,18 @@ th.sorted {
 .j1-table .j1-host { width: 100%; white-space: normal; }
 .j1-table .badge { font-size: 0.66rem; padding: 1px 6px; }
 
+/* Visa Performance top row: filters/count on the left, Visa Processing chart
+   filling the empty space on the right. Table stays full width below. */
+.j1-perf-head { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 12px; }
+.j1-perf-head .j1-perf-left { flex: 0 0 auto; }
+.j1-perf-head .j1-perf-left .toolbar { margin-top: 8px; }
+.j1-perf-head .j1-perf-chart { flex: 1 1 auto; min-width: 0; margin: 0; }
+.j1-perf-head .j1-perf-chart canvas { max-height: 160px; }
+@media (max-width: 768px) {
+  .j1-perf-head { flex-direction: column; }
+  .j1-perf-head .j1-perf-left, .j1-perf-head .j1-perf-chart { width: 100%; }
+}
+
 .compare-stamp { margin-left: auto; align-self: center; font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
 @media (max-width: 768px) { .compare-stamp { margin-left: 0; width: 100%; padding-top: 4px; } }
 
