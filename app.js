@@ -1282,16 +1282,17 @@ const App = (() => {
       }
       const cnt = document.getElementById('recCount');
       if (cnt) cnt.textContent = `${rows.length.toLocaleString()} record${rows.length === 1 ? '' : 's'}`;
-      // These operational counts are GLOBAL — not affected by the office /
-      // cruise-line / onboarding / date filters.
+      // Operational counts apply the office/cruise/onboarding filters but NOT
+      // the sign-on date range.
+      const opBase = applyDeployFilters(data, { ..._recFilters, from: '', to: '' });
       const lm = document.getElementById('lastminCount');
-      if (lm) lm.textContent = '· ' + data
+      if (lm) lm.textContent = '· ' + opBase
         .filter(r => _lastMinSet.has(String(r.crewIdNumber ?? '').trim())).length;
       const lr = document.getElementById('lastreschedCount');
-      if (lr) lr.textContent = '· ' + data
+      if (lr) lr.textContent = '· ' + opBase
         .filter(r => _lastReschedSet.has(String(r.crewIdNumber ?? '').trim())).length;
       const ra = document.getElementById('reassignedCount');
-      if (ra) ra.textContent = '· ' + data.filter(isReassigned).length;
+      if (ra) ra.textContent = '· ' + opBase.filter(isReassigned).length;
       const cs = document.getElementById('compareStamp');
       if (cs) cs.textContent = _lastComparedAt ? `Last compared: ${fmtWITA(_lastComparedAt)}` : 'Last compared: not yet run';
       document.getElementById('recHead').innerHTML = headHtml(cols);
@@ -1342,19 +1343,20 @@ const App = (() => {
   }
 
   // Records dataset for the current sub-tab + the search box. The three
-  // operational tabs (Last Minutes Assignment / Rescheduled, Re-Assigned) are
-  // GLOBAL lists — they intentionally ignore the office/cruise/onboarding/date
-  // filters; only "All Records" applies them.
+  // operational tabs (Last Minutes Assignment / Rescheduled, Re-Assigned) apply
+  // the office/cruise/onboarding filters but NOT the sign-on date range; only
+  // "All Records" applies the full filter bar (including the date range).
   function recFiltered(data) {
     let rows;
+    const op = () => applyDeployFilters(data, { ..._recFilters, from: '', to: '' });
     if (_recTab === 'lastmin')
-      rows = data.filter(r => _lastMinSet.has(String(r.crewIdNumber ?? '').trim()));
+      rows = op().filter(r => _lastMinSet.has(String(r.crewIdNumber ?? '').trim()));
     else if (_recTab === 'lastresched')
-      rows = data.filter(r => _lastReschedSet.has(String(r.crewIdNumber ?? '').trim()));
+      rows = op().filter(r => _lastReschedSet.has(String(r.crewIdNumber ?? '').trim()));
     else if (_recTab === 'reassigned')
-      rows = data.filter(isReassigned);
+      rows = op().filter(isReassigned);
     else
-      rows = applyDeployFilters(data, _recFilters);   // All Records
+      rows = applyDeployFilters(data, _recFilters);   // All Records (full filters)
     const q = _search.trim().toLowerCase();
     if (q) rows = rows.filter(r =>
       [r.name, r.email, r.ctiOffice, r.crewIdNumber, r.joiningShip, r.signOnPort,
