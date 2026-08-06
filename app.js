@@ -1282,14 +1282,16 @@ const App = (() => {
       }
       const cnt = document.getElementById('recCount');
       if (cnt) cnt.textContent = `${rows.length.toLocaleString()} record${rows.length === 1 ? '' : 's'}`;
+      // These operational counts are GLOBAL — not affected by the office /
+      // cruise-line / onboarding / date filters.
       const lm = document.getElementById('lastminCount');
-      if (lm) lm.textContent = '· ' + applyDeployFilters(data, _recFilters)
+      if (lm) lm.textContent = '· ' + data
         .filter(r => _lastMinSet.has(String(r.crewIdNumber ?? '').trim())).length;
       const lr = document.getElementById('lastreschedCount');
-      if (lr) lr.textContent = '· ' + applyDeployFilters(data, _recFilters)
+      if (lr) lr.textContent = '· ' + data
         .filter(r => _lastReschedSet.has(String(r.crewIdNumber ?? '').trim())).length;
       const ra = document.getElementById('reassignedCount');
-      if (ra) ra.textContent = '· ' + applyDeployFilters(data, _recFilters).filter(isReassigned).length;
+      if (ra) ra.textContent = '· ' + data.filter(isReassigned).length;
       const cs = document.getElementById('compareStamp');
       if (cs) cs.textContent = _lastComparedAt ? `Last compared: ${fmtWITA(_lastComparedAt)}` : 'Last compared: not yet run';
       document.getElementById('recHead').innerHTML = headHtml(cols);
@@ -1339,22 +1341,20 @@ const App = (() => {
     return so !== dayKeyOf(r.rescheduledDate);     // unmatched
   }
 
-  // Records dataset filtered by the shared deployment filters + the search box.
+  // Records dataset for the current sub-tab + the search box. The three
+  // operational tabs (Last Minutes Assignment / Rescheduled, Re-Assigned) are
+  // GLOBAL lists — they intentionally ignore the office/cruise/onboarding/date
+  // filters; only "All Records" applies them.
   function recFiltered(data) {
-    let rows = applyDeployFilters(data, _recFilters);
-    // Last Minutes Assignment: newly assigned since the previous day's snapshot,
-    // with a sign-on under 4 weeks away (see refreshLastMinute).
+    let rows;
     if (_recTab === 'lastmin')
-      rows = rows.filter(r => _lastMinSet.has(String(r.crewIdNumber ?? '').trim()));
-    // Last Minutes Rescheduled: an imminent (≤4-day) sign-on that moved to a
-    // new date; stays until onboarding = Report to Ship (see refreshLastMinute).
+      rows = data.filter(r => _lastMinSet.has(String(r.crewIdNumber ?? '').trim()));
     else if (_recTab === 'lastresched')
-      rows = rows.filter(r => _lastReschedSet.has(String(r.crewIdNumber ?? '').trim()));
-    // Re-Assigned: onboarding still "Rescheduled" but the Sign On Date no longer
-    // matches Rescheduled_Date — i.e. a new join date was set but the status was
-    // never updated. Drops off once onboarding changes away from Rescheduled.
+      rows = data.filter(r => _lastReschedSet.has(String(r.crewIdNumber ?? '').trim()));
     else if (_recTab === 'reassigned')
-      rows = rows.filter(isReassigned);
+      rows = data.filter(isReassigned);
+    else
+      rows = applyDeployFilters(data, _recFilters);   // All Records
     const q = _search.trim().toLowerCase();
     if (q) rows = rows.filter(r =>
       [r.name, r.email, r.ctiOffice, r.crewIdNumber, r.joiningShip, r.signOnPort,
