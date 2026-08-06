@@ -1,0 +1,20 @@
+name: Daily Last-Minute Comparison
+
+# Runs the "last-minute" comparison at 06:00 WITA (UTC+8) every day, i.e.
+# 22:00 UTC. Uses the live worker's existing endpoints — no Cloudflare deploy
+# required. Also runnable on demand from the Actions tab (workflow_dispatch).
+on:
+  schedule:
+    - cron: '0 22 * * *'   # 22:00 UTC = 06:00 WITA
+  workflow_dispatch: {}
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run daily comparison
+        run: node scripts/daily-comparison.mjs
