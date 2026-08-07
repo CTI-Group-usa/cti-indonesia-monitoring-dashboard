@@ -1219,6 +1219,8 @@ const App = (() => {
       { label: 'BST Status',            render: r => esc(r.bstStatus),         sort: r => txtSort(r.bstStatus) },
       { label: 'Seaman Book Status',    render: r => esc(r.seamanBookStatus),  sort: r => txtSort(r.seamanBookStatus) },
       { label: 'Medical Status',        render: r => esc(r.medicalStatus),     sort: r => txtSort(r.medicalStatus) },
+      { label: 'SDB Status',            render: r => esc(r.sdbStatus),         sort: r => txtSort(r.sdbStatus) },
+      { label: 'BID Status',            render: r => esc(r.bidStatus),         sort: r => txtSort(r.bidStatus) },
       { label: 'C1/D Visa Status',      render: r => esc(r.c1dVisaStatus),     sort: r => txtSort(r.c1dVisaStatus) },
       { label: 'OKTB Status',           render: r => esc(r.oktbStatus),        sort: r => txtSort(r.oktbStatus) },
       { label: 'MCV Status',            render: r => esc(r.mcvStatus),         sort: r => txtSort(r.mcvStatus) },
