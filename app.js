@@ -173,7 +173,7 @@ const App = (() => {
   const CACHE_TTL   = 30 * 60 * 1000;  // ignore cache older than 30 min
   // Bump when the record-mapping logic changes so old snapshots are discarded
   // (otherwise a stale snapshot mapped by the previous code is shown first).
-  const CACHE_VERSION = 6;
+  const CACHE_VERSION = 7;
   const DB_NAME = 'cti_indo', STORE = 'cache', CACHE_KEY = 'records';
 
   function idbOpen() {
@@ -551,6 +551,12 @@ const App = (() => {
     { key: 'medical',  label: 'Medical',
       statusKey: 'medicalStatus',     numberKey: null,                apptKey: null,
       expiryKey: 'medicalExpiry',     expectedKey: 'medicalExpectedDate' },
+    { key: 'sdb',      label: 'SDB',
+      statusKey: 'sdbStatus',         numberKey: null,                apptKey: null,
+      expiryKey: 'sdbExpiry' },
+    { key: 'bid',      label: 'BID',
+      statusKey: 'bidStatus',         numberKey: null,                apptKey: null,
+      expiryKey: 'bidExpiry' },
     // Visas.
     { key: 'c1d',      label: 'C1/D',
       statusKey: 'c1dVisaStatus',   numberKey: 'c1dVisaNumber',   apptKey: 'c1dVisaAppointment',

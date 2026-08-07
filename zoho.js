@@ -125,6 +125,10 @@ const Zoho = (() => {
       seamanBookStatus: val(r[F.seamanBookStatus]),
       seamanBookNumber: val(r[F.seamanBookNumber]),
       seamanBookExpiry: r[F.seamanBookExpiry] || null,
+      sdbStatus:        val(r[F.sdbStatus]),
+      sdbExpiry:        r[F.sdbExpiry] || null,
+      bidStatus:        val(r[F.bidStatus]),
+      bidExpiry:        r[F.bidExpiry] || null,
       vaccinesStatus:   val(r[F.vaccinesStatus]),
       // Per-visa-type (VISA page)
       c1dVisaStatus:      val(r[F.c1dVisaStatus]),
