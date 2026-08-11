@@ -1406,7 +1406,7 @@ const App = (() => {
         return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
       };
       tbody.innerHTML = Object.keys(groups).sort((a, b) => b.localeCompare(a)).map(k =>
-        `<tr class="group-row"><td class="group-cell" colspan="${cols.length}">Found ${fmtDay(k)} · ${groups[k].length}</td></tr>` +
+        `<tr class="group-row"><td class="group-cell" colspan="${cols.length}">${fmtDay(k)} · ${groups[k].length}</td></tr>` +
         groups[k].map(rowHtml).join('')
       ).join('');
       return;
