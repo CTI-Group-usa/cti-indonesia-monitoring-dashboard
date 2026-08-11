@@ -1069,10 +1069,10 @@ const App = (() => {
 
   // Drill-down: list the seafarers behind a clicked status bar.
   function showVisaDetail(holders, tab, status) {
-    // MCV: the "Need to Process" / "In Process" bars also show the
-    // admin-recorded Expected Date column (matching the In Progress chip).
+    // "Need to Process" / "In Process" bars also show the admin-recorded
+    // Expected Date column (any tab that has an expected-date field).
     let extraCols = null;
-    if (tab.key === 'mcv' && tab.expectedKey &&
+    if (tab.expectedKey &&
         /need|process|pending|progress|applied|appointment|schedul|await/i.test(status)) {
       extraCols = [{
         label: tab.expectedLabel || 'Expected Date',
