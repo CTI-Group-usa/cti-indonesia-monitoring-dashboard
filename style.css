@@ -1226,6 +1226,13 @@ th.sorted {
 .records-table .sticky-col-1 { left: 0;     width: 96px;  min-width: 96px;  max-width: 96px; }
 .records-table .sticky-col-2 { left: 96px;  width: 168px; min-width: 168px; max-width: 168px;
   border-right: 1px solid var(--border); }
+/* Date-found group separator (Last Minutes tabs). */
+.records-table td.group-cell {
+  position: sticky; left: 0;
+  background: var(--bg); color: var(--accent);
+  font-weight: 700; font-size: 0.72rem; letter-spacing: 0.02em;
+  padding: 6px 10px; border-top: 2px solid var(--accent);
+}
 
 /* ─── VISA drill-down detail ─── */
 .card-title .hint { font-weight: 400; font-size: 0.76rem; color: var(--muted); margin-left: 6px; }

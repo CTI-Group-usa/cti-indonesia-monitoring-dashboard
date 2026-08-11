@@ -588,6 +588,8 @@ const App = (() => {
   let _recTab = 'all';                // Records sub-tab: 'all' | 'lastmin' | 'lastresched'
   let _lastMinSet = new Set();        // crew IDs flagged as last-minute assignments
   let _lastReschedSet = new Set();    // crew IDs flagged as last-minute RESCHEDULED (imminent sign-on moved)
+  let _lastMinDays = {};              // crewId -> "YYYY-MM-DD" day found (for date grouping)
+  let _lastReschedDays = {};
   let _lastComparedAt = null;         // epoch ms of the last daily comparison (6 AM WITA)
   let _j1Tab  = 'performance';        // J1 Program sub-tab: 'performance' | 'progress'
   let _j1Sort = { i: 0, dir: 1 };     // J1 Visa Performance table sort
@@ -705,7 +707,8 @@ const App = (() => {
     state.flags = flags;
     state.reschedFlags = reschedFlags;
     if (changed) await statePut(KEY, state);
-    return { assign: new Set(Object.keys(flags)), resched: new Set(Object.keys(reschedFlags)), comparedAt: state.comparedAt || null };
+    return { assign: new Set(Object.keys(flags)), resched: new Set(Object.keys(reschedFlags)),
+             assignDays: flags, reschedDays: reschedFlags, comparedAt: state.comparedAt || null };
   }
   let _ovFilters = { office: [DEFAULT_OFFICE], cruiseLine: [] };   // Overview charts
   let _penFilters = emptyFilters();   // Pending Action page
@@ -1201,6 +1204,8 @@ const App = (() => {
     const _lm = await refreshLastMinute(data);     // day-over-day (shared via worker KV)
     _lastMinSet = _lm.assign;
     _lastReschedSet = _lm.resched;
+    _lastMinDays = _lm.assignDays || {};
+    _lastReschedDays = _lm.reschedDays || {};
     _lastComparedAt = _lm.comparedAt;
 
     const offices     = distinctVals(data, 'ctiOffice');
@@ -1304,7 +1309,9 @@ const App = (() => {
       const cs = document.getElementById('compareStamp');
       if (cs) cs.textContent = _lastComparedAt ? `Last compared: ${fmtWITA(_lastComparedAt)}` : 'Last compared: not yet run';
       document.getElementById('recHead').innerHTML = headHtml(cols);
-      paintRows(rows, cols);
+      const dayMap = _recTab === 'lastmin' ? _lastMinDays
+        : _recTab === 'lastresched' ? _lastReschedDays : null;
+      paintRows(rows, cols, dayMap);
       document.querySelectorAll('#recHead th.sortable').forEach(th =>
         th.onclick = () => {
           const i = +th.dataset.i;
@@ -1374,20 +1381,37 @@ const App = (() => {
     return rows;
   }
 
-  function paintRows(rows, cols) {
+  // dayMap (optional): crewId -> "YYYY-MM-DD"; when given, rows are grouped under
+  // a "Found <date>" separator, newest day first, so the latest finds stand out.
+  function paintRows(rows, cols, dayMap) {
     const tbody = document.getElementById('recBody');
     if (!tbody) return;
     if (!rows.length) {
       tbody.innerHTML = `<tr><td colspan="${cols.length}" class="empty-row">No records match.</td></tr>`;
       return;
     }
-    tbody.innerHTML = rows.map(r =>
-      `<tr>${cols.map((c, i) => {
-        const html = c.render(r);
-        if (i < 2) return `<td class="sticky-col sticky-col-${i + 1}" title="${String(html).replace(/<[^>]*>/g, '')}">${html}</td>`;
-        return `<td>${html}</td>`;
-      }).join('')}</tr>`
-    ).join('');
+    const rowHtml = r => `<tr>${cols.map((c, i) => {
+      const html = c.render(r);
+      if (i < 2) return `<td class="sticky-col sticky-col-${i + 1}" title="${String(html).replace(/<[^>]*>/g, '')}">${html}</td>`;
+      return `<td>${html}</td>`;
+    }).join('')}</tr>`;
+
+    if (dayMap) {
+      const idOf = r => String(r.crewIdNumber ?? '').trim();
+      const groups = {};
+      rows.forEach(r => { const k = dayMap[idOf(r)] || '0000-00-00'; (groups[k] = groups[k] || []).push(r); });
+      const fmtDay = k => {
+        if (k === '0000-00-00') return 'Earlier';
+        const [y, m, d] = k.split('-').map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      };
+      tbody.innerHTML = Object.keys(groups).sort((a, b) => b.localeCompare(a)).map(k =>
+        `<tr class="group-row"><td class="group-cell" colspan="${cols.length}">Found ${fmtDay(k)} · ${groups[k].length}</td></tr>` +
+        groups[k].map(rowHtml).join('')
+      ).join('');
+      return;
+    }
+    tbody.innerHTML = rows.map(rowHtml).join('');
   }
 
   // ── Edit modal → push Recruit status; all detail from the module ────
