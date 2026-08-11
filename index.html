@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="style.css?v=20260807b">
+  <link rel="stylesheet" href="style.css?v=20260807c">
   <script src="config.js?v=20260807a"></script>
   <script src="auth.js?v=20260729bt"></script>
   <script src="zoho.js?v=20260807a"></script>
@@ -79,6 +79,9 @@
         <div class="topbar-right">
           <div class="last-refresh" id="lastRefresh"></div>
           <div class="zoho-status" id="zohoStatus"></div>
+          <button class="icon-btn" id="refreshBtn" title="Reload latest data">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
           <button class="icon-btn" id="themeBtn" title="Toggle dark mode">
             <svg id="themeIcon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           </button>
@@ -124,6 +127,15 @@
     document.getElementById('footerOrg').textContent = CONFIG.ORG_NAME;
 
     document.getElementById('logoutBtn').addEventListener('click', () => Auth.logout());
+
+    // Manual "reload latest data" — force-fetches fresh from Zoho and updates
+    // the timestamp (browser refresh only shows the cached snapshot first).
+    document.getElementById('refreshBtn').addEventListener('click', e => {
+      const b = e.currentTarget;
+      if (b.classList.contains('spin')) return;
+      b.classList.add('spin');
+      Promise.resolve(App.refresh()).finally(() => b.classList.remove('spin'));
+    });
 
     const hamburger = document.getElementById('hamburger');
     const sidebar   = document.getElementById('sidebar');
