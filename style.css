@@ -83,14 +83,12 @@ a { color: inherit; text-decoration: none; }
   transform: translateX(-100%);
 }
 .sidebar.open { transform: none; }
-/* The 45%-opacity glass tint above reads fine over dark mode's already-dark
-   page background, but in light mode the near-white backdrop bleeds through
-   the blur and washes the navy tint out to low-contrast gray, making the
-   light sidebar text ("--sidebar-txt") nearly invisible. Bump the opacity
-   for light mode specifically so the navy stays dominant regardless of what
-   it's blurring behind. */
-[data-theme="light"] .sidebar {
-  background: rgba(13, 27, 46, 0.94);
+/* Light mode's near-white page background bleeds through the sidebar's
+   translucent glass tint, making the grayish --sidebar-txt hard to read.
+   Rather than fight the glass effect, just use solid white sidebar text
+   in light mode -- keeps the frosted-glass look, fixes the contrast. */
+[data-theme="light"] {
+  --sidebar-txt: #FFFFFF;
 }
 
 .sidebar-header {
