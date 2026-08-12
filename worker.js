@@ -365,11 +365,15 @@ async function getAccessToken(env) {
   // reloads, cron, etc.) retried Zoho's token endpoint immediately with zero
   // backoff -- almost certainly what turned one transient Zoho rate-limit
   // ("You have made too many requests continuously") into a self-perpetuating
-  // block that never got a clean window to expire. Short-circuit repeat
-  // attempts for 2 minutes after a failure instead of hammering Zoho again.
+  // block that never got a clean window to expire. With multiple people using
+  // the dashboard concurrently, even a short cooldown gets reset by the next
+  // person's request before Zoho's throttle actually clears -- so this is a
+  // hard 30-minute block on ANY retry after a failure, regardless of how many
+  // users hit the Worker in that window, guaranteeing Zoho gets one real quiet
+  // period.
   const cooldownKey = 'token_refresh_cooldown';
   if (await env.TOKEN_CACHE.get(cooldownKey)) {
-    throw new Error('TOKEN_REFRESH_COOLDOWN: a previous attempt failed recently; waiting before retrying Zoho.');
+    throw new Error('TOKEN_REFRESH_COOLDOWN: blocked for 30min after a Zoho rate-limit; not retrying yet.');
   }
 
   const params = new URLSearchParams({
@@ -382,7 +386,7 @@ async function getAccessToken(env) {
   const resp = await fetch(`${ACCOUNTS}/oauth/v2/token?${params}`, { method: 'POST' });
   const data = await resp.json();
   if (!data.access_token) {
-    await env.TOKEN_CACHE.put(cooldownKey, '1', { expirationTtl: 120 });
+    await env.TOKEN_CACHE.put(cooldownKey, '1', { expirationTtl: 1800 });
     throw new Error('TOKEN_REFRESH_FAILED: ' + JSON.stringify(data));
   }
   await env.TOKEN_CACHE.put('access_token', data.access_token, { expirationTtl: 3300 });
