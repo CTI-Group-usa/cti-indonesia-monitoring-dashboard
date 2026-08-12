@@ -80,6 +80,32 @@ export default {
       return json({ error: 'Unauthorized' }, 401, CORS);
     }
 
+    // ── TEMPORARY diagnostic (added 2026-08-12) — shape of the stored Zoho
+    // credentials, never the values: presence, length, first 12 chars, and
+    // whether stray whitespace got pasted in. Exists to settle "is the RIGHT
+    // value actually stored?" without guessing, after a grant code was very
+    // likely pasted where the refresh token belonged. The first 12 chars are
+    // enough to tell a grant code from a refresh token and not enough to use.
+    // Auth-gated like everything else here. DELETE once the Zoho fetch is
+    // confirmed healthy.
+    if (path === '/debug/creds') {
+      const shape = k => {
+        const v = env[k];
+        if (!v) return { present: false };
+        return {
+          present: true,
+          length: v.length,
+          prefix: String(v).slice(0, 12),
+          hasSurroundingWhitespace: v !== v.trim(),
+        };
+      };
+      return json({
+        ZOHO_CLIENT_ID:     shape('ZOHO_CLIENT_ID'),
+        ZOHO_CLIENT_SECRET: shape('ZOHO_CLIENT_SECRET'),
+        ZOHO_REFRESH_TOKEN: shape('ZOHO_REFRESH_TOKEN'),
+      }, 200, CORS);
+    }
+
     // ── Shared app state (KV) — GET/PUT small JSON blobs, no Zoho auth ──
     // Used by the dashboard's "Last Minutes Assignment" so all users share the
     // same daily snapshot. Stored in the existing TOKEN_CACHE KV under a prefix.
@@ -390,15 +416,15 @@ async function getAccessToken(env) {
     grant_type:    'refresh_token',
   });
 
-  // Send credentials in the POST BODY, not the query string. This previously
-  // used `?${params}`, which puts the refresh token + client secret in the URL
-  // (they leak into logs) and -- observed 2026-08-12 -- got an HTML block page
-  // back from Zoho instead of JSON, while the identical request as a form body
-  // succeeded. Match the form-body shape that works.
-  const resp = await fetch(`${ACCOUNTS}/oauth/v2/token`, {
+  // Params go in the QUERY STRING on a POST -- this is the shape Zoho
+  // documents for /oauth/v2/token, and the shape this Worker ran on
+  // successfully for months. (Briefly switched to a form body on 2026-08-12;
+  // Zoho answered with an HTML 400 error page, so that was reverted.)
+  // Accept is set explicitly because Zoho renders an HTML error page rather
+  // than JSON when it isn't asked for JSON.
+  const resp = await fetch(`${ACCOUNTS}/oauth/v2/token?${params}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString(),
+    headers: { 'Accept': 'application/json' },
   });
 
   // Zoho does not always answer with JSON -- an HTML error/block page makes
