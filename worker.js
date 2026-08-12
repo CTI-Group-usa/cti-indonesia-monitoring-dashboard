@@ -360,20 +360,20 @@ async function getAccessToken(env) {
   const cached = await env.TOKEN_CACHE.get('access_token');
   if (cached) return cached;
 
-  // Cooldown guard (added 2026-08-12): a failed refresh was never cached, so
-  // EVERY request while broken (dashboard auto-refresh every 5min, manual
-  // reloads, cron, etc.) retried Zoho's token endpoint immediately with zero
-  // backoff -- almost certainly what turned one transient Zoho rate-limit
-  // ("You have made too many requests continuously") into a self-perpetuating
-  // block that never got a clean window to expire. With multiple people using
-  // the dashboard concurrently, even a short cooldown gets reset by the next
-  // person's request before Zoho's throttle actually clears -- so this is a
-  // hard 30-minute block on ANY retry after a failure, regardless of how many
-  // users hit the Worker in that window, guaranteeing Zoho gets one real quiet
-  // period.
+  // Cooldown guard (added 2026-08-12, extended same day after 30min proved
+  // insufficient): a failed refresh was never cached, so every request while
+  // broken retried Zoho's token endpoint immediately with zero backoff --
+  // this is what turned a transient Zoho OAuth throttle ("too many requests
+  // continuously" on /oauth/v2/token specifically -- separate from, and much
+  // stricter than, the general Recruit API credit pool, which was confirmed
+  // NOT exhausted: 12466/33000 for the day) into a self-perpetuating block.
+  // 30 minutes wasn't a long enough quiet window -- with many concurrent
+  // users, the very next retry after each 30min window kept failing and
+  // re-arming the cooldown, so it never actually got a clean gap. Now a hard
+  // 3-hour block, unconditionally, regardless of traffic.
   const cooldownKey = 'token_refresh_cooldown';
   if (await env.TOKEN_CACHE.get(cooldownKey)) {
-    throw new Error('TOKEN_REFRESH_COOLDOWN: blocked for 30min after a Zoho rate-limit; not retrying yet.');
+    throw new Error('TOKEN_REFRESH_COOLDOWN: blocked for 3h after a Zoho OAuth throttle; not retrying yet.');
   }
 
   const params = new URLSearchParams({
@@ -386,7 +386,7 @@ async function getAccessToken(env) {
   const resp = await fetch(`${ACCOUNTS}/oauth/v2/token?${params}`, { method: 'POST' });
   const data = await resp.json();
   if (!data.access_token) {
-    await env.TOKEN_CACHE.put(cooldownKey, '1', { expirationTtl: 1800 });
+    await env.TOKEN_CACHE.put(cooldownKey, '1', { expirationTtl: 10800 });
     throw new Error('TOKEN_REFRESH_FAILED: ' + JSON.stringify(data));
   }
   await env.TOKEN_CACHE.put('access_token', data.access_token, { expirationTtl: 3300 });
