@@ -58,13 +58,13 @@ async function main() {
       if (pd && pd.getTime() >= nowT && pd.getTime() <= nowT + FOUR_DAYS) reschedFlags[id] = dayKey;
     }
   }
+  // A flag clears ONLY once onboarding becomes Report to Ship / Rescheduled /
+  // Resigned, or the record is gone. A past sign-on date does NOT clear it.
   const DONE = ['report to ship', 'rescheduled', 'resigned'];
   for (const id of Object.keys(flags)) {
     const r = byId[id];
     if (!r) { delete flags[id]; continue; }
-    const d = parseDate(r['Sign_On_Date']);
-    const done = DONE.includes(String(r['Onboarding_Status'] ?? '').trim().toLowerCase());
-    if (done || !d || d.getTime() < nowT) delete flags[id];
+    if (DONE.includes(String(r['Onboarding_Status'] ?? '').trim().toLowerCase())) delete flags[id];
   }
   for (const id of Object.keys(reschedFlags)) {
     const r = byId[id];
