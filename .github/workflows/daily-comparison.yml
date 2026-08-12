@@ -1,11 +1,20 @@
 name: Daily Last-Minute Comparison
 
-# Runs the "last-minute" comparison at 06:00 WITA (UTC+8) every day, i.e.
-# 22:00 UTC. Uses the live worker's existing endpoints — no Cloudflare deploy
-# required. Also runnable on demand from the Actions tab (workflow_dispatch).
+# Manual/backup run of the "last-minute" comparison. The AUTHORITATIVE daily
+# run is worker.js's own Cloudflare Cron Trigger (wrangler.jsonc "0 22 * * *"
+# = 06:00 WITA). This workflow's `schedule` trigger was REMOVED 2026-08-12:
+# it fired at the identical "0 22 * * *" instant as the Worker Cron, so every
+# day two independent, uncoordinated writers each re-fetched all ~3,800
+# seafarers and read-modify-wrote the same shared KV key. GitHub Actions'
+# scheduled runs are also jittered/delayed (observed ~30min late), so the two
+# writers' fetches landed minutes apart on separately-fetched snapshots. Any
+# transient gap in either fetch (rate limit, dropped page, slow response)
+# caused that writer to see a still-active seafarer as "missing" and silently
+# delete their last-minute flag for good — exactly what happened to Crew ID
+# 840172, whose flag was lost despite meeting every documented retention
+# condition. Kept as workflow_dispatch only: available as an on-demand manual
+# re-run, not a second automatic daily writer.
 on:
-  schedule:
-    - cron: '0 22 * * *'   # 22:00 UTC = 06:00 WITA
   workflow_dispatch: {}
 
 jobs:

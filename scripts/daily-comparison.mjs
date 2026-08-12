@@ -49,6 +49,17 @@ async function main() {
   const dayKey = seafarerDayKey();
   const prev = state.signon || {};
 
+  // Guard against an incomplete fetch (dropped page, rate limit, timeout).
+  // Seafarers leave gradually, never in bulk -- a big drop vs. yesterday's
+  // count means THIS fetch is broken, not a mass departure. Without this,
+  // the clearing loop below would treat every missing-this-run ID as "gone"
+  // and permanently delete its flag. Matches the same guard in worker.js.
+  const prevCount = Object.keys(prev).length, todayCount = Object.keys(byId).length;
+  if (prevCount > 0 && todayCount < prevCount * 0.9) {
+    console.error(`Aborting: suspicious record-count drop ${prevCount} -> ${todayCount} (possible incomplete fetch)`);
+    process.exit(1);
+  }
+
   if (Object.keys(prev).length) {   // skip a first/reset run (empty baseline)
     for (const id of Object.keys(todaySign)) {
       if (prev[id] === todaySign[id]) continue;                 // sign-on unchanged

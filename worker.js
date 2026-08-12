@@ -149,6 +149,19 @@ async function runDailyComparison(env) {
   const dayKey = seafarerDayKey();
   const prev = state.signon || {};
 
+  // Guard against an incomplete fetch (dropped page, rate limit, timeout).
+  // Seafarers leave the dataset gradually, never in bulk -- so a big drop
+  // vs. yesterday's count means THIS fetch is broken, not that hundreds of
+  // people vanished. Without this check, the clearing loop below would treat
+  // every missing-this-run ID as "record gone" and permanently delete its
+  // flag -- indistinguishable from a legitimate clear. Abort without writing
+  // so a bad run can never look like ground truth.
+  const prevCount = Object.keys(prev).length, todayCount = Object.keys(byId).length;
+  if (prevCount > 0 && todayCount < prevCount * 0.9) {
+    console.error(`runDailyComparison: aborting, suspicious record-count drop ${prevCount} -> ${todayCount} (possible incomplete fetch)`);
+    return;
+  }
+
   if (Object.keys(prev).length) {   // skip first run (empty baseline)
     for (const id of Object.keys(todaySign)) {
       if (prev[id] === todaySign[id]) continue;                 // sign-on unchanged
