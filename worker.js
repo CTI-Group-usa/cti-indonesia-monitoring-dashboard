@@ -390,11 +390,31 @@ async function getAccessToken(env) {
     grant_type:    'refresh_token',
   });
 
-  const resp = await fetch(`${ACCOUNTS}/oauth/v2/token?${params}`, { method: 'POST' });
-  const data = await resp.json();
-  if (!data.access_token) {
+  // Send credentials in the POST BODY, not the query string. This previously
+  // used `?${params}`, which puts the refresh token + client secret in the URL
+  // (they leak into logs) and -- observed 2026-08-12 -- got an HTML block page
+  // back from Zoho instead of JSON, while the identical request as a form body
+  // succeeded. Match the form-body shape that works.
+  const resp = await fetch(`${ACCOUNTS}/oauth/v2/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString(),
+  });
+
+  // Zoho does not always answer with JSON -- an HTML error/block page makes
+  // resp.json() throw. That previously escaped WITHOUT arming the cooldown
+  // (so every request kept hammering Zoho) and surfaced as an opaque
+  // "Unexpected token '<'". Read as text, then report status + a snippet.
+  const raw = await resp.text();
+  let data = null;
+  try { data = JSON.parse(raw); } catch { /* non-JSON handled below */ }
+
+  if (!data || !data.access_token) {
+    // Arm the cooldown on EVERY failure path, JSON or not.
     await env.TOKEN_CACHE.put(cooldownKey, '1', { expirationTtl: 300 });
-    throw new Error('TOKEN_REFRESH_FAILED: ' + JSON.stringify(data));
+    const detail = data ? JSON.stringify(data)
+      : `HTTP ${resp.status}, non-JSON response: ${raw.slice(0, 200).replace(/\s+/g, ' ')}`;
+    throw new Error('TOKEN_REFRESH_FAILED: ' + detail);
   }
   await env.TOKEN_CACHE.put('access_token', data.access_token, { expirationTtl: 3300 });
   return data.access_token;
