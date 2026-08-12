@@ -7,13 +7,26 @@
   // "putu-astra") — the account that already runs the live worker and holds the
   // Zoho secrets. The two IDs below belong to THAT account.
   //
-  // Secrets (ZOHO_CLIENT_ID / ZOHO_CLIENT_SECRET / ZOHO_REFRESH_TOKEN) are NOT
-  // defined here — they are stored encrypted on the Worker and preserved across
-  // deploys. Manage them with `wrangler secret put <NAME>` or the dashboard.
+  // Secrets (ZOHO_*, SSO_*, AUTOMATION_KEY) are NOT defined here — they are set
+  // on the Worker via the dashboard / `wrangler secret put <NAME>`.
+  //
+  // ⚠️ keep_vars IS LOAD-BEARING. Without it, `wrangler deploy` DELETES every
+  // var/secret configured in the dashboard that isn't declared in this file.
+  // This bit us hard on 2026-08-12: the CI deploy had never once succeeded
+  // since it was added (Aug 3), so `wrangler deploy` had never actually run
+  // against this Worker — every worker.js change was hand-pasted in the
+  // dashboard, which leaves secrets alone. The moment CI was fixed and the
+  // first real `wrangler deploy` landed, it silently wiped ZOHO_CLIENT_ID /
+  // ZOHO_CLIENT_SECRET / ZOHO_REFRESH_TOKEN, and the dashboard went to all
+  // zeros. The resulting Zoho error ("You have made too many requests
+  // continuously") looks exactly like a rate limit, which sent us chasing a
+  // throttle for hours — it was actually Zoho rejecting an empty client_id.
+  // ZeusHire's deploy/wrangler.toml carries the same flag for the same reason.
   "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
   "name": "cti-indo-proxy",
   "main": "worker.js",
   "compatibility_date": "2026-07-28",
+  "keep_vars": true,
 
   // Daily "last-minute" comparison at 06:00 WITA (22:00 UTC).
   "triggers": { "crons": ["0 22 * * *"] },
