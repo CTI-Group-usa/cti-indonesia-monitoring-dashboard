@@ -360,6 +360,18 @@ async function getAccessToken(env) {
   const cached = await env.TOKEN_CACHE.get('access_token');
   if (cached) return cached;
 
+  // Cooldown guard (added 2026-08-12): a failed refresh was never cached, so
+  // EVERY request while broken (dashboard auto-refresh every 5min, manual
+  // reloads, cron, etc.) retried Zoho's token endpoint immediately with zero
+  // backoff -- almost certainly what turned one transient Zoho rate-limit
+  // ("You have made too many requests continuously") into a self-perpetuating
+  // block that never got a clean window to expire. Short-circuit repeat
+  // attempts for 2 minutes after a failure instead of hammering Zoho again.
+  const cooldownKey = 'token_refresh_cooldown';
+  if (await env.TOKEN_CACHE.get(cooldownKey)) {
+    throw new Error('TOKEN_REFRESH_COOLDOWN: a previous attempt failed recently; waiting before retrying Zoho.');
+  }
+
   const params = new URLSearchParams({
     refresh_token: env.ZOHO_REFRESH_TOKEN,
     client_id:     env.ZOHO_CLIENT_ID,
@@ -370,6 +382,7 @@ async function getAccessToken(env) {
   const resp = await fetch(`${ACCOUNTS}/oauth/v2/token?${params}`, { method: 'POST' });
   const data = await resp.json();
   if (!data.access_token) {
+    await env.TOKEN_CACHE.put(cooldownKey, '1', { expirationTtl: 120 });
     throw new Error('TOKEN_REFRESH_FAILED: ' + JSON.stringify(data));
   }
   await env.TOKEN_CACHE.put('access_token', data.access_token, { expirationTtl: 3300 });
