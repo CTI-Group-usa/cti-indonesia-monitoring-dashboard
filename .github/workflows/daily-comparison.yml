@@ -26,4 +26,6 @@ jobs:
         with:
           node-version: 20
       - name: Run daily comparison
+        env:
+          AUTOMATION_KEY: ${{ secrets.AUTOMATION_KEY }}
         run: node scripts/daily-comparison.mjs

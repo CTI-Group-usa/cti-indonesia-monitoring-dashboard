@@ -116,8 +116,57 @@ git push
 ```
 
 ## Credentials & Logins
-- Dashboard default login: `admin` / `changeme` (⚠️ change before real use)
+- **Dashboard login: Microsoft 365 SSO** (added 2026-08-12, replaced the old
+  local username/password). Any `@cti-usa.com` Microsoft 365 account can sign
+  in — access control is enforced **server-side** in `worker.js` (every route
+  requires a valid session or the automation key; there is no client-only
+  gate anymore).
 - Cloudflare (live worker): **`putu-astra`** account (workers.dev subdomain
   `putu-astra`). NOTE: `putuastrawijaya@gmail.com` is a *separate* account and
   does NOT host this worker.
 - GitHub: PutuAstra (repo under org `CTI-Group-usa`)
+
+## Microsoft 365 SSO setup (one-time, manual — Azure Portal + Cloudflare)
+The code is done; these steps need a human with Azure/Cloudflare access —
+Claude cannot create Azure app registrations or set Worker secrets.
+
+1. **Azure Portal → Microsoft Entra ID → App registrations → New registration**
+   - Name: `CTI Indonesia Monitoring Dashboard`
+   - Supported account types: *Accounts in this organizational directory only*
+   - Redirect URI: **Web** — `https://cti-indo-proxy.putu-astra.workers.dev/api/auth/callback`
+2. On the app's **Overview** page, copy the **Application (client) ID** and
+   **Directory (tenant) ID**.
+3. **Certificates & secrets → New client secret** — copy the secret **value**
+   immediately (it's hidden after you leave the page).
+4. **API permissions** — the default `User.Read` (delegated, Microsoft Graph)
+   is enough; no admin consent should be required for `openid profile email`
+   sign-in alone. If your tenant enforces admin consent on all delegated
+   permissions, click **Grant admin consent**.
+5. Set these as **Cloudflare Worker secrets** on `cti-indo-proxy` (Cloudflare
+   dashboard → Workers & Pages → cti-indo-proxy → Settings → Variables, or
+   `wrangler secret put <NAME>` from the `putu-astra` account):
+   - `SSO_TENANT_ID` — the Directory (tenant) ID from step 2
+   - `SSO_CLIENT_ID` — the Application (client) ID from step 2
+   - `SSO_CLIENT_SECRET` — the secret value from step 3
+   - `AUTOMATION_KEY` — any long random string you generate yourself (e.g.
+     `openssl rand -hex 32`) — this is NOT an Azure value, it's a shared
+     secret only for the `daily-comparison.mjs` GitHub Action.
+6. Add `AUTOMATION_KEY` (the **same** value from step 5) as a **GitHub repo
+   secret** (Settings → Secrets and variables → Actions) so
+   `.github/workflows/daily-comparison.yml` can authenticate as the one
+   legitimate non-human caller.
+7. Deploy the worker (CI auto-deploys `worker.js` on push to `main`, but
+   secrets set via dashboard/`wrangler secret` take effect immediately without
+   a redeploy).
+
+**How it works (for future reference):** server-side OAuth 2.0 authorization-
+code flow — same pattern as ZeusHire's `worker.js`, no MSAL/SDK on the
+frontend. `GET /api/auth/login` redirects to Microsoft; `GET /api/auth/callback`
+exchanges the code, decodes the `id_token`, checks `tid` matches
+`SSO_TENANT_ID` and the email ends in `@cti-usa.com`, then mints this app's
+own random session token (stored in the `TOKEN_CACHE` KV under
+`authsession:<token>`, 7-day TTL) and redirects to `index.html#authToken=...`.
+The frontend (`auth.js`) captures that token, stores it in `localStorage`, and
+sends it back as `X-Auth-Token` on every API call; `worker.js` now requires
+either that header (valid session) or `X-Automation-Key` (the daily-comparison
+script) on **every** route — Recruit, Sheet, and `/state/*` alike.

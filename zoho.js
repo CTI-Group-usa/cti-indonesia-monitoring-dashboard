@@ -1,11 +1,19 @@
 // ─────────────────────────────────────────────────────────────
 //  ZOHO API CLIENT — Recruit (pull) + Zoho Sheet (merge + push)
 //  All auth is handled server-side by the Cloudflare Worker
-//  (CONFIG.PROXY). No tokens are ever handled in the browser.
+//  (CONFIG.PROXY). No Zoho tokens are ever handled in the browser —
+//  only this dashboard's own SSO session token (Auth.authHeaders()),
+//  which the Worker now requires on every route.
 // ─────────────────────────────────────────────────────────────
 const Zoho = (() => {
 
   const PROXY = CONFIG.PROXY;
+
+  // A 401 means the session expired or was revoked server-side — bounce to
+  // login rather than let every subsequent call fail silently one by one.
+  function checkSession(resp) {
+    if (resp.status === 401) { Auth.logout(); throw new Error('SESSION_EXPIRED'); }
+  }
 
   // ═══════════════════════════════════════════════════════════
   //  ZOHO RECRUIT
@@ -16,7 +24,8 @@ const Zoho = (() => {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
     // no-store: never let the browser serve a stale proxy response from its
     // HTTP cache — data freshness is the whole point of this dashboard.
-    const resp = await fetch(url.toString(), { cache: 'no-store' });
+    const resp = await fetch(url.toString(), { cache: 'no-store', headers: Auth.authHeaders() });
+    checkSession(resp);
     // Zoho returns 204 (no content) for a page past the last one.
     if (resp.status === 204) return { data: [], info: { more_records: false } };
     if (!resp.ok) throw new Error(`RECRUIT_API_ERROR_${resp.status}`);
@@ -27,9 +36,10 @@ const Zoho = (() => {
   async function recruitPut(endpoint, body) {
     const resp = await fetch(`${PROXY}/recruit/v2/${endpoint}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...Auth.authHeaders() },
       body: JSON.stringify(body),
     });
+    checkSession(resp);
     if (!resp.ok) throw new Error(`RECRUIT_PUT_ERROR_${resp.status}`);
     return resp.json();
   }
@@ -176,9 +186,10 @@ const Zoho = (() => {
     });
     const resp = await fetch(`${PROXY}/sheet/v2/${sheet.resourceId}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...Auth.authHeaders() },
       body: body.toString(),
     });
+    checkSession(resp);
     if (!resp.ok) throw new Error(`SHEET_API_ERROR_${resp.status}`);
     const json = await resp.json();
     if (json.status && json.status !== 'success') {

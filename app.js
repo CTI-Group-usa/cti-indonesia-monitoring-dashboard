@@ -599,7 +599,7 @@ const App = (() => {
   // the same snapshot. Falls back to null if the endpoint isn't deployed yet.
   async function stateGet(key) {
     try {
-      const r = await fetch(`${CONFIG.PROXY}/state/${key}`, { cache: 'no-store' });
+      const r = await fetch(`${CONFIG.PROXY}/state/${key}`, { cache: 'no-store', headers: Auth.authHeaders() });
       if (!r.ok) return null;
       return await r.json();
     } catch { return null; }
@@ -607,7 +607,7 @@ const App = (() => {
   async function statePut(key, val) {
     try {
       await fetch(`${CONFIG.PROXY}/state/${key}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(val),
+        method: 'PUT', headers: { 'Content-Type': 'application/json', ...Auth.authHeaders() }, body: JSON.stringify(val),
       });
     } catch { /* ignore */ }
   }

@@ -202,17 +202,10 @@ const CONFIG = {
   },
 
   // ─────────────────────────────────────────────────────────────
-  //  Local dashboard users (SHA-256 hashed passwords)
+  //  Login: Microsoft 365 SSO (worker.js /api/auth/*) — replaced the local
+  //  username/password login 2026-08-12. Access is restricted server-side
+  //  to @cti-usa.com accounts; there is nothing to configure here.
   // ─────────────────────────────────────────────────────────────
-  //   Generate a hash in the browser console:
-  //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourpassword'))
-  //     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
-  USERS: {
-    // Passwords updated 2026-07-21 per user request.
-    // To change: hash a new password with the snippet above and replace.
-    admin: { hash: '3b612c75a7b5048a435fb6ec81e52ff92d6d795a8b5a9c17070f6a63c97a53b2', role: 'admin' },
-    staff: { hash: 'cdc4d189f8469bf67d5c5d2137221b8712e04c29415bb67df0b7e8d347694ef2', role: 'staff' },
-  },
 
   // ── Branding ─────────────────────────────────────────────────
   APP_NAME:     'Indonesia Monitoring',

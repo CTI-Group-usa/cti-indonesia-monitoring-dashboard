@@ -6,8 +6,13 @@
 // baseline, and stamps comparedAt = the run time (~06:00 WITA).
 //
 // Set DRY_RUN=1 to compute + print without writing to KV.
+//
+// Requires the AUTOMATION_KEY env var (GitHub Actions repo secret) — since
+// the Worker now requires a signed-in session (Microsoft 365 SSO) or this
+// automation key on every route, added 2026-08-12 when SSO login was set up.
 
 const PROXY = 'https://cti-indo-proxy.putu-astra.workers.dev';
+const AUTH_HEADERS = { 'X-Automation-Key': process.env.AUTOMATION_KEY || '' };
 const DAY = 86400000, FOUR_WK = 28 * DAY, FOUR_DAYS = 4 * DAY;
 
 const seafarerDayKey = (t = Date.now()) => new Date(t + 2 * 3600000).toISOString().slice(0, 10);
@@ -19,7 +24,7 @@ async function main() {
   const FIELDS = ['Crew_ID_Number', 'Sign_On_Date', 'Onboarding_Status'].join(',');
   let all = [], page = 1, more = true;
   while (more) {
-    const r = await fetch(`${PROXY}/recruit/v2/Candidates?fields=${FIELDS}&page=${page}&per_page=200`, { cache: 'no-store' });
+    const r = await fetch(`${PROXY}/recruit/v2/Candidates?fields=${FIELDS}&page=${page}&per_page=200`, { cache: 'no-store', headers: AUTH_HEADERS });
     if (r.status === 204) break;
     if (!r.ok) throw new Error('RECRUIT_' + r.status);
     const j = await r.json();
@@ -43,7 +48,7 @@ async function main() {
     if (d) todaySign[id] = signKey(d);
   }
 
-  const stateResp = await fetch(`${PROXY}/state/lastmin`, { cache: 'no-store' });
+  const stateResp = await fetch(`${PROXY}/state/lastmin`, { cache: 'no-store', headers: AUTH_HEADERS });
   const state = (await stateResp.json()) || { day: null, signon: {}, flags: {}, reschedFlags: {} };
   let flags = state.flags || {}, reschedFlags = state.reschedFlags || {};
   const dayKey = seafarerDayKey();
@@ -89,7 +94,7 @@ async function main() {
 
   if (process.env.DRY_RUN) { console.log('DRY_RUN — not writing to KV'); return; }
   const put = await fetch(`${PROXY}/state/lastmin`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(out),
+    method: 'PUT', headers: { 'Content-Type': 'application/json', ...AUTH_HEADERS }, body: JSON.stringify(out),
   });
   if (!put.ok) throw new Error('STATE_PUT_' + put.status);
   console.log('KV updated, PUT', put.status);

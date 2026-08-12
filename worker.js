@@ -7,6 +7,12 @@
 //    ZOHO_CLIENT_ID
 //    ZOHO_CLIENT_SECRET
 //    ZOHO_REFRESH_TOKEN   (must include Recruit + Sheet scopes)
+//    SSO_TENANT_ID        (Azure AD tenant ID — "CTI Indonesia Monitoring" app)
+//    SSO_CLIENT_ID        (Azure AD app (client) ID)
+//    SSO_CLIENT_SECRET    (Azure AD client secret)
+//    AUTOMATION_KEY       (shared secret for the daily-comparison.mjs
+//                          GitHub Action — the only non-human caller;
+//                          generate any long random string)
 //
 //  KV binding:
 //    TOKEN_CACHE   (Workers KV namespace, bound as TOKEN_CACHE)
@@ -20,6 +26,14 @@ const RECRUIT_BASE = 'https://recruit.zoho.com/recruit/v2';
 const SHEET_BASE   = 'https://sheet.zoho.com/api/v2';
 const ACCOUNTS     = 'https://accounts.zoho.com';
 
+// ── Microsoft 365 SSO (non-secret constants — the Client Secret/Tenant/
+//    Client IDs are Worker secrets, see header above) ─────────────────
+const SSO_REDIRECT_URI     = 'https://cti-indo-proxy.putu-astra.workers.dev/api/auth/callback';
+const SSO_APP_HOME         = 'https://cti-group-usa.github.io/cti-indonesia-monitoring-dashboard/index.html';
+const SSO_LOGIN_PAGE       = 'https://cti-group-usa.github.io/cti-indonesia-monitoring-dashboard/login.html';
+const ALLOWED_EMAIL_DOMAIN = 'cti-usa.com';
+const SESSION_TTL_SEC      = 7 * 24 * 3600;   // 7 days
+
 // Only these page origins may call the proxy from a browser. Add a
 // localhost entry here temporarily if you need to test locally.
 const ALLOWED_ORIGINS = [
@@ -32,7 +46,7 @@ function cors(request) {
   const origin = request.headers.get('Origin') || '';
   const h = {
     'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Auth-Token,X-Automation-Key',
     'Vary': 'Origin',
   };
   if (ALLOWED_ORIGINS.includes(origin)) h['Access-Control-Allow-Origin'] = origin;
@@ -49,6 +63,22 @@ export default {
 
     const url  = new URL(request.url);
     const path = url.pathname;
+
+    // ── Microsoft 365 SSO — sign-in flow (public, no session required) ──
+    if (path === '/api/auth/login')    return ssoLogin(env, CORS);
+    if (path === '/api/auth/callback') return ssoCallback(request, env, CORS);
+    if (path === '/api/auth/me')       return ssoMe(request, env, CORS);
+    if (path === '/api/auth/logout')   return ssoLogout(request, env, CORS);
+
+    // ── Everything below requires a signed-in session (or the automation
+    // key used by the daily-comparison.mjs GitHub Action). Previously these
+    // routes had NO server-side auth at all — the local username/password
+    // check only gated the frontend, so anyone who knew the Worker URL could
+    // query live seafarer data directly (confirmed via curl 2026-08-12).
+    // The dashboard's real access control now lives here, not in the browser.
+    if (!(await resolveUser(request, env))) {
+      return json({ error: 'Unauthorized' }, 401, CORS);
+    }
 
     // ── Shared app state (KV) — GET/PUT small JSON blobs, no Zoho auth ──
     // Used by the dashboard's "Last Minutes Assignment" so all users share the
@@ -193,6 +223,111 @@ async function runDailyComparison(env) {
   state.reschedFlags = reschedFlags;
   state.comparedAt = Date.now();
   await env.TOKEN_CACHE.put(KEY, JSON.stringify(state));
+}
+
+// ── Microsoft 365 SSO ──────────────────────────────────────────────
+// Server-side OAuth 2.0 authorization-code flow (same pattern as ZeusHire's
+// worker.js) — no MSAL/SDK on the frontend. The browser only redirects to
+// /api/auth/login and later reads a session token back from the URL
+// fragment; Microsoft's own tokens never reach the browser.
+
+async function ssoLogin(env, CORS) {
+  const state = crypto.randomUUID();
+  await env.TOKEN_CACHE.put('ssostate:' + state, '1', { expirationTtl: 600 });
+  const authUrl = `https://login.microsoftonline.com/${env.SSO_TENANT_ID}/oauth2/v2.0/authorize?` +
+    new URLSearchParams({
+      client_id: env.SSO_CLIENT_ID, response_type: 'code', redirect_uri: SSO_REDIRECT_URI,
+      response_mode: 'query', scope: 'openid profile email', state,
+    });
+  return new Response(null, { status: 302, headers: { ...CORS, Location: authUrl } });
+}
+
+async function ssoCallback(request, env, CORS) {
+  const url  = new URL(request.url);
+  const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state');
+  const oauthErr = url.searchParams.get('error_description') || url.searchParams.get('error');
+  if (oauthErr) return ssoError(oauthErr, CORS);
+  if (!code) return ssoError('No authorization code returned.', CORS);
+  if (!state || !(await env.TOKEN_CACHE.get('ssostate:' + state))) {
+    return ssoError('Invalid or expired sign-in request. Please try signing in again.', CORS);
+  }
+  await env.TOKEN_CACHE.delete('ssostate:' + state);
+
+  const tokenRes = await fetch(`https://login.microsoftonline.com/${env.SSO_TENANT_ID}/oauth2/v2.0/token`, {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: env.SSO_CLIENT_ID, client_secret: env.SSO_CLIENT_SECRET, code,
+      redirect_uri: SSO_REDIRECT_URI, grant_type: 'authorization_code', scope: 'openid profile email',
+    }),
+  });
+  const tok = await tokenRes.json();
+  if (!tok.id_token) return ssoError('Sign-in failed: ' + (tok.error_description || tok.error || 'unknown error'), CORS);
+
+  let claims;
+  try { claims = decodeJwt(tok.id_token); } catch { return ssoError('Invalid identity token.', CORS); }
+  if (claims.tid !== env.SSO_TENANT_ID) return ssoError('This sign-in is not from the CTI organization.', CORS);
+  const email = String(claims.preferred_username || claims.email || '').toLowerCase();
+  if (!email.endsWith('@' + ALLOWED_EMAIL_DOMAIN)) {
+    return ssoError(`Only @${ALLOWED_EMAIL_DOMAIN} accounts may sign in to this dashboard.`, CORS);
+  }
+
+  const sessionToken = crypto.randomUUID();
+  await env.TOKEN_CACHE.put('authsession:' + sessionToken, JSON.stringify({
+    email, name: claims.name || email, createdAt: Date.now(), expiresAt: Date.now() + SESSION_TTL_SEC * 1000,
+  }), { expirationTtl: SESSION_TTL_SEC });
+
+  // Fragment (not query string) so the session token never hits server logs.
+  return new Response(null, { status: 302, headers: { ...CORS, Location: `${SSO_APP_HOME}#authToken=${sessionToken}` } });
+}
+
+async function ssoMe(request, env, CORS) {
+  const user = await resolveUser(request, env);
+  if (!user) return json({ error: 'Unauthorized' }, 401, CORS);
+  return json({ email: user.email, name: user.name }, 200, CORS);
+}
+
+async function ssoLogout(request, env, CORS) {
+  const token = request.headers.get('X-Auth-Token');
+  if (token) await env.TOKEN_CACHE.delete('authsession:' + token);
+  return json({ ok: true }, 200, CORS);
+}
+
+// Resolves the caller for every non-auth route: either a valid SSO session
+// (X-Auth-Token) or the automation key used by the daily-comparison.mjs
+// GitHub Action (X-Automation-Key) — the one legitimate non-human caller.
+async function resolveUser(request, env) {
+  const autoKey = request.headers.get('X-Automation-Key');
+  if (autoKey && env.AUTOMATION_KEY && autoKey === env.AUTOMATION_KEY) {
+    return { email: 'automation', name: 'Daily Comparison Job' };
+  }
+  const token = request.headers.get('X-Auth-Token');
+  if (!token) return null;
+  const raw = await env.TOKEN_CACHE.get('authsession:' + token);
+  if (!raw) return null;
+  const session = JSON.parse(raw);
+  if (session.expiresAt < Date.now()) return null;
+  return session;
+}
+
+// Decode a JWT payload (id_token from Microsoft's token endpoint — already
+// trusted over TLS via our client secret exchange, so no JWKS signature
+// check here; same simplification ZeusHire's worker.js makes).
+function decodeJwt(jwt) {
+  const p = jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(p);
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+function ssoError(msg, CORS) {
+  const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:480px;margin:80px auto;text-align:center;color:#1a1a1a">
+<h2>Sign-in failed</h2><p>${esc(msg)}</p><p><a href="${SSO_LOGIN_PAGE}">Back to sign in</a></p></body></html>`;
+  return new Response(html, { status: 401, headers: { ...CORS, 'Content-Type': 'text/html' } });
 }
 
 // Forward a request to Zoho with the OAuth header, preserving

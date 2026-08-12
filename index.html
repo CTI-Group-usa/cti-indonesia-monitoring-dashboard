@@ -8,14 +8,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="style.css?v=20260807c">
-  <script src="config.js?v=20260807a"></script>
-  <script src="auth.js?v=20260729bt"></script>
-  <script src="zoho.js?v=20260807a"></script>
+  <script src="config.js?v=20260812a"></script>
+  <script src="auth.js?v=20260812a"></script>
+  <script src="zoho.js?v=20260812a"></script>
 </head>
-<body>
-  <!-- Auth guard -->
-  <script>if (!Auth.requireAuth()) document.body.innerHTML = '';</script>
-
+<body style="visibility:hidden">
   <!-- Global top load bar (shown on every data fetch/refresh) -->
   <div class="load-bar" id="loadBar"><div class="load-bar-fill"></div></div>
 
@@ -110,18 +107,23 @@
   <!-- Toast container -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <script src="app.js?v=20260807f"></script>
+  <script src="app.js?v=20260812a"></script>
   <script>
-    const sess = Auth.getSession();
-    if (sess) {
-      const name = sess.user.charAt(0).toUpperCase() + sess.user.slice(1);
-      const ini  = name.charAt(0).toUpperCase();
-      const role = sess.role === 'admin' ? 'Administrator' : 'Staff';
-      document.getElementById('sidebarUsername').textContent = name;
-      document.getElementById('sidebarRole').textContent     = role;
-      document.getElementById('sidebarAvatar').textContent   = ini;
-      document.getElementById('topbarAvatar').textContent    = ini;
-    }
+  (async () => {
+    // Auth guard — validates the session against the Worker (which now
+    // enforces this server-side; see worker.js). Redirects to login.html
+    // and stops here if there's no valid Microsoft 365 session.
+    const user = await Auth.requireAuth();
+    if (!user) return;
+    document.body.style.visibility = 'visible';
+
+    const name = user.name || user.email;
+    const ini  = (name || '?').trim().charAt(0).toUpperCase();
+    document.getElementById('sidebarUsername').textContent = name;
+    document.getElementById('sidebarRole').textContent     = user.email;
+    document.getElementById('sidebarAvatar').textContent   = ini;
+    document.getElementById('topbarAvatar').textContent    = ini;
+
     document.getElementById('appName').textContent   = CONFIG.APP_NAME;
     document.getElementById('orgName').textContent   = CONFIG.ORG_NAME;
     document.getElementById('footerOrg').textContent = CONFIG.ORG_NAME;
@@ -152,6 +154,7 @@
     if (savedTheme) document.documentElement.dataset.theme = savedTheme;
 
     App.init();
+  })();
   </script>
 </body>
 </html>
