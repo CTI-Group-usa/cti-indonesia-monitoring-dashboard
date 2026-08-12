@@ -80,32 +80,6 @@ export default {
       return json({ error: 'Unauthorized' }, 401, CORS);
     }
 
-    // ── TEMPORARY diagnostic (added 2026-08-12) — shape of the stored Zoho
-    // credentials, never the values: presence, length, first 12 chars, and
-    // whether stray whitespace got pasted in. Exists to settle "is the RIGHT
-    // value actually stored?" without guessing, after a grant code was very
-    // likely pasted where the refresh token belonged. The first 12 chars are
-    // enough to tell a grant code from a refresh token and not enough to use.
-    // Auth-gated like everything else here. DELETE once the Zoho fetch is
-    // confirmed healthy.
-    if (path === '/debug/creds') {
-      const shape = k => {
-        const v = env[k];
-        if (!v) return { present: false };
-        return {
-          present: true,
-          length: v.length,
-          prefix: String(v).slice(0, 12),
-          hasSurroundingWhitespace: v !== v.trim(),
-        };
-      };
-      return json({
-        ZOHO_CLIENT_ID:     shape('ZOHO_CLIENT_ID'),
-        ZOHO_CLIENT_SECRET: shape('ZOHO_CLIENT_SECRET'),
-        ZOHO_REFRESH_TOKEN: shape('ZOHO_REFRESH_TOKEN'),
-      }, 200, CORS);
-    }
-
     // ── Shared app state (KV) — GET/PUT small JSON blobs, no Zoho auth ──
     // Used by the dashboard's "Last Minutes Assignment" so all users share the
     // same daily snapshot. Stored in the existing TOKEN_CACHE KV under a prefix.
