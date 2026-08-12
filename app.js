@@ -684,17 +684,15 @@ const App = (() => {
       state.comparedAt = Date.now();    // stamp when this day's comparison ran
       changed = true;
     }
-    // A flag is cleared once the assignment is handled (onboarding = Report to
-    // Ship / Rescheduled / Resigned), the record is gone, OR its sign-on date
-    // has already passed — a past sign-on is no longer a last-minute assignment
-    // to act on, so it must drop off the list instead of accumulating forever.
+    // A flag is cleared ONLY once the assignment is handled — onboarding status
+    // becomes Report to Ship / Rescheduled / Resigned — or the record is gone
+    // (e.g. resigned → excluded from the dataset). A past sign-on date does NOT
+    // clear it: the seafarer stays on the list until the onboarding status moves.
     const DONE = ['report to ship', 'rescheduled', 'resigned'];
     Object.keys(flags).forEach(id => {
       const r = byId[id];
       if (!r) { delete flags[id]; changed = true; return; }
-      const d = parseDate(r.signOnDate);
-      const done = DONE.includes(String(r.onboardingStatus ?? '').trim().toLowerCase());
-      if (done || !d || d.getTime() < nowT) { delete flags[id]; changed = true; }
+      if (DONE.includes(String(r.onboardingStatus ?? '').trim().toLowerCase())) { delete flags[id]; changed = true; }
     });
     // Reschedule flags clear ONLY once the seafarer reports to ship (or the
     // record is gone / resigned → already filtered out). Being "Rescheduled" is
