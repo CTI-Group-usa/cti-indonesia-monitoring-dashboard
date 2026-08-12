@@ -25,7 +25,7 @@
     // The "cti-indo-token-cache" namespace in the putu-astra account, bound as
     // TOKEN_CACHE. Fill its ID (Cloudflare → Workers & Pages → KV → copy the ID
     // next to "cti-indo-token-cache"). Non-secret.
-    { "binding": "TOKEN_CACHE", "id": "FILL_cti-indo-token-cache_KV_ID" }
+    { "binding": "TOKEN_CACHE", "id": "432ac5e5be2a47849f2dab45cd61e9a7" }
   ],
 
   "observability": {
