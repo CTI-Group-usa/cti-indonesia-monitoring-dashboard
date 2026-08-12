@@ -27,3 +27,8 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # wrangler-action's default (3.90.0) failed to pick up "main" from
+          # wrangler.jsonc ("Missing entry-point" error, 2026-08-12) even
+          # though the file is valid -- a local dry-run with wrangler 4.121.0
+          # read it fine. Pin to a modern major version.
+          wranglerVersion: '4'
