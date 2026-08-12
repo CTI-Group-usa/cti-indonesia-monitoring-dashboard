@@ -158,14 +158,14 @@ async function runDailyComparison(env) {
       if (pd && pd.getTime() >= nowT && pd.getTime() <= nowT + FOUR_DAYS) reschedFlags[id] = dayKey;
     }
   }
-  // Assignment flags clear when handled / gone / sign-on passed.
+  // A flag clears ONLY once onboarding becomes Report to Ship / Rescheduled /
+  // Resigned, or the record is gone. A past (or blank) sign-on date does NOT
+  // clear it — matches app.js refreshLastMinute() and daily-comparison.mjs.
   const DONE = ['report to ship', 'rescheduled', 'resigned'];
   for (const id of Object.keys(flags)) {
     const r = byId[id];
     if (!r) { delete flags[id]; continue; }
-    const d = parseDate(r['Sign_On_Date']);
-    const done = DONE.includes(String(r['Onboarding_Status'] ?? '').trim().toLowerCase());
-    if (done || !d || d.getTime() < nowT) delete flags[id];
+    if (DONE.includes(String(r['Onboarding_Status'] ?? '').trim().toLowerCase())) delete flags[id];
   }
   // Reschedule flags clear ONLY once reported to ship (or the record is gone).
   for (const id of Object.keys(reschedFlags)) {
