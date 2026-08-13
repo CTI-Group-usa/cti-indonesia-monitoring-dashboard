@@ -471,7 +471,11 @@ const App = (() => {
   }
 
   // Draws each bar's value just above the bar, so the count is visible
-  // without hovering.
+  // without hovering. Also enforces a minimum visible bar height for any
+  // nonzero value — with a big disparity between categories (e.g. 1,485 vs
+  // 4), the small bar's true height rounds to a sub-pixel sliver and reads
+  // as an empty gap even though its value label is drawn above it.
+  const MIN_BAR_PX = 3;
   const barValueLabels = {
     id: 'barValueLabels',
     afterDatasetsDraw(chart) {
@@ -480,6 +484,17 @@ const App = (() => {
       if (!meta || meta.hidden) return;
       const color = (getComputedStyle(document.documentElement)
         .getPropertyValue('--text') || '#e5e7eb').trim();
+      const barColor = chart.data.datasets[0].backgroundColor;
+      meta.data.forEach((bar, i) => {
+        const v = chart.data.datasets[0].data[i];
+        if (v == null) return;
+        if (v > 0 && bar.base - bar.y < MIN_BAR_PX) {
+          ctx.save();
+          ctx.fillStyle = barColor;
+          ctx.fillRect(bar.x - bar.width / 2, bar.base - MIN_BAR_PX, bar.width, MIN_BAR_PX);
+          ctx.restore();
+        }
+      });
       ctx.save();
       ctx.font = '600 11px Inter, system-ui, sans-serif';
       ctx.fillStyle = color;
@@ -488,7 +503,8 @@ const App = (() => {
       meta.data.forEach((bar, i) => {
         const v = chart.data.datasets[0].data[i];
         if (v == null) return;
-        ctx.fillText(Number(v).toLocaleString(), bar.x, bar.y - 4);
+        const y = (v > 0 && bar.base - bar.y < MIN_BAR_PX) ? bar.base - MIN_BAR_PX : bar.y;
+        ctx.fillText(Number(v).toLocaleString(), bar.x, y - 4);
       });
       ctx.restore();
     },
