@@ -642,6 +642,32 @@ const App = (() => {
     let reschedFlags = state.reschedFlags || {};
     let changed = false;
 
+    // ⚠️ Guard against acting on an INCOMPLETE dataset. zoho.js getAllRecords()
+    // returns [] (not null) when the Zoho fetch fails, and `if (!allData)` at
+    // the call site does NOT catch that — an empty array is truthy. A failed or
+    // partial load therefore reached the clearing loops below, where
+    // `if (!r) delete flags[id]` matches EVERY flag and wipes the entire list,
+    // then persists that to shared KV. Any Zoho hiccup silently destroyed the
+    // Last-Minutes list for everyone; confirmed 2026-08-12 when a multi-hour
+    // Zoho outage took the flags from 2 to 0 while users had the dashboard open
+    // on its 5-minute auto-refresh. This is also the most likely original cause
+    // of flags vanishing despite meeting every documented retention condition
+    // (e.g. crew 840172: future sign-on, onboarding "Ready to Go").
+    // Seafarers leave the dataset gradually, never in bulk, so a big drop vs.
+    // the stored baseline means THIS fetch is broken. Bail out READ-ONLY: show
+    // the stored flags, write nothing. Mirrors the same guard in worker.js
+    // runDailyComparison() and scripts/daily-comparison.mjs.
+    const readOnlyResult = () => ({
+      assign: new Set(Object.keys(flags)), resched: new Set(Object.keys(reschedFlags)),
+      assignDays: flags, reschedDays: reschedFlags, comparedAt: state.comparedAt || null,
+    });
+    const baselineCount = Object.keys(state.signon || {}).length;
+    const loadedCount   = Object.keys(byId).length;
+    if (!loadedCount || (baselineCount && loadedCount < baselineCount * 0.9)) {
+      console.warn(`refreshLastMinute: incomplete dataset (${loadedCount} records vs baseline ${baselineCount}) — leaving shared state untouched.`);
+      return readOnlyResult();
+    }
+
     // One-time self-heal: an earlier version stored a legacy `ids` key and, on
     // the snapshot-format change, mass-flagged ~10% of all seafarers in a single
     // day (the "234"/"390" blow-up). Its presence proves the state predates the
