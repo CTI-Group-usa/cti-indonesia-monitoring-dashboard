@@ -560,7 +560,10 @@ const App = (() => {
     // Visas.
     { key: 'c1d',      label: 'C1/D',
       statusKey: 'c1dVisaStatus',   numberKey: 'c1dVisaNumber',   apptKey: 'c1dVisaAppointment',
-      expiryKey: 'c1dVisaExpiry',   sheetType: /c1\s*\/?\s*d/i,   expectedKey: 'c1dExpectedDate' },
+      expiryKey: 'c1dVisaExpiry',   sheetType: /c1\s*\/?\s*d/i,   expectedKey: 'c1dExpectedDate',
+      moduleOnly: true },   // Recruit module only — the "By Status" chart must not show sheet-only
+                            // statuses (e.g. "Visa Application Processed") that don't exist in Recruit.
+                            // sheetType is still used by the separate Visa Processing chart below.
     { key: 'schengen', label: 'Schengen',
       statusKey: 'otherVisaStatus', numberKey: 'otherVisaNumber', apptKey: 'otherVisaAppointment',
       expiryKey: 'otherVisaExpiry', sheetType: /schengen/i,
