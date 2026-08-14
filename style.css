@@ -429,8 +429,9 @@ tbody tr:hover { background: var(--bg); }
 .status-flag { color: var(--accent); font-weight: 600; }
 
 /* Pending Action table: an Expected Date that's already passed and still
-   unresolved renders the whole row in red font. */
-.row-overdue td { color: var(--accent); }
+   unresolved renders the whole row in red font. Selector must out-specify
+   `.data-table tbody td` (line ~1062), which also sets td color. */
+.data-table tbody tr.row-overdue td { color: var(--accent); }
 .badge-gray   { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
 
 /* ─────────────────────────────────────────────────────────────
