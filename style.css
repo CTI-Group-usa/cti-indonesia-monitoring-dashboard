@@ -423,6 +423,10 @@ tbody tr:hover { background: var(--bg); }
 .badge-red    { background: #fee2e2; color: #991b1b; }
 .badge-yellow { background: #fef9c3; color: #854d0e; }
 .badge-blue   { background: #dbeafe; color: #1e40af; }
+
+/* Records table: document statuses that still need action (Need to Process /
+   In Process / Unfit) render in red font so they stand out while scanning. */
+.status-flag { color: var(--accent); font-weight: 600; }
 .badge-gray   { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
 
 /* ─────────────────────────────────────────────────────────────

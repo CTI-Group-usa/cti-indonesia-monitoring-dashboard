@@ -64,6 +64,16 @@ const App = (() => {
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
+  // Document-status cell for the Records table: flags outstanding statuses
+  // (Need to Process / In Process / Unfit) in red font so they jump out
+  // while scanning the table, without changing the underlying data.
+  const NEEDS_ATTENTION = /^(need to process|in process|unfit)$/i;
+  function docStatus(s) {
+    const t = String(s ?? '').trim();
+    if (!t || t === '—') return esc(t || '—');
+    return NEEDS_ATTENTION.test(t) ? `<span class="status-flag">${esc(t)}</span>` : esc(t);
+  }
+
   function badge(text) {
     if (!text || text === '—') return `<span class="badge badge-gray">—</span>`;
     const t = String(text).toLowerCase();
@@ -1263,17 +1273,17 @@ const App = (() => {
       { label: 'Sign On Port',          render: r => esc(r.signOnPort),        sort: r => txtSort(r.signOnPort) },
       { label: 'Sign On Date',          render: r => formatDate(r.signOnDate), sort: r => dateSort(parseDate(r.signOnDate)), num: true },
       { label: 'Onboarding Status',     render: r => esc(r.onboardingStatus),  sort: r => txtSort(r.onboardingStatus) },
-      { label: 'Passport Status',       render: r => esc(r.passportStatus),    sort: r => txtSort(r.passportStatus) },
-      { label: 'BST Status',            render: r => esc(r.bstStatus),         sort: r => txtSort(r.bstStatus) },
-      { label: 'Seaman Book Status',    render: r => esc(r.seamanBookStatus),  sort: r => txtSort(r.seamanBookStatus) },
-      { label: 'Medical Status',        render: r => esc(r.medicalStatus),     sort: r => txtSort(r.medicalStatus) },
-      { label: 'SDB Status',            render: r => esc(r.sdbStatus),         sort: r => txtSort(r.sdbStatus) },
-      { label: 'BID Status',            render: r => esc(r.bidStatus),         sort: r => txtSort(r.bidStatus) },
-      { label: 'C1/D Visa Status',      render: r => esc(r.c1dVisaStatus),     sort: r => txtSort(r.c1dVisaStatus) },
-      { label: 'OKTB Status',           render: r => esc(r.oktbStatus),        sort: r => txtSort(r.oktbStatus) },
-      { label: 'MCV Status',            render: r => esc(r.mcvStatus),         sort: r => txtSort(r.mcvStatus) },
+      { label: 'Passport Status',       render: r => docStatus(r.passportStatus),    sort: r => txtSort(r.passportStatus) },
+      { label: 'BST Status',            render: r => docStatus(r.bstStatus),         sort: r => txtSort(r.bstStatus) },
+      { label: 'Seaman Book Status',    render: r => docStatus(r.seamanBookStatus),  sort: r => txtSort(r.seamanBookStatus) },
+      { label: 'Medical Status',        render: r => docStatus(r.medicalStatus),     sort: r => txtSort(r.medicalStatus) },
+      { label: 'SDB Status',            render: r => docStatus(r.sdbStatus),         sort: r => txtSort(r.sdbStatus) },
+      { label: 'BID Status',            render: r => docStatus(r.bidStatus),         sort: r => txtSort(r.bidStatus) },
+      { label: 'C1/D Visa Status',      render: r => docStatus(r.c1dVisaStatus),     sort: r => txtSort(r.c1dVisaStatus) },
+      { label: 'OKTB Status',           render: r => docStatus(r.oktbStatus),        sort: r => txtSort(r.oktbStatus) },
+      { label: 'MCV Status',            render: r => docStatus(r.mcvStatus),         sort: r => txtSort(r.mcvStatus) },
       { label: 'Completed Vaccination', render: r => esc(r.vaccinesStatus),    sort: r => txtSort(r.vaccinesStatus) },
-      { label: 'Other Visa Status',     render: r => esc(r.otherVisaStatus),   sort: r => txtSort(r.otherVisaStatus) },
+      { label: 'Other Visa Status',     render: r => docStatus(r.otherVisaStatus),   sort: r => txtSort(r.otherVisaStatus) },
       { label: 'Other Visa Name',      render: r => esc(r.otherVisaName),     sort: r => txtSort(r.otherVisaName) },
     ];
     // Re-Assigned tab: show Rescheduled Sign On Date next to Sign On Date (to
