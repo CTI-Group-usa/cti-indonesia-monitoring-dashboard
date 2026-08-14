@@ -1642,6 +1642,11 @@ const App = (() => {
       return out;
     };
 
+    // Expected Date already passed and still not resolved → the whole row
+    // renders in red font so overdue items are obvious at a glance.
+    const today0 = new Date(); today0.setHours(0, 0, 0, 0);
+    const isOverdue = x => x.exp.getTime() < today0.getTime();
+
     const paint = () => {
       const rows = buildRows();
       const cnt = document.getElementById('penCount');
@@ -1649,7 +1654,7 @@ const App = (() => {
       document.getElementById('penHead').innerHTML = headHtml();
       const tbody = document.getElementById('penBody');
       if (tbody) tbody.innerHTML = rows.length
-        ? rows.map(x => `<tr>${cols.map(c => `<td>${c.render(x)}</td>`).join('')}</tr>`).join('')
+        ? rows.map(x => `<tr class="${isOverdue(x) ? 'row-overdue' : ''}">${cols.map(c => `<td>${c.render(x)}</td>`).join('')}</tr>`).join('')
         : `<tr><td colspan="${cols.length}" class="empty-row">No pending actions.</td></tr>`;
       document.querySelectorAll('#penHead th.sortable').forEach(th =>
         th.onclick = () => {
