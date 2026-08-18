@@ -1642,10 +1642,11 @@ const App = (() => {
       return out;
     };
 
-    // Expected Date already passed and still not resolved → the whole row
-    // renders in red font so overdue items are obvious at a glance.
+    // Expected Date is today or already passed, and still not resolved → the
+    // whole row renders in red font so due-today/overdue items are obvious
+    // at a glance (today is included so staff can clear it before it slips).
     const today0 = new Date(); today0.setHours(0, 0, 0, 0);
-    const isOverdue = x => x.exp.getTime() < today0.getTime();
+    const isOverdue = x => x.exp.getTime() <= today0.getTime();
 
     const paint = () => {
       const rows = buildRows();
