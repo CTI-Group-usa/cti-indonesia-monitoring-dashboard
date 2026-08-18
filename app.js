@@ -1645,8 +1645,13 @@ const App = (() => {
     // Expected Date is today or already passed, and still not resolved → the
     // whole row renders in red font so due-today/overdue items are obvious
     // at a glance (today is included so staff can clear it before it slips).
-    const today0 = new Date(); today0.setHours(0, 0, 0, 0);
-    const isOverdue = x => x.exp.getTime() <= today0.getTime();
+    // Compared by CALENDAR DAY, not raw epoch: date-only strings parse as
+    // UTC midnight, which — for any positive UTC offset (e.g. WITA) — sits
+    // hours ahead of local midnight and would otherwise make "today" look
+    // like it hasn't arrived yet under a plain epoch comparison.
+    const dayOnly = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const today0 = dayOnly(new Date());
+    const isOverdue = x => dayOnly(x.exp) <= today0;
 
     const paint = () => {
       const rows = buildRows();
