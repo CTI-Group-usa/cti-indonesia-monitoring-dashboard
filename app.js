@@ -980,13 +980,16 @@ const App = (() => {
     }
     const issueGap = issueGapRows.length;
 
-    // C1/D and Schengen only: sign-on is less than 4 weeks away, AND either —
+    // C1/D and Schengen only: sign-on is less than 8 weeks (~2mo) away, AND
+    // either —
     //   1) visa status is Need to Process, or
     //   2) visa status is In Process but the appointment date is blank or
     //      has already passed (a booked appointment that slipped by still
     //      counts as stalled).
-    // Appointment slots run ~2 months out, so this needs to surface well
-    // before the 4-week mark to give the Visa Team a chance.
+    // Appointment slots run ~2 months out, so the window matches that lead
+    // time — otherwise a case sitting at Need to Process 6-8 weeks out (still
+    // enough runway to book an appointment today) wouldn't surface until it's
+    // arguably too late to still make that appointment window.
     // Deliberately NOT affected by the page's Sign On Date range filter — that
     // filter is for browsing a window, but this is a real-time "is anyone
     // about to miss their appointment window" alert, so it always evaluates
@@ -996,7 +999,7 @@ const App = (() => {
     if ((tab.key === 'c1d' || tab.key === 'schengen') && tab.apptKey) {
       const noApptSource = rawData ? applyDeployFilters(rawData, { ..._visaFilters, from: '', to: '' }) : data;
       const noApptHolders = noApptSource.map(r => ({ r, s: visaStatusOf(r, tab) })).filter(x => x.s);
-      const FOUR_WK = 28 * 86400000;
+      const EIGHT_WK = 56 * 86400000;
       const nowT = Date.now();
       noApptRows = noApptHolders
         .filter(x => {
@@ -1013,7 +1016,7 @@ const App = (() => {
           const so = parseDate(r.signOnDate);
           if (!so) return false;
           const until = so.getTime() - nowT;
-          return until >= 0 && until < FOUR_WK;
+          return until >= 0 && until < EIGHT_WK;
         });
     }
     const noAppt = noApptRows.length;
@@ -1067,7 +1070,7 @@ const App = (() => {
         ${tab.expiryKey ? statCard(expiringLabel, expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('No Status', noStatus, { id: 'statNoStatus', clickable: noStatus > 0 })}
         ${tab.key === 'mcv' ? statCard('Unmatched Passport', unmatched, { id: 'statUnmatched', clickable: unmatched > 0 }) : ''}
         ${tab.key === 'schengen' ? statCard('Issued < 2d before Sign On', issueGap, { id: 'statIssueGap', clickable: issueGap > 0 }) : ''}
-        ${(tab.key === 'c1d' || tab.key === 'schengen') ? statCard('Stalled Visa, Sign On <4wk', noAppt, { id: 'statNoAppt', clickable: noAppt > 0 }) : ''}
+        ${(tab.key === 'c1d' || tab.key === 'schengen') ? statCard('Stalled Visa, Sign On <8wk', noAppt, { id: 'statNoAppt', clickable: noAppt > 0 }) : ''}
       </div>
       <div class="chart-row">
         <div class="card chart-card">
@@ -1170,7 +1173,7 @@ const App = (() => {
       igCard.onclick = () => openDetailModal(issueGapRows, igCols, `${tab.label} — Visa Issued < 2 days before Sign On`);
     }
 
-    // C1/D & Schengen: Need to Process, or In Process with no/passed appointment.
+    // C1/D & Schengen: Need to Process, or In Process with no/passed appointment (sign-on <8wk).
     const naCard = document.getElementById('statNoAppt');
     if (naCard && noAppt) {
       const naCols = [
@@ -1183,7 +1186,7 @@ const App = (() => {
         { label: 'Ship',         render: r => esc(r.joiningShip),          sort: r => txtSort(r.joiningShip),  w: 150 },
         { label: 'Sign On Port', render: r => esc(r.signOnPort),           sort: r => txtSort(r.signOnPort),   w: 140 },
       ];
-      naCard.onclick = () => openDetailModal(noApptRows, naCols, `${tab.label} — Stalled Visa, Sign On < 4 Weeks`);
+      naCard.onclick = () => openDetailModal(noApptRows, naCols, `${tab.label} — Stalled Visa, Sign On < 8 Weeks`);
     }
   }
 
