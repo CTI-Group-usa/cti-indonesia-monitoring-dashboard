@@ -1185,11 +1185,11 @@ const App = (() => {
         { label: 'Email',        render: r => esc(r.email),                sort: r => txtSort(r.email),        w: 220, wrap: true },
         { label: `${tab.label} Status`, render: r => esc(r[tab.statusKey]), sort: r => txtSort(r[tab.statusKey]), w: 150 },
         { label: 'Appointment Date', render: r => formatDate(r[tab.apptKey]), sort: r => dateSort(parseDate(r[tab.apptKey])), num: true, w: 140 },
+        { label: 'Expected Date', render: r => formatDate(r[tab.expectedKey]), sort: r => dateSort(parseDate(r[tab.expectedKey])), num: true, w: 130 },
         { label: 'Sign On Date', render: r => formatDate(r.signOnDate),    sort: r => dateSort(parseDate(r.signOnDate)), num: true, w: 130 },
         { label: 'Ship',         render: r => esc(r.joiningShip),          sort: r => txtSort(r.joiningShip),  w: 150 },
         { label: 'Sign On Port', render: r => esc(r.signOnPort),           sort: r => txtSort(r.signOnPort),   w: 140 },
         { label: 'Onboarding Status', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus), w: 150 },
-        { label: 'Expected Date', render: r => formatDate(r[tab.expectedKey]), sort: r => dateSort(parseDate(r[tab.expectedKey])), num: true, w: 130 },
       ];
       naCard.onclick = () => openDetailModal(noApptRows, naCols, `${tab.label} — Stalled Visa, Sign On < 2 Months`);
     }
