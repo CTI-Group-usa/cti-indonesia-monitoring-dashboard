@@ -1189,6 +1189,7 @@ const App = (() => {
         { label: 'Ship',         render: r => esc(r.joiningShip),          sort: r => txtSort(r.joiningShip),  w: 150 },
         { label: 'Sign On Port', render: r => esc(r.signOnPort),           sort: r => txtSort(r.signOnPort),   w: 140 },
         { label: 'Onboarding Status', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus), w: 150 },
+        { label: 'Expected Date', render: r => formatDate(r[tab.expectedKey]), sort: r => dateSort(parseDate(r[tab.expectedKey])), num: true, w: 130 },
       ];
       naCard.onclick = () => openDetailModal(noApptRows, naCols, `${tab.label} — Stalled Visa, Sign On < 2 Months`);
     }
