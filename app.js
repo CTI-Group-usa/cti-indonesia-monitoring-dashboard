@@ -1068,7 +1068,7 @@ const App = (() => {
       const otherCols      = [col.name, col.email, col.line, col.pay, col.vstat, col.bniva, col.appt, col.appid];
       const c1dApptCols    = [col.added, col.name, col.email, col.line, col.vstat, col.bniva, col.appt, col.appid];   // no Payment Status
       const c1dSecuredCols = [col.name, col.email, col.line, col.vstat, col.bniva, col.appt, col.appid];               // no Payment Status
-      const schApptCols    = [col.added, col.name, col.email, col.line, col.notes];
+      const schApptCols    = [col.added, col.name, col.email, col.line, col.vstat, col.notes];
       const firstLabel = procGroups[0][0];   // "Pending DS-160" / "Pending Application"
       drawBar('c1dSheetChart', counts, label => {
         const g = procGroups.find(([l]) => l === label);
