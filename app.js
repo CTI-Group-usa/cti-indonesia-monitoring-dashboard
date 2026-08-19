@@ -1179,17 +1179,19 @@ const App = (() => {
     // C1/D & Schengen: Need to Process, or In Process with no/passed appointment (sign-on <2mo).
     const naCard = document.getElementById('statNoAppt');
     if (naCard && noAppt) {
+      // Percentage widths (sum to 100%) so the table fills the modal exactly,
+      // with no horizontal scrolling, instead of fixed px widths.
       const naCols = [
-        { label: 'ID Number',    render: r => esc(r.crewIdNumber),         sort: r => txtSort(r.crewIdNumber), w: 100 },
-        { label: 'Name',         render: r => esc(r.name),                 sort: r => txtSort(r.name),         w: 200, wrap: true },
-        { label: 'Email',        render: r => esc(r.email),                sort: r => txtSort(r.email),        w: 220, wrap: true },
-        { label: `${tab.label} Status`, render: r => esc(r[tab.statusKey]), sort: r => txtSort(r[tab.statusKey]), w: 150 },
-        { label: 'Appointment Date', render: r => formatDate(r[tab.apptKey]), sort: r => dateSort(parseDate(r[tab.apptKey])), num: true, w: 140 },
-        { label: 'Expected Date', render: r => formatDate(r[tab.expectedKey]), sort: r => dateSort(parseDate(r[tab.expectedKey])), num: true, w: 130 },
-        { label: 'Sign On Date', render: r => formatDate(r.signOnDate),    sort: r => dateSort(parseDate(r.signOnDate)), num: true, w: 130 },
-        { label: 'Ship',         render: r => esc(r.joiningShip),          sort: r => txtSort(r.joiningShip),  w: 150 },
-        { label: 'Sign On Port', render: r => esc(r.signOnPort),           sort: r => txtSort(r.signOnPort),   w: 140 },
-        { label: 'Onboarding Status', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus), w: 150 },
+        { label: 'ID Number',    render: r => esc(r.crewIdNumber),         sort: r => txtSort(r.crewIdNumber), w: '6%' },
+        { label: 'Name',         render: r => esc(r.name),                 sort: r => txtSort(r.name),         w: '13%', wrap: true },
+        { label: 'Email',        render: r => esc(r.email),                sort: r => txtSort(r.email),        w: '14%', wrap: true },
+        { label: `${tab.label} Status`, render: r => esc(r[tab.statusKey]), sort: r => txtSort(r[tab.statusKey]), w: '10%' },
+        { label: 'Appointment Date', render: r => formatDate(r[tab.apptKey]), sort: r => dateSort(parseDate(r[tab.apptKey])), num: true, w: '9%' },
+        { label: 'Expected Date', render: r => formatDate(r[tab.expectedKey]), sort: r => dateSort(parseDate(r[tab.expectedKey])), num: true, w: '9%' },
+        { label: 'Sign On Date', render: r => formatDate(r.signOnDate),    sort: r => dateSort(parseDate(r.signOnDate)), num: true, w: '9%' },
+        { label: 'Ship',         render: r => esc(r.joiningShip),          sort: r => txtSort(r.joiningShip),  w: '10%' },
+        { label: 'Sign On Port', render: r => esc(r.signOnPort),           sort: r => txtSort(r.signOnPort),   w: '9%' },
+        { label: 'Onboarding Status', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus), w: '11%' },
       ];
       naCard.onclick = () => openDetailModal(noApptRows, naCols, `${tab.label} — Stalled Visa, Sign On < 2 Months`);
     }
