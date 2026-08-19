@@ -881,7 +881,7 @@ const App = (() => {
       </div>
       <div id="visaPanel"></div>`;
 
-    const repaint = () => { destroyCharts(); paintVisaPanel(applyVisaFilters(data), visaSheet); };
+    const repaint = () => { destroyCharts(); paintVisaPanel(applyVisaFilters(data), visaSheet, data); };
 
     mc.querySelectorAll('[data-visatab]').forEach(b =>
       b.addEventListener('click', () => {
@@ -908,7 +908,7 @@ const App = (() => {
     updateStatus();
   }
 
-  function paintVisaPanel(data, visaSheet) {
+  function paintVisaPanel(data, visaSheet, rawData) {
     const tab = VISA_TABS.find(t => t.key === _visaTab);
     const panel = document.getElementById('visaPanel');
 
@@ -984,11 +984,18 @@ const App = (() => {
     // less than 4 weeks away, and the visa isn't resolved (excludes Valid and
     // Not Required). Appointment slots run ~2 months out, so this needs to
     // surface well before the 4-week mark to give the Visa Team a chance.
+    // Deliberately NOT affected by the page's Sign On Date range filter — that
+    // filter is for browsing a window, but this is a real-time "is anyone
+    // about to miss their appointment window" alert, so it always evaluates
+    // against the true sign-on date regardless of what date range is shown.
+    // Office/Cruise Line/Onboarding Status filters still apply.
     let noApptRows = [];
     if ((tab.key === 'c1d' || tab.key === 'schengen') && tab.apptKey) {
+      const noApptSource = rawData ? applyDeployFilters(rawData, { ..._visaFilters, from: '', to: '' }) : data;
+      const noApptHolders = noApptSource.map(r => ({ r, s: visaStatusOf(r, tab) })).filter(x => x.s);
       const FOUR_WK = 28 * 86400000;
       const nowT = Date.now();
-      noApptRows = holders
+      noApptRows = noApptHolders
         .filter(x => !isValid(x.s) && !/not required/i.test(x.s))
         .map(x => x.r)
         .filter(r => {
