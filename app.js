@@ -1073,7 +1073,7 @@ const App = (() => {
         ${tab.expiryKey ? statCard(expiringLabel, expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('No Status', noStatus, { id: 'statNoStatus', clickable: noStatus > 0 })}
         ${tab.key === 'mcv' ? statCard('Unmatched Passport', unmatched, { id: 'statUnmatched', clickable: unmatched > 0 }) : ''}
         ${tab.key === 'schengen' ? statCard('Issued < 2d before Sign On', issueGap, { id: 'statIssueGap', clickable: issueGap > 0 }) : ''}
-        ${(tab.key === 'c1d' || tab.key === 'schengen') ? statCard('Stalled Visa, Sign On <2mo', noAppt, { id: 'statNoAppt', clickable: noAppt > 0 }) : ''}
+        ${(tab.key === 'c1d' || tab.key === 'schengen') ? statCard('At Risk, Sign On <2mo', noAppt, { id: 'statNoAppt', clickable: noAppt > 0 }) : ''}
       </div>
       <div class="chart-row">
         <div class="card chart-card">
@@ -1193,7 +1193,7 @@ const App = (() => {
         { label: 'Sign On Port', render: r => esc(r.signOnPort),           sort: r => txtSort(r.signOnPort),   w: '9%' },
         { label: 'Onboarding Status', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus), w: '11%' },
       ];
-      naCard.onclick = () => openDetailModal(noApptRows, naCols, `${tab.label} — Stalled Visa, Sign On < 2 Months`);
+      naCard.onclick = () => openDetailModal(noApptRows, naCols, `${tab.label} — At Risk, Sign On < 2 Months`);
     }
   }
 
