@@ -980,10 +980,13 @@ const App = (() => {
     }
     const issueGap = issueGapRows.length;
 
-    // C1/D and Schengen only: no embassy appointment booked yet, sign-on is
-    // less than 4 weeks away, and the visa isn't resolved (excludes Valid and
-    // Not Required). Appointment slots run ~2 months out, so this needs to
-    // surface well before the 4-week mark to give the Visa Team a chance.
+    // C1/D and Schengen only: sign-on is less than 4 weeks away, AND either —
+    //   1) visa status is Need to Process, or
+    //   2) visa status is In Process but the appointment date is blank or
+    //      has already passed (a booked appointment that slipped by still
+    //      counts as stalled).
+    // Appointment slots run ~2 months out, so this needs to surface well
+    // before the 4-week mark to give the Visa Team a chance.
     // Deliberately NOT affected by the page's Sign On Date range filter — that
     // filter is for browsing a window, but this is a real-time "is anyone
     // about to miss their appointment window" alert, so it always evaluates
@@ -996,10 +999,17 @@ const App = (() => {
       const FOUR_WK = 28 * 86400000;
       const nowT = Date.now();
       noApptRows = noApptHolders
-        .filter(x => !isValid(x.s) && !/not required/i.test(x.s))
+        .filter(x => {
+          const s = String(x.s).trim().toLowerCase();
+          if (s === 'need to process') return true;
+          if (s === 'in process') {
+            const appt = parseDate(x.r[tab.apptKey]);
+            return !appt || appt.getTime() < nowT;   // blank or already passed
+          }
+          return false;
+        })
         .map(x => x.r)
         .filter(r => {
-          if (parseDate(r[tab.apptKey])) return false;   // already has an appointment
           const so = parseDate(r.signOnDate);
           if (!so) return false;
           const until = so.getTime() - nowT;
@@ -1057,7 +1067,7 @@ const App = (() => {
         ${tab.expiryKey ? statCard(expiringLabel, expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('No Status', noStatus, { id: 'statNoStatus', clickable: noStatus > 0 })}
         ${tab.key === 'mcv' ? statCard('Unmatched Passport', unmatched, { id: 'statUnmatched', clickable: unmatched > 0 }) : ''}
         ${tab.key === 'schengen' ? statCard('Issued < 2d before Sign On', issueGap, { id: 'statIssueGap', clickable: issueGap > 0 }) : ''}
-        ${(tab.key === 'c1d' || tab.key === 'schengen') ? statCard('No Appointment, Sign On <4wk', noAppt, { id: 'statNoAppt', clickable: noAppt > 0 }) : ''}
+        ${(tab.key === 'c1d' || tab.key === 'schengen') ? statCard('Stalled Visa, Sign On <4wk', noAppt, { id: 'statNoAppt', clickable: noAppt > 0 }) : ''}
       </div>
       <div class="chart-row">
         <div class="card chart-card">
@@ -1160,7 +1170,7 @@ const App = (() => {
       igCard.onclick = () => openDetailModal(issueGapRows, igCols, `${tab.label} — Visa Issued < 2 days before Sign On`);
     }
 
-    // C1/D & Schengen: no embassy appointment yet, sign-on <4 weeks away.
+    // C1/D & Schengen: Need to Process, or In Process with no/passed appointment.
     const naCard = document.getElementById('statNoAppt');
     if (naCard && noAppt) {
       const naCols = [
@@ -1168,11 +1178,12 @@ const App = (() => {
         { label: 'Name',         render: r => esc(r.name),                 sort: r => txtSort(r.name),         w: 200, wrap: true },
         { label: 'Email',        render: r => esc(r.email),                sort: r => txtSort(r.email),        w: 220, wrap: true },
         { label: `${tab.label} Status`, render: r => esc(r[tab.statusKey]), sort: r => txtSort(r[tab.statusKey]), w: 150 },
+        { label: 'Appointment Date', render: r => formatDate(r[tab.apptKey]), sort: r => dateSort(parseDate(r[tab.apptKey])), num: true, w: 140 },
         { label: 'Sign On Date', render: r => formatDate(r.signOnDate),    sort: r => dateSort(parseDate(r.signOnDate)), num: true, w: 130 },
         { label: 'Ship',         render: r => esc(r.joiningShip),          sort: r => txtSort(r.joiningShip),  w: 150 },
         { label: 'Sign On Port', render: r => esc(r.signOnPort),           sort: r => txtSort(r.signOnPort),   w: 140 },
       ];
-      naCard.onclick = () => openDetailModal(noApptRows, naCols, `${tab.label} — No Appointment, Sign On < 4 Weeks`);
+      naCard.onclick = () => openDetailModal(noApptRows, naCols, `${tab.label} — Stalled Visa, Sign On < 4 Weeks`);
     }
   }
 
