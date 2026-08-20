@@ -980,11 +980,13 @@ const App = (() => {
     }
     const issueGap = issueGapRows.length;
 
-    // C1/D and Schengen only: sign-on is less than 2 calendar months away, AND
-    // either —
+    // C1/D and Schengen only: Onboarding Status is not Rescheduled, sign-on is
+    // less than 2 calendar months away, AND either —
     //   1) visa status is Need to Process, or
     //   2) visa status is In Process but the EXPECTED date (admin-recorded)
     //      is blank or has already passed.
+    // Excluding Rescheduled: once a seafarer's assignment is rescheduled, the
+    // sign-on date this alert is anchored to no longer reflects a real plan.
     // Appointment slots run ~2 months out, so the window matches that lead
     // time — otherwise a case sitting at Need to Process with ~2 months left
     // (still enough runway to book an appointment today) wouldn't surface
@@ -1014,6 +1016,7 @@ const App = (() => {
           return false;
         })
         .map(x => x.r)
+        .filter(r => String(r.onboardingStatus ?? '').trim().toLowerCase() !== 'rescheduled')
         .filter(r => {
           const so = parseDate(r.signOnDate);
           if (!so) return false;
