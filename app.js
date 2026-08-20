@@ -983,9 +983,8 @@ const App = (() => {
     // C1/D and Schengen only: sign-on is less than 2 calendar months away, AND
     // either —
     //   1) visa status is Need to Process, or
-    //   2) visa status is In Process but the appointment date is blank or
-    //      has already passed (a booked appointment that slipped by still
-    //      counts as stalled).
+    //   2) visa status is In Process but the EXPECTED date (admin-recorded)
+    //      is blank or has already passed.
     // Appointment slots run ~2 months out, so the window matches that lead
     // time — otherwise a case sitting at Need to Process with ~2 months left
     // (still enough runway to book an appointment today) wouldn't surface
@@ -999,7 +998,7 @@ const App = (() => {
     // against the true sign-on date regardless of what date range is shown.
     // Office/Cruise Line/Onboarding Status filters still apply.
     let noApptRows = [];
-    if ((tab.key === 'c1d' || tab.key === 'schengen') && tab.apptKey) {
+    if ((tab.key === 'c1d' || tab.key === 'schengen') && tab.expectedKey) {
       const noApptSource = rawData ? applyDeployFilters(rawData, { ..._visaFilters, from: '', to: '' }) : data;
       const noApptHolders = noApptSource.map(r => ({ r, s: visaStatusOf(r, tab) })).filter(x => x.s);
       const nowT = Date.now();
@@ -1009,8 +1008,8 @@ const App = (() => {
           const s = String(x.s).trim().toLowerCase();
           if (s === 'need to process') return true;
           if (s === 'in process') {
-            const appt = parseDate(x.r[tab.apptKey]);
-            return !appt || appt.getTime() < nowT;   // blank or already passed
+            const exp = parseDate(x.r[tab.expectedKey]);
+            return !exp || exp.getTime() < nowT;   // blank or already passed
           }
           return false;
         })
