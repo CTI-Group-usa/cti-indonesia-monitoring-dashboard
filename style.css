@@ -1248,9 +1248,13 @@ th.sorted {
 .records-table .sticky-col-1 { left: 0;     width: 96px;  min-width: 96px;  max-width: 96px; }
 .records-table .sticky-col-2 { left: 96px;  width: 168px; min-width: 168px; max-width: 168px;
   border-right: 1px solid var(--border); }
-/* Date-found group separator (Last Minutes tabs). */
-.records-table td.group-cell {
-  position: sticky; left: 0;
+/* Date-found group separator (Last Minutes tabs). The label is an inner
+   sticky <span> — position:sticky on the colspan'd <td> itself is unreliable
+   across browsers, so the td just paints the row background and the span
+   does the actual sticking to the left edge while scrolling horizontally. */
+.records-table td.group-cell { background: var(--bg); padding: 0; }
+.records-table td.group-cell .group-label {
+  position: sticky; left: 0; display: inline-block;
   background: var(--bg); color: var(--accent);
   font-weight: 700; font-size: 0.72rem; letter-spacing: 0.02em;
   padding: 6px 10px;

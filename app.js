@@ -1659,8 +1659,11 @@ const App = (() => {
         const [y, m, d] = k.split('-').map(Number);
         return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
       };
+      // The label is an inner sticky <span>, not a sticky <td> — position:sticky
+      // on a colspan'd table cell is unreliable across browsers (it silently
+      // fails to stick in some), while an inline-block span sticks reliably.
       tbody.innerHTML = Object.keys(groups).sort((a, b) => b.localeCompare(a)).map(k =>
-        `<tr class="group-row"><td class="group-cell" colspan="${cols.length}">${fmtDay(k)} · ${groups[k].length}</td></tr>` +
+        `<tr class="group-row"><td class="group-cell" colspan="${cols.length}"><span class="group-label">${fmtDay(k)} · ${groups[k].length}</span></td></tr>` +
         groups[k].map(rowHtml).join('')
       ).join('');
       return;
