@@ -614,7 +614,7 @@ const App = (() => {
   let _visaFilters = emptyFilters();
   let _recFilters  = emptyFilters();
   let _recSort = { i: -1, dir: 1 };   // Records table sort (col index, direction)
-  let _recTab = 'all';                // Records sub-tab: 'all' | 'lastmin' | 'lastresched'
+  let _recTab = 'all';                // Records sub-tab: 'all' | 'rtg' | 'lastmin' | 'lastresched' | 'reassigned'
   let _lastMinSet = new Set();        // crew IDs flagged as last-minute assignments
   let _lastReschedSet = new Set();    // crew IDs flagged as last-minute RESCHEDULED (imminent sign-on moved)
   let _lastMinDays = {};              // crewId -> "YYYY-MM-DD" day found (for date grouping)
@@ -1416,6 +1416,7 @@ const App = (() => {
       <div class="page-header"><h1>Records</h1></div>
       <div class="subtabs">
         <button class="subtab ${_recTab === 'all' ? 'active' : ''}" data-rectab="all">All Records</button>
+        <button class="subtab ${_recTab === 'rtg' ? 'active' : ''}" data-rectab="rtg">Potential RTG <span class="subtab-count" id="rtgCount"></span></button>
         <button class="subtab ${_recTab === 'lastmin' ? 'active' : ''}" data-rectab="lastmin">Last Minutes Assignment <span class="subtab-count" id="lastminCount"></span></button>
         <button class="subtab ${_recTab === 'lastresched' ? 'active' : ''}" data-rectab="lastresched">Last Minutes Rescheduled <span class="subtab-count" id="lastreschedCount"></span></button>
         <button class="subtab ${_recTab === 'reassigned' ? 'active' : ''}" data-rectab="reassigned">Re-Assigned <span class="subtab-count" id="reassignedCount"></span></button>
@@ -1468,6 +1469,8 @@ const App = (() => {
         .filter(r => _lastReschedSet.has(String(r.crewIdNumber ?? '').trim())).length;
       const ra = document.getElementById('reassignedCount');
       if (ra) ra.textContent = '· ' + opBase.filter(isReassigned).length;
+      const rtg = document.getElementById('rtgCount');
+      if (rtg) rtg.textContent = '· ' + opBase.filter(isPotentialRTG).length;
       const cs = document.getElementById('compareStamp');
       if (cs) cs.textContent = _lastComparedAt ? `Last compared: ${fmtWITA(_lastComparedAt)}` : 'Last compared: not yet run';
       document.getElementById('recHead').innerHTML = headHtml(cols);
@@ -1519,10 +1522,27 @@ const App = (() => {
     return so !== dayKeyOf(r.rescheduledDate);     // unmatched
   }
 
-  // Records dataset for the current sub-tab + the search box. The three
-  // operational tabs (Last Minutes Assignment / Rescheduled, Re-Assigned) apply
-  // the office/cruise/onboarding filters but NOT the sign-on date range; only
-  // "All Records" applies the full filter bar (including the date range).
+  // Potential RTG (Ready To Go): onboarding is "Completing Documents" and
+  // every document status — including vaccination — is clear of the same
+  // red flags used in the Records table (Need to Process / In Process /
+  // Unfit). Vaccines_Status is multi-select (comma-joined), so each selected
+  // value is checked individually.
+  const RTG_DOC_FIELDS = [
+    'passportStatus', 'bstStatus', 'seamanBookStatus', 'medicalStatus',
+    'sdbStatus', 'bidStatus', 'c1dVisaStatus', 'oktbStatus', 'mcvStatus',
+    'otherVisaStatus', 'vaccinesStatus',
+  ];
+  function isPotentialRTG(r) {
+    if (String(r.onboardingStatus ?? '').trim().toLowerCase() !== 'completing documents') return false;
+    return RTG_DOC_FIELDS.every(f =>
+      !String(r[f] ?? '').split(',').some(v => NEEDS_ATTENTION.test(v.trim())));
+  }
+
+  // Records dataset for the current sub-tab + the search box. The operational
+  // tabs (Last Minutes Assignment / Rescheduled, Re-Assigned, Potential RTG)
+  // apply the office/cruise/onboarding filters but NOT the sign-on date
+  // range; only "All Records" applies the full filter bar (including the
+  // date range).
   function recFiltered(data) {
     let rows;
     const op = () => applyDeployFilters(data, { ..._recFilters, from: '', to: '' });
@@ -1532,6 +1552,8 @@ const App = (() => {
       rows = op().filter(r => _lastReschedSet.has(String(r.crewIdNumber ?? '').trim()));
     else if (_recTab === 'reassigned')
       rows = op().filter(isReassigned);
+    else if (_recTab === 'rtg')
+      rows = op().filter(isPotentialRTG);
     else
       rows = applyDeployFilters(data, _recFilters);   // All Records (full filters)
     const q = _search.trim().toLowerCase();
