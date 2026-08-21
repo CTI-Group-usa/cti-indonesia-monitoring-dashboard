@@ -119,6 +119,37 @@ const App = (() => {
     }) + ' WITA';
   }
 
+  // Every "is this date within N days/weeks of today" check in the dashboard
+  // is anchored to WITA (Bali time), not the viewer's own browser timezone
+  // and not raw UTC. Two dashboard dates a week apart can otherwise appear
+  // to "roll over" at whatever instant is UTC midnight — which, for a
+  // Bali-based team, lands at an arbitrary time of day depending on the
+  // viewer's own timezone offset (e.g. UTC midnight = noon for UTC+12).
+  function witaTodayParts() {
+    const shifted = new Date(Date.now() + 8 * 3600000);   // WITA = UTC+8
+    return [shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate()];
+  }
+  // Whole calendar-day difference between a date and "today in WITA",
+  // ignoring time-of-day on both sides. 0 = today, positive = future,
+  // negative = past. Accepts a raw field value or an already-parsed Date.
+  function daysUntilWITA(dateVal) {
+    const d = (dateVal instanceof Date) ? dateVal : parseDate(dateVal);
+    if (!d || isNaN(d)) return null;
+    const [ty, tm, td] = witaTodayParts();
+    const todayUTC  = Date.UTC(ty, tm, td);
+    const targetUTC = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+    return Math.round((targetUTC - todayUTC) / 86400000);
+  }
+  // Same as daysUntilWITA, but for Sheet-sourced (DD/MM/YYYY) date values.
+  function daysUntilWITASheet(dateVal) {
+    const d = (dateVal instanceof Date) ? dateVal : parseSheetDate(dateVal);
+    if (!d || isNaN(d)) return null;
+    const [ty, tm, td] = witaTodayParts();
+    const todayUTC  = Date.UTC(ty, tm, td);
+    const targetUTC = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+    return Math.round((targetUTC - todayUTC) / 86400000);
+  }
+
   // Zoho SHEET dates are DD/MM/YYYY (Indonesian). Unlike module dates,
   // day comes first — parse day-first for slash/dash dates, else native
   // (handles ISO / datetime strings). Use this for any Sheet-sourced date.
@@ -330,13 +361,12 @@ const App = (() => {
     const assigned = recs.filter(hasSignOn).length;
     const noAssignRows = recs.filter(r => !hasSignOn(r));
     const noAssign = noAssignRows.length;
-    // Onboard = signed on in the past AND signs off in the future.
+    // Onboard = signed on in the past AND signs off in the future (WITA today).
     // At Home = everyone not currently onboard (future/blank sign-on, or a
     // contract that has already ended).
-    const nowT = Date.now();
     const isOnboard = r => {
-      const on = parseDate(r.signOnDate), off = parseDate(r.signOffDate);
-      return on && on.getTime() <= nowT && off && off.getTime() > nowT;
+      const onDays = daysUntilWITA(r.signOnDate), offDays = daysUntilWITA(r.signOffDate);
+      return onDays !== null && onDays <= 0 && offDays !== null && offDays > 0;
     };
     const onboard = recs.filter(isOnboard).length;
     const atHome = recs.length - onboard;
@@ -655,8 +685,7 @@ const App = (() => {
     const KEY = 'lastmin';
     const idOf = r => String(r.crewIdNumber ?? '').trim();
     const dayKey = seafarerDayKey();   // day boundary = 06:00 WITA
-    const now0 = new Date(); now0.setHours(0, 0, 0, 0);
-    const nowT = now0.getTime(), FOUR_WK = 28 * 86400000, FOUR_DAYS = 4 * 86400000;
+    const FOUR_WK_DAYS = 28, FOUR_DAY_DAYS = 4;   // "today" for these = WITA today, via daysUntilWITA
     const signKey = d => d ? `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}` : null;
     const parseSignKey = k => { if (!k) return null; const [y, m, d] = String(k).split('-').map(Number); return new Date(y, m - 1, d); };
 
@@ -727,15 +756,17 @@ const App = (() => {
       if (Object.keys(prev).length) {
         Object.keys(todaySign).forEach(id => {
           if (prev[id] === todaySign[id]) return;               // sign-on unchanged
-          const d = parseDate(byId[id].signOnDate);
-          // Last-minute ASSIGNMENT: sign-on changed to under 4 weeks away.
-          if (d && d.getTime() >= nowT && d.getTime() < nowT + FOUR_WK) flags[id] = dayKey;
+          // Last-minute ASSIGNMENT: sign-on changed to under 4 weeks away
+          // (WITA today).
+          const dDays = daysUntilWITA(byId[id].signOnDate);
+          if (dDays !== null && dDays >= 0 && dDays < FOUR_WK_DAYS) flags[id] = dayKey;
           // Last-minute RESCHEDULE: a sign-on that was imminent (≤4 days away)
           // moved to a different date — e.g. a seafarer already at the airport
           // pushed to a later date. Needs a prior imminent date, so brand-new
           // assignments don't count.
           const pd = parseSignKey(prev[id]);
-          if (pd && pd.getTime() >= nowT && pd.getTime() <= nowT + FOUR_DAYS) reschedFlags[id] = dayKey;
+          const pdDays = pd ? daysUntilWITA(pd) : null;
+          if (pdDays !== null && pdDays >= 0 && pdDays <= FOUR_DAY_DAYS) reschedFlags[id] = dayKey;
         });
       }
       state.day = dayKey;
@@ -1027,25 +1058,21 @@ const App = (() => {
     if (AT_RISK_WEEKS[tab.key] && tab.expectedKey) {
       const noApptSource = rawData ? applyDeployFilters(rawData, { ..._visaFilters, from: '', to: '' }) : data;
       const noApptHolders = noApptSource.map(r => ({ r, s: visaStatusOf(r, tab) })).filter(x => x.s);
-      const nowT = Date.now();
-      const windowEnd = nowT + AT_RISK_WEEKS[tab.key] * 7 * 86400000;
       noApptRows = noApptHolders
         .filter(x => {
           const s = String(x.s).trim().toLowerCase();
           if (s === 'need to process') return true;
           if (s === 'in process') {
-            const exp = parseDate(x.r[tab.expectedKey]);
-            return !exp || exp.getTime() < nowT;   // blank or already passed
+            const expDays = daysUntilWITA(x.r[tab.expectedKey]);
+            return expDays === null || expDays < 0;   // blank or already passed (WITA today)
           }
           return false;
         })
         .map(x => x.r)
         .filter(r => String(r.onboardingStatus ?? '').trim().toLowerCase() !== 'rescheduled')
         .filter(r => {
-          const so = parseDate(r.signOnDate);
-          if (!so) return false;
-          const t = so.getTime();
-          return t >= nowT && t < windowEnd;
+          const days = daysUntilWITA(r.signOnDate);
+          return days !== null && days >= 0 && days < AT_RISK_WEEKS[tab.key] * 7;
         });
     }
     const noAppt = noApptRows.length;
@@ -1064,7 +1091,6 @@ const App = (() => {
         ? (t => low(t) === 'c1/d visa')
         : (t => schengenTypes.includes(low(t)));
       const rows = visaSheet.filter(row => typeMatch(row[typeCol]));
-      const nowT = Date.now();
       const firstLabel = tab.key === 'c1d' ? 'Pending DS-160' : 'Pending Application';
       procGroups = [
         [firstLabel,            rows.filter(row => {
@@ -1080,8 +1106,8 @@ const App = (() => {
           return vs === 'visa payment processed' || vs === 'visa application processed';
         })],
         ['Secured Appointment', rows.filter(row => {
-          const d = parseSheetDate(row['Appointment Date']);
-          if (!d || d.getTime() <= nowT) return false;              // future appointment
+          const days = daysUntilWITASheet(row['Appointment Date']);
+          if (days === null || days <= 0) return false;              // future appointment (WITA today)
           if (tab.key === 'schengen') return low(row['Payment Status']) === 'paid';  // Schengen also requires Paid
           return true;
         })],
@@ -1820,13 +1846,13 @@ const App = (() => {
     // Expected Date is today or already passed, and still not resolved → the
     // whole row renders in red font so due-today/overdue items are obvious
     // at a glance (today is included so staff can clear it before it slips).
-    // Compared by CALENDAR DAY, not raw epoch: date-only strings parse as
-    // UTC midnight, which — for any positive UTC offset (e.g. WITA) — sits
-    // hours ahead of local midnight and would otherwise make "today" look
-    // like it hasn't arrived yet under a plain epoch comparison.
-    const dayOnly = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-    const today0 = dayOnly(new Date());
-    const isOverdue = x => dayOnly(x.exp) <= today0;
+    // "Today" here is WITA (Bali time), not the viewer's own browser
+    // timezone — so this flips the same way for everyone regardless of
+    // where they're opening the dashboard from.
+    const isOverdue = x => {
+      const days = daysUntilWITA(x.exp);
+      return days !== null && days <= 0;
+    };
 
     const paint = () => {
       const rows = buildRows();
@@ -1905,7 +1931,6 @@ const App = (() => {
   function j1ProcessingGroups(rows) {
     const norm = v => String(v ?? '').trim();
     const low  = v => norm(v).toLowerCase();
-    const nowT = Date.now();
     return [
       ['Pending DS-160', rows.filter(r => low(r['Payment Status']) === 'paid' && norm(r['Visa Status']) === '')],
       ['Pending Appointment', rows.filter(r => {
@@ -1915,8 +1940,8 @@ const App = (() => {
         return vs === 'visa payment processed' || vs === 'visa application processed';
       })],
       ['Secured Appointment', rows.filter(r => {
-        const d = parseSheetDate(r['Appointment Date']);
-        return d && d.getTime() > nowT;
+        const days = daysUntilWITASheet(r['Appointment Date']);
+        return days !== null && days > 0;   // future appointment (WITA today)
       })],
     ];
   }
@@ -1955,7 +1980,6 @@ const App = (() => {
     // "Current Appt" = 3rd appt, else 2nd, else 1st.
     // "Current Appt" = 3rd appt, else 2nd, else 1st.
     const lastAppt = p => p.appt3 || p.appt2 || p.appt1 || null;
-    const nowT = Date.now();
     // Program Source is bucketed into 4 fixed options; anything that isn't
     // MCSI / Bangkok / Vietnam is treated as CTI Indonesia.
     const sources = ['CTI MCSI', 'CTI Bangkok', 'CTI Vietnam', 'CTI Indonesia'];
@@ -1975,10 +1999,10 @@ const App = (() => {
       if (!hc || hc === '—' || hc.toLowerCase() === 'application process on hold') return false;
       if (!inSel(_j1Filters.source, sourceBucket(p))) return false;
       if (_j1Filters.apptRange !== 'all') {
-        const d = parseDate(lastAppt(p));
-        if (!d) return false;   // no current appointment → not past nor upcoming
-        if (_j1Filters.apptRange === 'past'     && !(d.getTime() <  nowT)) return false;
-        if (_j1Filters.apptRange === 'upcoming' && !(d.getTime() >= nowT)) return false;
+        const days = daysUntilWITA(lastAppt(p));
+        if (days === null) return false;   // no current appointment → not past nor upcoming
+        if (_j1Filters.apptRange === 'past'     && !(days < 0))  return false;
+        if (_j1Filters.apptRange === 'upcoming' && !(days >= 0)) return false;
       }
       return true;
     });
