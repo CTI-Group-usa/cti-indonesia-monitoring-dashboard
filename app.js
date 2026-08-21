@@ -1217,9 +1217,11 @@ const App = (() => {
         { label: 'Appointment Date', render: r => formatDate(r[tab.apptKey]), sort: r => dateSort(parseDate(r[tab.apptKey])), num: true, w: '8%' },
         { label: 'Expected Date', render: r => formatDate(r[tab.expectedKey]), sort: r => dateSort(parseDate(r[tab.expectedKey])), num: true, w: '8%' },
         { label: 'Visa Log Status', render: r => {
-            const v = String(visaLogLookup(r)?.['Visa Status'] ?? '').trim();
-            return v ? `<span class="log-progress">${esc(v)}</span>` : '—';
-          }, sort: r => txtSort(visaLogLookup(r)?.['Visa Status']), w: '10%' },
+            const m = visaLogLookup(r);
+            if (!m) return '—';   // no matching email in the Visa Log at all
+            const v = String(m['Visa Status'] ?? '').trim() || 'Registered';   // matched, but Visa Status blank
+            return `<span class="log-progress">${esc(v)}</span>`;
+          }, sort: r => txtSort(visaLogLookup(r)?.['Visa Status'] || (visaLogLookup(r) ? 'Registered' : '')), w: '10%' },
         { label: 'Sign On Date', render: r => formatDate(r.signOnDate),    sort: r => dateSort(parseDate(r.signOnDate)), num: true, w: '8%' },
         { label: 'Ship',         render: r => esc(r.joiningShip),          sort: r => txtSort(r.joiningShip),  w: '9%' },
         { label: 'Sign On Port', render: r => esc(r.signOnPort),           sort: r => txtSort(r.signOnPort),   w: '8%' },
