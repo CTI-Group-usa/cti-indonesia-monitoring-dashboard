@@ -1522,11 +1522,12 @@ const App = (() => {
     return so !== dayKeyOf(r.rescheduledDate);     // unmatched
   }
 
-  // Potential RTG (Ready To Go): onboarding is "Completing Documents" and
-  // every document status — including vaccination — is clear of the same
-  // red flags used in the Records table (Need to Process / In Process /
-  // Unfit). Vaccines_Status is multi-select (comma-joined), so each selected
-  // value is checked individually.
+  // Potential RTG (Ready To Go): onboarding is "Completing Documents", every
+  // document status — including vaccination — is clear of the same red
+  // flags used in the Records table (Need to Process / In Process / Unfit),
+  // AND Completed Vaccination includes at least both MMR 1 and MMR 2.
+  // Vaccines_Status is multi-select (comma-joined), so each selected value
+  // is checked individually.
   const RTG_DOC_FIELDS = [
     'passportStatus', 'bstStatus', 'seamanBookStatus', 'medicalStatus',
     'sdbStatus', 'bidStatus', 'c1dVisaStatus', 'oktbStatus', 'mcvStatus',
@@ -1534,8 +1535,11 @@ const App = (() => {
   ];
   function isPotentialRTG(r) {
     if (String(r.onboardingStatus ?? '').trim().toLowerCase() !== 'completing documents') return false;
-    return RTG_DOC_FIELDS.every(f =>
+    const clear = RTG_DOC_FIELDS.every(f =>
       !String(r[f] ?? '').split(',').some(v => NEEDS_ATTENTION.test(v.trim())));
+    if (!clear) return false;
+    const vaccines = String(r.vaccinesStatus ?? '').split(',').map(v => v.trim().toLowerCase());
+    return vaccines.includes('mmr 1') && vaccines.includes('mmr 2');
   }
 
   // Records dataset for the current sub-tab + the search box. The operational
