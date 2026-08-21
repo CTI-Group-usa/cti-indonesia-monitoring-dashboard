@@ -1219,8 +1219,11 @@ const App = (() => {
         { label: 'Visa Log Status', render: r => {
             const m = visaLogLookup(r);
             if (!m) return '—';   // no matching email in the Visa Log at all
-            const v = String(m['Visa Status'] ?? '').trim() || 'Registered';   // matched, but Visa Status blank
-            return `<span class="log-progress">${esc(v)}</span>`;
+            const raw = String(m['Visa Status'] ?? '').trim();
+            // A real status = actual progress (green); matched but still
+            // blank = only registered so far, no processing yet (red).
+            const cls = raw ? 'log-progress' : 'status-flag';
+            return `<span class="${cls}">${esc(raw || 'Registered')}</span>`;
           }, sort: r => txtSort(visaLogLookup(r)?.['Visa Status'] || (visaLogLookup(r) ? 'Registered' : '')), w: '10%' },
         { label: 'Sign On Date', render: r => formatDate(r.signOnDate),    sort: r => dateSort(parseDate(r.signOnDate)), num: true, w: '8%' },
         { label: 'Ship',         render: r => esc(r.joiningShip),          sort: r => txtSort(r.joiningShip),  w: '9%' },
