@@ -980,6 +980,31 @@ const App = (() => {
     }
     const issueGap = issueGapRows.length;
 
+    // C1/D and Schengen only: Visa Registration Log rows for this tab's visa
+    // type, indexed by email — lets the At Risk drill-down cross-check
+    // against the sheet, since the Recruit module's status can lag behind
+    // what the Visa Team has actually already logged/booked there.
+    let sheetByEmail = null;
+    if ((tab.key === 'c1d' || tab.key === 'schengen') && Array.isArray(visaSheet) && visaSheet.length) {
+      const typeCol = 'Please select the type of visa you want to process';
+      const norm = v => String(v ?? '').trim();
+      const low  = v => norm(v).toLowerCase();
+      const schengenTypes = ['schengen visa', 'schengen visa prime time', 'spain visa prime time'];
+      const typeMatch = tab.key === 'c1d'
+        ? (t => low(t) === 'c1/d visa')
+        : (t => schengenTypes.includes(low(t)));
+      sheetByEmail = new Map();
+      visaSheet.filter(row => typeMatch(row[typeCol])).forEach(row => {
+        const email = low(row['Email Address']);
+        if (email) sheetByEmail.set(email, row);   // last match wins on duplicates
+      });
+    }
+    const visaLogLookup = r => {
+      if (!sheetByEmail) return null;
+      const email = String(r.email ?? '').trim().toLowerCase();
+      return email ? (sheetByEmail.get(email) || null) : null;
+    };
+
     // C1/D and Schengen only: Onboarding Status is not Rescheduled, sign-on is
     // less than 10 weeks away, AND either —
     //   1) visa status is Need to Process, or
@@ -1180,17 +1205,27 @@ const App = (() => {
     if (naCard && noAppt) {
       // Percentage widths (sum to 100%) so the table fills the modal exactly,
       // with no horizontal scrolling, instead of fixed px widths.
+      // Visa Log Status/Appointment cross-check the Visa Registration Log by
+      // email — the Recruit module's status can lag behind what the Visa
+      // Team already logged there, so a match here means this person is
+      // actually further along than their module status shows.
       const naCols = [
-        { label: 'ID Number',    render: r => esc(r.crewIdNumber),         sort: r => txtSort(r.crewIdNumber), w: '6%' },
-        { label: 'Name',         render: r => esc(r.name),                 sort: r => txtSort(r.name),         w: '13%', wrap: true },
-        { label: 'Email',        render: r => esc(r.email),                sort: r => txtSort(r.email),        w: '14%', wrap: true },
-        { label: `${tab.label} Status`, render: r => esc(r[tab.statusKey]), sort: r => txtSort(r[tab.statusKey]), w: '10%' },
-        { label: 'Appointment Date', render: r => formatDate(r[tab.apptKey]), sort: r => dateSort(parseDate(r[tab.apptKey])), num: true, w: '9%' },
-        { label: 'Expected Date', render: r => formatDate(r[tab.expectedKey]), sort: r => dateSort(parseDate(r[tab.expectedKey])), num: true, w: '9%' },
-        { label: 'Sign On Date', render: r => formatDate(r.signOnDate),    sort: r => dateSort(parseDate(r.signOnDate)), num: true, w: '9%' },
-        { label: 'Ship',         render: r => esc(r.joiningShip),          sort: r => txtSort(r.joiningShip),  w: '10%' },
-        { label: 'Sign On Port', render: r => esc(r.signOnPort),           sort: r => txtSort(r.signOnPort),   w: '9%' },
-        { label: 'Onboarding Status', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus), w: '11%' },
+        { label: 'ID Number',    render: r => esc(r.crewIdNumber),         sort: r => txtSort(r.crewIdNumber), w: '5%' },
+        { label: 'Name',         render: r => esc(r.name),                 sort: r => txtSort(r.name),         w: '11%', wrap: true },
+        { label: 'Email',        render: r => esc(r.email),                sort: r => txtSort(r.email),        w: '15%', wrap: true },
+        { label: `${tab.label} Status`, render: r => esc(r[tab.statusKey]), sort: r => txtSort(r[tab.statusKey]), w: '8%' },
+        { label: 'Appointment Date', render: r => formatDate(r[tab.apptKey]), sort: r => dateSort(parseDate(r[tab.apptKey])), num: true, w: '7%' },
+        { label: 'Expected Date', render: r => formatDate(r[tab.expectedKey]), sort: r => dateSort(parseDate(r[tab.expectedKey])), num: true, w: '7%' },
+        { label: 'Visa Log Status', render: r => {
+            const v = String(visaLogLookup(r)?.['Visa Status'] ?? '').trim();
+            return v ? `<span class="log-progress">${esc(v)}</span>` : '—';
+          }, sort: r => txtSort(visaLogLookup(r)?.['Visa Status']), w: '9%' },
+        { label: 'Visa Log Appt', render: r => formatSheetDate(visaLogLookup(r)?.['Appointment Date']),
+          sort: r => dateSort(parseSheetDate(visaLogLookup(r)?.['Appointment Date'])), num: true, w: '7%' },
+        { label: 'Sign On Date', render: r => formatDate(r.signOnDate),    sort: r => dateSort(parseDate(r.signOnDate)), num: true, w: '7%' },
+        { label: 'Ship',         render: r => esc(r.joiningShip),          sort: r => txtSort(r.joiningShip),  w: '8%' },
+        { label: 'Sign On Port', render: r => esc(r.signOnPort),           sort: r => txtSort(r.signOnPort),   w: '7%' },
+        { label: 'Onboarding Status', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus), w: '9%' },
       ];
       naCard.onclick = () => openDetailModal(noApptRows, naCols, `${tab.label} — At Risk, Sign On < 10 Weeks`);
     }

@@ -428,6 +428,10 @@ tbody tr:hover { background: var(--bg); }
    In Process / Unfit) render in red font so they stand out while scanning. */
 .status-flag { color: var(--accent); font-weight: 600; }
 
+/* At Risk drill-down: a Visa Registration Log match (green) means this
+   person is actually further along than their Recruit module status shows. */
+.log-progress { color: #16a34a; font-weight: 600; }
+
 /* Pending Action table: an Expected Date that's already passed and still
    unresolved renders the whole row in red font. Selector must out-specify
    `.data-table tbody td` (line ~1062), which also sets td color. */
