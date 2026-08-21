@@ -1470,7 +1470,8 @@ const App = (() => {
       const ra = document.getElementById('reassignedCount');
       if (ra) ra.textContent = '· ' + opBase.filter(isReassigned).length;
       const rtg = document.getElementById('rtgCount');
-      if (rtg) rtg.textContent = '· ' + opBase.filter(isPotentialRTG).length;
+      // Potential RTG follows ALL filters, including the Sign On date range.
+      if (rtg) rtg.textContent = '· ' + applyDeployFilters(data, _recFilters).filter(isPotentialRTG).length;
       const cs = document.getElementById('compareStamp');
       if (cs) cs.textContent = _lastComparedAt ? `Last compared: ${fmtWITA(_lastComparedAt)}` : 'Last compared: not yet run';
       document.getElementById('recHead').innerHTML = headHtml(cols);
@@ -1542,11 +1543,12 @@ const App = (() => {
     return vaccines.includes('mmr 1') && vaccines.includes('mmr 2');
   }
 
-  // Records dataset for the current sub-tab + the search box. The operational
-  // tabs (Last Minutes Assignment / Rescheduled, Re-Assigned, Potential RTG)
+  // Records dataset for the current sub-tab + the search box. The daily-
+  // comparison tabs (Last Minutes Assignment / Rescheduled, Re-Assigned)
   // apply the office/cruise/onboarding filters but NOT the sign-on date
-  // range; only "All Records" applies the full filter bar (including the
-  // date range).
+  // range, since narrowing by date would hide flags found on other days.
+  // "All Records" and "Potential RTG" apply the full filter bar, including
+  // the date range.
   function recFiltered(data) {
     let rows;
     const op = () => applyDeployFilters(data, { ..._recFilters, from: '', to: '' });
@@ -1557,7 +1559,7 @@ const App = (() => {
     else if (_recTab === 'reassigned')
       rows = op().filter(isReassigned);
     else if (_recTab === 'rtg')
-      rows = op().filter(isPotentialRTG);
+      rows = applyDeployFilters(data, _recFilters).filter(isPotentialRTG);   // full filters, incl. Sign On date range
     else
       rows = applyDeployFilters(data, _recFilters);   // All Records (full filters)
     const q = _search.trim().toLowerCase();
