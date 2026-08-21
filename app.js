@@ -149,9 +149,13 @@ const App = (() => {
 
     const stamp = document.getElementById('lastRefresh');
     if (stamp && _lastUpdated) {
-      const t = new Date(_lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      stamp.textContent = `🔄 Updated ${t}`;
-      stamp.title = `Data last refreshed at ${new Date(_lastUpdated).toLocaleString()}`;
+      // Always WITA (Bali time), regardless of the viewer's own timezone —
+      // matches "Last compared" so every time shown in the dashboard is
+      // anchored to the same clock.
+      const opts = { timeZone: 'Asia/Makassar' };
+      const t = new Date(_lastUpdated).toLocaleTimeString([], { ...opts, hour: '2-digit', minute: '2-digit' });
+      stamp.textContent = `🔄 Updated ${t} WITA`;
+      stamp.title = `Data last refreshed at ${new Date(_lastUpdated).toLocaleString([], { ...opts, dateStyle: 'medium', timeStyle: 'short' })} WITA`;
     }
   }
 
