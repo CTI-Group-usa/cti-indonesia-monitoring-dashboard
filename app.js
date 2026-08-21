@@ -1281,7 +1281,7 @@ const App = (() => {
     const body  = document.getElementById('detailBody');
     if (!modal || !body) return;
 
-    let activeTab = 0, sortI = -1, dir = 1;
+    let activeTab = 0, sortI = -1, dir = 1, q = '';
     const curRows = () => tabs ? tabs[activeTab].rows : rows;
 
     // Fixed-width columns with ellipsis; full value on hover via title.
@@ -1296,8 +1296,18 @@ const App = (() => {
       return `<td${cls}${st} title="${esc(txt)}">${html}</td>`;
     };
 
-    const sortedRows = () => {
+    // Plain text of every column, for the search box (search across all
+    // visible columns, not just one field).
+    const rowText = r => cols.map(c => String(c.render(r)).replace(/<[^>]*>/g, ' ')).join(' ').toLowerCase();
+
+    const filteredRows = () => {
       const rws = curRows();
+      const term = q.trim().toLowerCase();
+      return term ? rws.filter(r => rowText(r).includes(term)) : rws;
+    };
+
+    const sortedRows = () => {
+      const rws = filteredRows();
       if (sortI < 0) return rws;
       const c = cols[sortI];
       return rws.slice().sort((a, b) => {
@@ -1317,6 +1327,26 @@ const App = (() => {
       return `<th class="sortable" data-i="${i}"${st}>${c.label}${arrow}</th>`;
     }).join('')}</tr>`;
 
+    // Rebuilds only the table head/body + shown-count — keeps the search
+    // input (and its focus/cursor) intact while typing, and reruns on sort.
+    const repaintTable = () => {
+      const thead = body.querySelector('#detailThead');
+      const tbody = body.querySelector('#detailTbody');
+      if (!thead || !tbody) return;
+      thead.innerHTML = headHtml();
+      const rws = sortedRows();
+      tbody.innerHTML = rws.length
+        ? rws.map(r => `<tr>${cols.map(c => cell(c, r)).join('')}</tr>`).join('')
+        : `<tr><td colspan="${cols.length}" class="empty-row">No matches.</td></tr>`;
+      const shown = body.querySelector('#detailShown');
+      if (shown) shown.textContent = `${rws.length.toLocaleString()} shown`;
+      thead.querySelectorAll('th.sortable').forEach(th => th.onclick = () => {
+        const i = +th.dataset.i;
+        if (i === sortI) dir = -dir; else { sortI = i; dir = 1; }
+        repaintTable();
+      });
+    };
+
     const render = () => {
       // Header count: total across all tabs (not just the active one).
       const n = tabs ? tabs.reduce((s, t) => s + t.rows.length, 0) : curRows().length;
@@ -1330,20 +1360,24 @@ const App = (() => {
         </div>
         ${subtabs}
         <div class="modal-detail-body">
+          <div class="toolbar" style="margin-bottom:10px;">
+            <input type="search" class="search-input" id="detailSearch" placeholder="Search…" value="${esc(q)}">
+            <span class="rec-count" id="detailShown"></span>
+          </div>
           <div class="table-wrap detail-wrap"><table class="data-table detail-table">
-            <thead>${headHtml()}</thead>
-            <tbody>${sortedRows().map(r => `<tr>${cols.map(c => cell(c, r)).join('')}</tr>`).join('')}</tbody>
+            <thead id="detailThead"></thead>
+            <tbody id="detailTbody"></tbody>
           </table></div>
         </div>`;
       document.getElementById('detailClose').onclick = closeDetail;
-      body.querySelectorAll('th.sortable').forEach(th => th.onclick = () => {
-        const i = +th.dataset.i;
-        if (i === sortI) dir = -dir; else { sortI = i; dir = 1; }
-        render();
-      });
       body.querySelectorAll('[data-dtab]').forEach(b => b.onclick = () => {
         activeTab = +b.dataset.dtab; sortI = -1; dir = 1; render();
       });
+      document.getElementById('detailSearch').addEventListener('input', e => {
+        q = e.target.value;
+        repaintTable();
+      });
+      repaintTable();
     };
 
     modal.classList.add('show');
