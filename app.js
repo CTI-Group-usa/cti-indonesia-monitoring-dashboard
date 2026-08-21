@@ -1006,27 +1006,25 @@ const App = (() => {
     };
 
     // C1/D and Schengen only: Onboarding Status is not Rescheduled, sign-on is
-    // less than 10 weeks away, AND either —
+    // less than the tab's window away (C1/D: 12 weeks, Schengen: 8 weeks —
+    // different processing lead times per visa type), AND either —
     //   1) visa status is Need to Process, or
     //   2) visa status is In Process but the EXPECTED date (admin-recorded)
     //      is blank or has already passed.
     // Excluding Rescheduled: once a seafarer's assignment is rescheduled, the
     // sign-on date this alert is anchored to no longer reflects a real plan.
-    // Appointment slots run ~2 months out; 10 weeks gives a bit of headroom
-    // beyond that lead time so a case doesn't surface right at the edge of
-    // still being able to book.
     // Deliberately NOT affected by the page's Sign On Date range filter — that
     // filter is for browsing a window, but this is a real-time "is anyone
     // about to miss their appointment window" alert, so it always evaluates
     // against the true sign-on date regardless of what date range is shown.
     // Office/Cruise Line/Onboarding Status filters still apply.
     let noApptRows = [];
-    if ((tab.key === 'c1d' || tab.key === 'schengen') && tab.expectedKey) {
+    const AT_RISK_WEEKS = { c1d: 12, schengen: 8 };
+    if (AT_RISK_WEEKS[tab.key] && tab.expectedKey) {
       const noApptSource = rawData ? applyDeployFilters(rawData, { ..._visaFilters, from: '', to: '' }) : data;
       const noApptHolders = noApptSource.map(r => ({ r, s: visaStatusOf(r, tab) })).filter(x => x.s);
       const nowT = Date.now();
-      const TEN_WK = 70 * 86400000;
-      const windowEnd = nowT + TEN_WK;
+      const windowEnd = nowT + AT_RISK_WEEKS[tab.key] * 7 * 86400000;
       noApptRows = noApptHolders
         .filter(x => {
           const s = String(x.s).trim().toLowerCase();
@@ -1097,7 +1095,7 @@ const App = (() => {
         ${tab.expiryKey ? statCard(expiringLabel, expiring, { id: 'statExpiring', clickable: expiring > 0 }) : statCard('No Status', noStatus, { id: 'statNoStatus', clickable: noStatus > 0 })}
         ${tab.key === 'mcv' ? statCard('Unmatched Passport', unmatched, { id: 'statUnmatched', clickable: unmatched > 0 }) : ''}
         ${tab.key === 'schengen' ? statCard('Issued < 2d before Sign On', issueGap, { id: 'statIssueGap', clickable: issueGap > 0 }) : ''}
-        ${(tab.key === 'c1d' || tab.key === 'schengen') ? statCard('At Risk, Sign On <10wk', noAppt, { id: 'statNoAppt', clickable: noAppt > 0 }) : ''}
+        ${AT_RISK_WEEKS[tab.key] ? statCard(`At Risk, Sign On <${AT_RISK_WEEKS[tab.key]}wk`, noAppt, { id: 'statNoAppt', clickable: noAppt > 0 }) : ''}
       </div>
       <div class="chart-row">
         <div class="card chart-card">
@@ -1230,7 +1228,7 @@ const App = (() => {
         { label: 'Sign On Port', render: r => esc(r.signOnPort),           sort: r => txtSort(r.signOnPort),   w: '8%' },
         { label: 'Onboarding Status', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus), w: '7%' },
       ];
-      naCard.onclick = () => openDetailModal(noApptRows, naCols, `${tab.label} — At Risk, Sign On < 10 Weeks`);
+      naCard.onclick = () => openDetailModal(noApptRows, naCols, `${tab.label} — At Risk, Sign On < ${AT_RISK_WEEKS[tab.key]} Weeks`);
     }
   }
 
