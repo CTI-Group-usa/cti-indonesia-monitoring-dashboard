@@ -1146,10 +1146,20 @@ const App = (() => {
       const counts = {};
       procGroups.forEach(([label, rows]) => { counts[label] = rows.length; });
       const s = (row, k) => esc(row[k] || '—');
+      // The Visa Registration Log sheet has no Sign On Date column — look it
+      // up from the Recruit module by email (unfiltered, matching procGroups'
+      // own "not page-filtered" rule) so it can be shown alongside the sheet data.
+      const moduleByEmail = new Map();
+      (rawData || data).forEach(r => {
+        const email = String(r.email ?? '').trim().toLowerCase();
+        if (email) moduleByEmail.set(email, r);
+      });
+      const moduleOf = row => moduleByEmail.get(String(row['Email Address'] ?? '').trim().toLowerCase());
       const col = {
         name:  { label: 'Name',             render: r => s(r, 'Name'),            sort: r => txtSort(r['Name']),          w: 200, wrap: true },
         email: { label: 'Email',            render: r => s(r, 'Email Address'),   sort: r => txtSort(r['Email Address']), w: 230, wrap: true },
         line:  { label: 'Cruise Line',      render: r => s(r, 'Cruise Line'),     sort: r => txtSort(r['Cruise Line']),   w: 150 },
+        signOn:{ label: 'Sign On Date',     render: r => formatDate(moduleOf(r)?.signOnDate), sort: r => dateSort(parseDate(moduleOf(r)?.signOnDate)), num: true, w: 140 },
         pay:   { label: 'Payment Status',   render: r => s(r, 'Payment Status'),  sort: r => txtSort(r['Payment Status']), w: 130 },
         vstat: { label: 'Visa Status',      render: r => s(r, 'Visa Status'),     sort: r => txtSort(r['Visa Status']),   w: 180 },
         added: { label: 'Added Time',       render: r => formatSheetDate(r['Added Time']), sort: r => dateSort(parseSheetDate(r['Added Time'])), num: true, w: 140 },
@@ -1161,11 +1171,11 @@ const App = (() => {
       // Pending DS-160 / Pending Application uses "Added Time"; the other two
       // keep BNIVA + Appointment. Schengen's Pending Appointment is special:
       // Added Time (first), Name, Email, Cruise Line, Payment Status, wide Notes.
-      const ds160Cols      = [col.added, col.name, col.email, col.line, col.pay, col.vstat, col.appid];
-      const otherCols      = [col.name, col.email, col.line, col.pay, col.vstat, col.bniva, col.appt, col.appid];
-      const c1dApptCols    = [col.added, col.name, col.email, col.line, col.vstat, col.bniva, col.appt, col.appid];   // no Payment Status
-      const c1dSecuredCols = [col.name, col.email, col.line, col.vstat, col.bniva, col.appt, col.appid];               // no Payment Status
-      const schApptCols    = [col.added, col.name, col.email, col.line, col.vstat, col.notes];
+      const ds160Cols      = [col.added, col.name, col.email, col.line, col.signOn, col.pay, col.vstat, col.appid];
+      const otherCols      = [col.name, col.email, col.line, col.signOn, col.pay, col.vstat, col.bniva, col.appt, col.appid];
+      const c1dApptCols    = [col.added, col.name, col.email, col.line, col.signOn, col.vstat, col.bniva, col.appt, col.appid];   // no Payment Status
+      const c1dSecuredCols = [col.name, col.email, col.line, col.signOn, col.vstat, col.bniva, col.appt, col.appid];               // no Payment Status
+      const schApptCols    = [col.added, col.name, col.email, col.line, col.signOn, col.vstat, col.notes];
       const firstLabel = procGroups[0][0];   // "Pending DS-160" / "Pending Application"
       drawBar('c1dSheetChart', counts, label => {
         const g = procGroups.find(([l]) => l === label);
