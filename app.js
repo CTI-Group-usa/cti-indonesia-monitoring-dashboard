@@ -1180,7 +1180,10 @@ const App = (() => {
       // Pending DS-160 / Pending Application uses "Added Time"; the other two
       // keep BNIVA + Appointment. Schengen's Pending Appointment is special:
       // Added Time (first), Name, Email, Cruise Line, Payment Status, wide Notes.
+      // C1/D's Pending DS-160 swaps Visa Status/Application ID for Notes (both
+      // are always blank at that stage anyway).
       const ds160Cols      = pctCols([col.added, col.name, col.email, col.line, col.signOn, col.pay, col.vstat, col.appid]);
+      const ds160ColsC1D   = pctCols([col.added, col.name, col.email, col.line, col.signOn, col.pay, col.notes]);
       const otherCols      = pctCols([col.name, col.email, col.line, col.signOn, col.pay, col.vstat, col.bniva, col.appt, col.appid]);
       const c1dApptCols    = pctCols([col.added, col.name, col.email, col.line, col.signOn, col.vstat, col.bniva, col.appt, col.appid]);   // no Payment Status
       const c1dSecuredCols = pctCols([col.name, col.email, col.line, col.signOn, col.vstat, col.bniva, col.appt, col.appid]);               // no Payment Status
@@ -1189,7 +1192,8 @@ const App = (() => {
       drawBar('c1dSheetChart', counts, label => {
         const g = procGroups.find(([l]) => l === label);
         if (!g || !g[1].length) return;
-        const cols = label === firstLabel ? ds160Cols
+        const cols = (tab.key === 'c1d' && label === firstLabel) ? ds160ColsC1D
+          : label === firstLabel ? ds160Cols
           : (tab.key === 'schengen' && label === 'Pending Appointment') ? schApptCols
           : (tab.key === 'c1d' && label === 'Pending Appointment') ? c1dApptCols
           : (tab.key === 'c1d' && label === 'Secured Appointment') ? c1dSecuredCols
