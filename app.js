@@ -1852,6 +1852,7 @@ const App = (() => {
         const exp = parseDate(r[dt.exp]);
         if (!exp) return;                // no expected date recorded
         if (isValid(r[dt.st])) return;   // already Valid → resolved
+        if (/not required/i.test(String(r[dt.st] ?? ''))) return;   // Not Required → doesn't need this document at all
         rows.push({ r, doc: dt.label, exp, status: r[dt.st] });
       }));
       const q = _search.trim().toLowerCase();
