@@ -2167,14 +2167,10 @@ const App = (() => {
     const atRiskCard = panel.querySelector('#statJ1AtRisk');
     if (atRiskCard && atRiskRows.length) {
       const arCols = [
-        { label: 'Name',            render: p => esc(p.fullName),            sort: p => txtSort(p.fullName), w: '14%', wrap: true },
-        { label: 'Email',           render: p => esc(p.email),               sort: p => txtSort(p.email),    w: '18%' },
-        { label: 'Hosting Company', render: p => esc(p.hostingCompany),      sort: p => txtSort(p.hostingCompany), w: '17%', wrap: true },
+        { label: 'Name',            render: p => esc(p.fullName),            sort: p => txtSort(p.fullName), w: '12%', wrap: true },
+        { label: 'Email',           render: p => esc(p.email),               sort: p => txtSort(p.email),    w: '14%' },
+        { label: 'Hosting Company', render: p => esc(p.hostingCompany),      sort: p => txtSort(p.hostingCompany), w: '14%', wrap: true },
         { label: 'Program Start',   render: p => formatDate(p.programStart), sort: p => dateSort(parseDate(p.programStart)), num: true, w: '11%' },
-        { label: 'J1 Visa Status',  render: p => {
-            const raw = String(p.visaStatus ?? '').trim();
-            return /reject/i.test(raw) ? `<span class="status-flag">${esc(raw)}</span>` : esc(raw);
-          }, sort: p => txtSort(p.visaStatus), w: '13%' },
         { label: 'Visa Log Status', render: p => {
             const row = j1LogLookup(p);
             if (!row) return '—';
@@ -2189,7 +2185,12 @@ const App = (() => {
             const text = formatSheetDate(raw);
             const days = daysUntilWITASheet(raw);
             return (days !== null && days < 0) ? `<span class="status-flag">${esc(text)}</span>` : esc(text);
-          }, sort: p => dateSort(parseSheetDate(j1LogLookup(p)?.['Appointment Date'])), num: true, w: '14%' },
+          }, sort: p => dateSort(parseSheetDate(j1LogLookup(p)?.['Appointment Date'])), num: true, w: '12%' },
+        { label: 'Notes', render: p => {
+            const row = j1LogLookup(p);
+            const v = row ? String(row['Notes'] ?? '').trim() : '';
+            return esc(v || '—');
+          }, sort: p => txtSort(j1LogLookup(p)?.['Notes']), w: '24%', wrap: true },
       ];
       atRiskCard.onclick = () => openDetailModal(atRiskRows, arCols, 'J1 — At Risk, Program Start < 12 Weeks');
     }
