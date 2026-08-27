@@ -2158,12 +2158,17 @@ const App = (() => {
         { label: 'Email',           render: p => esc(p.email),               sort: p => txtSort(p.email),    w: '18%' },
         { label: 'Hosting Company', render: p => esc(p.hostingCompany),      sort: p => txtSort(p.hostingCompany), w: '17%', wrap: true },
         { label: 'Program Start',   render: p => formatDate(p.programStart), sort: p => dateSort(parseDate(p.programStart)), num: true, w: '11%' },
-        { label: 'J1 Visa Status',  render: p => esc(p.visaStatus),          sort: p => txtSort(p.visaStatus), w: '13%' },
+        { label: 'J1 Visa Status',  render: p => {
+            const raw = String(p.visaStatus ?? '').trim();
+            return /reject/i.test(raw) ? `<span class="status-flag">${esc(raw)}</span>` : esc(raw);
+          }, sort: p => txtSort(p.visaStatus), w: '13%' },
         { label: 'Visa Log Status', render: p => {
             const row = j1LogLookup(p);
             if (!row) return '—';
             const raw = String(row['Visa Status'] ?? '').trim();
-            const cls = raw ? 'log-progress' : 'status-flag';
+            // Rejected is always red, regardless of whether it's a real
+            // status or the "matched but blank" fallback label.
+            const cls = !raw ? 'status-flag' : /reject/i.test(raw) ? 'status-flag' : 'log-progress';
             return `<span class="${cls}">${esc(raw || 'Registered')}</span>`;
           }, sort: p => txtSort(j1LogLookup(p)?.['Visa Status'] || (j1LogLookup(p) ? 'Registered' : '')), w: '13%' },
         { label: 'Program Sources', render: p => esc(p.programSources),      sort: p => txtSort(p.programSources), w: '14%' },
