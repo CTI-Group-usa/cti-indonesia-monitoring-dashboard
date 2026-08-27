@@ -1213,21 +1213,21 @@ th.sorted {
 .j1-table .j1-host { width: 100%; white-space: normal; }
 .j1-table .badge { font-size: 0.66rem; padding: 1px 6px; }
 
-/* Visa Performance top area: normal document flow (NOT absolute/floated —
-   that was tried 3 ways and each one collided with something, since there
-   simply isn't enough spare blank space around this row for a 150px-tall
-   block to float over without hitting either the topbar or the table).
-   align-items:center gives literally equal top/bottom space around the
-   shorter filter column, and the row's own padding gives equal space above
-   the whole block and before the table below it. Guaranteed no overlap on
-   any screen size, at the cost of the table sitting further down. */
-.j1-perf-head {
-  display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; gap: 16px; padding: 18px 0; margin-bottom: 16px;
-}
-.j1-perf-head .j1-perf-left { flex: 1 1 320px; max-width: 55%; }
+/* Visa Performance top area: SAME mechanism as the original (pre-chip)
+   design — .j1-perf-head reserves NO extra space (filters/count only,
+   unchanged), and the chip+chart float up from a fixed offset anchored to
+   that row's own top edge, same as the original chart always did. The
+   original used top:-88px for a ~158px-tall single chart (bottom edge
+   ending ~70px below the row's top — the proven-safe clearance before the
+   table). This block is ~150px tall now (chip+chart), so the offset is
+   recalculated to land its bottom edge at that same ~70px mark: -80px. */
+.j1-perf-head { position: relative; min-height: 40px; margin-bottom: 12px; }
+.j1-perf-head .j1-perf-left { max-width: 55%; }
 .j1-perf-head .j1-perf-left .toolbar { margin-top: 8px; }
-.j1-perf-head .j1-perf-topright { display: flex; align-items: stretch; gap: 10px; height: 150px; flex: 0 0 auto; }
+.j1-perf-head .j1-perf-topright {
+  position: absolute; top: -80px; right: 0;
+  display: flex; align-items: stretch; gap: 10px; height: 150px;
+}
 .j1-perf-head .j1-perf-topright .stat-card {
   flex: 0 0 150px; height: 150px; padding: 14px; justify-content: center; box-sizing: border-box;
 }
@@ -1240,9 +1240,8 @@ th.sorted {
 .j1-perf-head .j1-perf-chart .card-title { font-size: 0.8rem; margin-bottom: 4px; flex: 0 0 auto; }
 .j1-perf-head .j1-perf-chart canvas { flex: 1 1 auto; min-height: 0; max-height: none; }
 @media (max-width: 768px) {
-  .j1-perf-head { padding: 12px 0; }
   .j1-perf-head .j1-perf-left { max-width: 100%; }
-  .j1-perf-head .j1-perf-topright { width: 100%; margin-top: 12px; flex-wrap: wrap; }
+  .j1-perf-head .j1-perf-topright { position: static; width: 100%; height: auto; margin-top: 12px; flex-wrap: wrap; }
   .j1-perf-head .j1-perf-topright .stat-card { height: auto; }
   .j1-perf-head .j1-perf-chart { width: 100%; max-width: 100%; height: 150px; }
 }
