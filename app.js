@@ -2032,7 +2032,7 @@ const App = (() => {
         : label === 'Pending Appointment' ? apptCols
         : securedCols;
       openDetailModal(g[1], cols, `J1 Visa — ${label}`);
-    });
+    }, { wrapLabels: true });
   }
 
   // Sub-tab 1 — Visa Performance: J1_Participants table (+ Visa Processing
