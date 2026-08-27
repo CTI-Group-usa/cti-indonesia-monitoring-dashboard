@@ -186,15 +186,16 @@ const CONFIG = {
   // ─────────────────────────────────────────────────────────────
   J1_MODULE: 'J1_Participants',
   J1_FIELDS: {
-    fullName:       'Full_Name',
-    email:          'Email',
-    programSources: 'J1_Program_Sources',
-    hostingCompany: 'Hosting_Company_2',
-    programStart:   'Program_Start_Date',
-    visaStatus:     'J1_Visa_Status',
-    appt1:          'J1_Visa_Appointment_Date',        // 1st appointment
-    appt2:          'J1_Visa_2nd_Appointment_Date',
-    appt3:          'J1_Visa_3rd_Appointment_Date',
+    fullName:          'Full_Name',
+    email:             'Email',
+    programSources:    'J1_Program_Sources',
+    hostingCompany:    'Hosting_Company_2',
+    programStart:      'Program_Start_Date',
+    visaStatus:        'J1_Visa_Status',
+    applicationStatus: 'J1_Application_Status',         // Stage 1 / Stage 2 / Stage 3 / Stage 4
+    appt1:             'J1_Visa_Appointment_Date',        // 1st appointment
+    appt2:             'J1_Visa_2nd_Appointment_Date',
+    appt3:             'J1_Visa_3rd_Appointment_Date',
   },
   // J1 Visa Log sheet (drives the J1 Visa Processing chart).
   J1_SHEET: {

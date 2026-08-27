@@ -2089,7 +2089,9 @@ const App = (() => {
       if (!hc || hc === '—' || hc.toLowerCase() === 'application process on hold') return false;
       return inSel(_j1Filters.source, sourceBucket(p));
     });
+    const AT_RISK_STAGES = ['stage 1', 'stage 2', 'stage 3', 'stage 4'];
     const atRiskRows = atRiskBase.filter(p => {
+      if (!AT_RISK_STAGES.includes(String(p.applicationStatus ?? '').trim().toLowerCase())) return false;
       if (isValid(p.visaStatus)) return false;
       const days = daysUntilWITA(p.programStart);
       return days !== null && days >= 0 && days < 12 * 7;

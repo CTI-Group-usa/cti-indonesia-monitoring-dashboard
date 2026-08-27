@@ -329,16 +329,17 @@ const Zoho = (() => {
       if (all.length > 50000) break;
     }
     return all.map(r => ({
-      id:             r.id,
-      fullName:       val(r[F.fullName]),
-      email:          val(r[F.email]),
-      programSources: val(r[F.programSources]),
-      hostingCompany: val(r[F.hostingCompany]),
-      programStart:   r[F.programStart] || null,
-      visaStatus:     val(r[F.visaStatus]),
-      appt1:          r[F.appt1] || null,
-      appt2:          r[F.appt2] || null,
-      appt3:          r[F.appt3] || null,
+      id:                r.id,
+      fullName:          val(r[F.fullName]),
+      email:             val(r[F.email]),
+      programSources:    val(r[F.programSources]),
+      hostingCompany:    val(r[F.hostingCompany]),
+      programStart:      r[F.programStart] || null,
+      visaStatus:        val(r[F.visaStatus]),
+      applicationStatus: val(r[F.applicationStatus]),
+      appt1:             r[F.appt1] || null,
+      appt2:             r[F.appt2] || null,
+      appt3:             r[F.appt3] || null,
     }));
   }
 
