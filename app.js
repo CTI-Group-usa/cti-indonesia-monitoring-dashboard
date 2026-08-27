@@ -2070,9 +2070,11 @@ const App = (() => {
     let participants = applyFilters();
 
     // At Risk: Program Start is less than 12 weeks away and the J1 Visa
-    // Status isn't resolved yet. Deliberately NOT affected by the Program
-    // Source / Appointment Range filters — like C1/D's own At Risk chip,
-    // this is a real-time "about to miss it" alert, not a browsing view.
+    // Status isn't resolved yet. Follows the Program Source filter (default
+    // CTI Indonesia) same as the table, but deliberately NOT affected by the
+    // Appointment Range filter — like C1/D's own At Risk chip ignoring its
+    // Sign On Date range, this is a real-time "about to miss it" alert, not
+    // a browsing view.
     // Also cross-checks the J1 Visa Log sheet by email, since the module's
     // status can lag behind what the Visa Team already logged there.
     const isValid = s => /valid|approv|issued|granted|complete|pass|board|ok to/i.test(String(s || ''));
@@ -2084,7 +2086,8 @@ const App = (() => {
     const j1LogLookup = p => j1SheetByEmail.get(String(p.email ?? '').trim().toLowerCase()) || null;
     const atRiskBase = allParticipants.filter(p => {
       const hc = String(p.hostingCompany ?? '').trim();
-      return hc && hc !== '—' && hc.toLowerCase() !== 'application process on hold';
+      if (!hc || hc === '—' || hc.toLowerCase() === 'application process on hold') return false;
+      return inSel(_j1Filters.source, sourceBucket(p));
     });
     const atRiskRows = atRiskBase.filter(p => {
       if (isValid(p.visaStatus)) return false;
@@ -2174,11 +2177,9 @@ const App = (() => {
       const c = panel.querySelector('#j1Count');
       if (c) c.textContent = `${participants.length.toLocaleString()} participant${participants.length === 1 ? '' : 's'}`;
     };
-    const refresh = () => {
-      participants = applyFilters();
-      panel.querySelector('#j1Body').innerHTML = bodyHtml();
-      updateCount();
-    };
+    // Full repaint (not just table body) — the At Risk chip's count depends
+    // on the Program Source filter too, so it needs to stay in sync.
+    const refresh = () => { destroyCharts(); paintJ1Performance(panel, allParticipants, j1rows); };
     updateCount();
 
     wireMS(panel, 'j1Source', sel => { _j1Filters.source = sel; refresh(); });
