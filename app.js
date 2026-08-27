@@ -1982,13 +1982,22 @@ const App = (() => {
       })],
     ];
   }
-  function drawJ1ProcessingChart(canvasId, rows) {
+  function drawJ1ProcessingChart(canvasId, rows, participants) {
     const groups = j1ProcessingGroups(rows);
     const s = (row, k) => esc(row[k] || '—');
+    // The J1 Visa Log sheet has no Program Start Date column — look it up
+    // from the J1_Participants module by email, same as C1/D's Sign On Date.
+    const moduleByEmail = new Map();
+    (participants || []).forEach(p => {
+      const email = String(p.email ?? '').trim().toLowerCase();
+      if (email) moduleByEmail.set(email, p);
+    });
+    const moduleOf = row => moduleByEmail.get(String(row['Email Address'] ?? '').trim().toLowerCase());
     const col = {
       name:  { label: 'Name',             render: r => s(r, 'Name'),            sort: r => txtSort(r['Name']),           w: 200, wrap: true },
       email: { label: 'Email',            render: r => s(r, 'Email Address'),   sort: r => txtSort(r['Email Address']),  w: 230, wrap: true },
       prog:  { label: 'Program Number',   render: r => s(r, 'Program Number'),  sort: r => txtSort(r['Program Number']), w: 150 },
+      pstart:{ label: 'Program Start',    render: r => formatDate(moduleOf(r)?.programStart), sort: r => dateSort(parseDate(moduleOf(r)?.programStart)), num: true, w: 140 },
       pay:   { label: 'Payment Status',   render: r => s(r, 'Payment Status'),  sort: r => txtSort(r['Payment Status']), w: 130 },
       vstat: { label: 'Visa Status',      render: r => s(r, 'Visa Status'),     sort: r => txtSort(r['Visa Status']),    w: 180 },
       added: { label: 'Added Time',       render: r => formatSheetDate(r['Added Time']), sort: r => dateSort(parseSheetDate(r['Added Time'])), num: true, w: 140 },
@@ -1996,9 +2005,16 @@ const App = (() => {
       appt:  { label: 'Appointment Date', render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: 150 },
       appid: { label: 'Application ID',   render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
     };
-    const ds160Cols   = [col.added, col.name, col.email, col.prog, col.pay, col.vstat, col.appid];
-    const apptCols    = [col.added, col.name, col.email, col.prog, col.vstat, col.bniva, col.appt, col.appid];
-    const securedCols = [col.name, col.email, col.prog, col.vstat, col.bniva, col.appt, col.appid];
+    // Scale each set's own px widths (as relative weights) to percentages
+    // summing to 100%, so it fits the modal with no horizontal scroll —
+    // same fix as the C1/D & Schengen Visa Processing drill-downs.
+    const pctCols = colsArr => {
+      const total = colsArr.reduce((sum, c) => sum + (typeof c.w === 'number' ? c.w : 100), 0);
+      return colsArr.map(c => ({ ...c, w: `${(100 * (typeof c.w === 'number' ? c.w : 100) / total).toFixed(2)}%` }));
+    };
+    const ds160Cols   = pctCols([col.added, col.name, col.email, col.prog, col.pstart, col.pay, col.vstat, col.appid]);
+    const apptCols    = pctCols([col.added, col.name, col.email, col.prog, col.pstart, col.vstat, col.bniva, col.appt, col.appid]);
+    const securedCols = pctCols([col.name, col.email, col.prog, col.pstart, col.vstat, col.bniva, col.appt, col.appid]);
     const counts = {};
     groups.forEach(([label, rs]) => { counts[label] = rs.length; });
     drawBar(canvasId, counts, label => {
@@ -2095,7 +2111,7 @@ const App = (() => {
       <div class="card table-card"><div class="table-wrap"><table class="data-table j1-table">
         <thead id="j1Head">${headHtml()}</thead><tbody id="j1Body">${bodyHtml()}</tbody>
       </table></div></div>`;
-    if (hasChart) drawJ1ProcessingChart('j1ChartPerf', j1rows);
+    if (hasChart) drawJ1ProcessingChart('j1ChartPerf', j1rows, allParticipants);
 
     const apptSel = panel.querySelector('#j1ApptRange');
     apptSel.value = _j1Filters.apptRange;
