@@ -1318,6 +1318,8 @@ const App = (() => {
       cols.push({ label: 'Joining Port', render: r => esc(r.signOnPort), sort: r => txtSort(r.signOnPort) });
     if (tab.key === 'schengen')
       cols.push({ label: 'Sign On Port', render: r => esc(r.signOnPort), sort: r => txtSort(r.signOnPort) });
+    if (tab.key === 'sdb' || tab.key === 'bid')
+      cols.push({ label: 'Employment Status', render: r => esc(r.employmentStatus), sort: r => txtSort(r.employmentStatus) });
     cols.push({ label: 'Onboarding', render: r => esc(r.onboardingStatus), sort: r => txtSort(r.onboardingStatus) });
     cols.push({ label: 'Sign On',    render: r => formatDate(r.signOnDate),  sort: r => dateSort(parseDate(r.signOnDate)), num: true });
     cols.push({ label: 'Sign Off',   render: r => formatDate(r.signOffDate),      sort: r => dateSort(parseDate(r.signOffDate)),     num: true });
