@@ -2019,11 +2019,13 @@ const App = (() => {
       bniva: { label: 'BNIVA Number',     render: r => s(r, 'BNIVA Number'),    sort: r => txtSort(r['BNIVA Number']),   w: 140 },
       appt:  { label: 'Appointment Date', render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: 150 },
       appid: { label: 'Application ID',   render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
-      // TEMPORARY DEBUG: showing only the keys that contain "note" (this
-      // sheet turned out to have 80+ columns — a full dump was unreadable).
-      notes: { label: 'Notes (DEBUG: keys w/ "note")', render: r => {
-          const hits = Object.keys(r).filter(k => /note/i.test(k));
-          return esc(hits.length ? hits.join(' | ') : 'NO KEY CONTAINS "note"');
+      // TEMPORARY DEBUG 2: no key contains "note", so the sheet API isn't
+      // returning that column at all. Notes lives at column DC (=107).
+      // Showing the key COUNT + the last keys tells us whether the API is
+      // truncating the column list (and where it stops).
+      notes: { label: 'Notes (DEBUG: count + last keys)', render: r => {
+          const keys = Object.keys(r);
+          return esc(`${keys.length} keys → LAST: ${keys.slice(-10).join(' , ')}`);
         }, sort: () => 0, w: 450, wrap: true },
     };
     // Scale each set's own px widths (as relative weights) to percentages
