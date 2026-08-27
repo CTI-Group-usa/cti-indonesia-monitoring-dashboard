@@ -1298,6 +1298,14 @@ const App = (() => {
         sort: r => dateSort(parseDate(r[tab.expectedKey])), num: true,
       }];
     }
+    // SDB/BID "Need to Process" bar only: also show Hired Date.
+    if ((tab.key === 'sdb' || tab.key === 'bid') && /^need to process$/i.test(status.trim())) {
+      extraCols = [...(extraCols || []), {
+        label: 'Hired Date',
+        render: r => formatDate(r.hiredDate),
+        sort: r => dateSort(parseDate(r.hiredDate)), num: true,
+      }];
+    }
     renderVisaDetail(holders.filter(x => x.s === status).map(x => x.r), tab,
       `${tab.label} — ${status}`, extraCols);
   }
