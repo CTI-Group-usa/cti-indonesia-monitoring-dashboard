@@ -1107,7 +1107,9 @@ const App = (() => {
         })],
         ['Secured Appointment', rows.filter(row => {
           const days = daysUntilWITASheet(row['Appointment Date']);
-          if (days === null || days <= 0) return false;              // future appointment (WITA today)
+          // Today counts as secured (>= 0) — an appointment happening today
+          // is still upcoming, not past. Same rule as the J1 chart.
+          if (days === null || days < 0) return false;
           if (tab.key === 'schengen') return low(row['Payment Status']) === 'paid';  // Schengen also requires Paid
           return true;
         })],
