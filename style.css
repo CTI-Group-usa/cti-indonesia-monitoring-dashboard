@@ -1225,7 +1225,7 @@ th.sorted {
 .j1-perf-head .j1-perf-left { max-width: 55%; }
 .j1-perf-head .j1-perf-left .toolbar { margin-top: 8px; }
 .j1-perf-head .j1-perf-topright {
-  position: absolute; top: -105px; right: -40px;
+  position: absolute; top: -105px; right: -140px;
   display: flex; align-items: stretch; gap: 10px; height: 170px;
 }
 .j1-perf-head .j1-perf-topright .stat-card {
