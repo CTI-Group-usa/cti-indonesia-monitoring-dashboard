@@ -2171,7 +2171,8 @@ const App = (() => {
             const cls = !raw ? 'status-flag' : /reject/i.test(raw) ? 'status-flag' : 'log-progress';
             return `<span class="${cls}">${esc(raw || 'Registered')}</span>`;
           }, sort: p => txtSort(j1LogLookup(p)?.['Visa Status'] || (j1LogLookup(p) ? 'Registered' : '')), w: '13%' },
-        { label: 'Program Sources', render: p => esc(p.programSources),      sort: p => txtSort(p.programSources), w: '14%' },
+        { label: 'Appointment Date', render: p => formatSheetDate(j1LogLookup(p)?.['Appointment Date']),
+          sort: p => dateSort(parseSheetDate(j1LogLookup(p)?.['Appointment Date'])), num: true, w: '14%' },
       ];
       atRiskCard.onclick = () => openDetailModal(atRiskRows, arCols, 'J1 — At Risk, Program Start < 12 Weeks');
     }
