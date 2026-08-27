@@ -344,13 +344,60 @@ const Zoho = (() => {
   }
 
   // Raw rows of the standalone J1 Visa Log sheet (CONFIG.J1_SHEET).
+  //
+  // ⚠️ The J1 Visa Log has 100+ columns (the DS-160 questionnaire), and its
+  // "Notes" column sits far right at column DC (107th). A plain
+  // worksheet.records.fetch does NOT return it — verified live: no key in the
+  // response contains "note". (The C1/D Visa Registration Log works with the
+  // same code only because its Notes column is early enough to be included.)
+  // So: fetch that column explicitly and merge it back in by row order.
+  // Best-effort — if none of the attempts work, the rest of the data is
+  // unaffected and Notes simply stays blank.
   async function getJ1VisaRows() {
     const s = CONFIG.J1_SHEET;
     if (!s || !s.resourceId) return [];
-    const json = await sheetCall(
-      { resourceId: s.resourceId, worksheet: s.worksheet, headerRow: s.headerRow ?? 1 },
-      'worksheet.records.fetch');
-    return json.records || [];
+    const cfg = { resourceId: s.resourceId, worksheet: s.worksheet, headerRow: s.headerRow ?? 1 };
+    const json = await sheetCall(cfg, 'worksheet.records.fetch');
+    const records = json.records || [];
+
+    const noteKeyOf = row => Object.keys(row || {}).find(k => /note/i.test(k));
+    if (!records.length || records.some(r => noteKeyOf(r))) return records;   // already there
+
+    // Attempt A: ask records.fetch for just that column (param name varies by
+    // API version, so try the known spellings; a wrong one is simply ignored).
+    for (const extra of [{ column_names: 'Notes' }, { selected_columns: 'Notes' }]) {
+      try {
+        const j = await sheetCall(cfg, 'worksheet.records.fetch', extra);
+        const rows = j.records || [];
+        const key = rows.length ? noteKeyOf(rows[0]) : null;
+        // Only accept it if it actually narrowed to the Notes column.
+        if (key && rows.length === records.length) {
+          rows.forEach((r, i) => { if (records[i]) records[i].Notes = r[key]; });
+          console.log('J1 Notes: merged via records.fetch column filter.');
+          return records;
+        }
+      } catch { /* try next */ }
+    }
+
+    // Attempt B: read the raw DC column range and align by row order
+    // (row 1 is the header, so data starts at index 1).
+    for (const method of ['range.content.get', 'worksheet.range.content.get']) {
+      try {
+        const j = await sheetCall(cfg, method, { range: `DC1:DC${records.length + 1}` });
+        const grid = j.content || j.range_content || j.data || j.records;
+        if (Array.isArray(grid) && grid.length > 1) {
+          grid.slice(1).forEach((cell, i) => {
+            const v = Array.isArray(cell) ? cell[0] : cell;
+            if (records[i] && v != null && v !== '') records[i].Notes = v;
+          });
+          console.log(`J1 Notes: merged via ${method} range read.`);
+          return records;
+        }
+      } catch { /* try next */ }
+    }
+
+    console.warn('J1 Notes: column DC could not be retrieved from the sheet API.');
+    return records;
   }
 
   return {
