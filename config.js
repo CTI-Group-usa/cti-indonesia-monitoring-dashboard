@@ -83,8 +83,10 @@ const CONFIG = {
     seamanBookExpiry: 'Seaman_Book_Expiration_Date',
     sdbStatus:        'Bermuda_Seaman_Status',   // "SDB Status"
     sdbExpiry:        'SDB_Expiration_Date',
+    sdbRequestedDate: 'SDB_Requested_Date',
     bidStatus:        'BID_Status',
     bidExpiry:        'BID_Expiration_Date',
+    bidRequestedDate: 'BID_Requested_Date',
     vaccinesStatus:   'Vaccines_Status',       // "Completed Vaccination"
 
     // Per-visa-type fields (for the VISA page sub-tabs)
