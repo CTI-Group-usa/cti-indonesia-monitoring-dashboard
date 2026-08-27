@@ -1995,7 +1995,7 @@ const App = (() => {
     const moduleOf = row => moduleByEmail.get(String(row['Email Address'] ?? '').trim().toLowerCase());
     const col = {
       name:  { label: 'Name',             render: r => s(r, 'Name'),            sort: r => txtSort(r['Name']),           w: 200, wrap: true },
-      email: { label: 'Email',            render: r => s(r, 'Email Address'),   sort: r => txtSort(r['Email Address']),  w: 230, wrap: true },
+      email: { label: 'Email',            render: r => s(r, 'Email Address'),   sort: r => txtSort(r['Email Address']),  w: 280 },
       prog:  { label: 'Program Number',   render: r => s(r, 'Program Number'),  sort: r => txtSort(r['Program Number']), w: 150 },
       // Hosting Company isn't reliably a sheet column, so it's looked up from
       // the module (same as Program Start), unlike C1/D's Cruise Line which
@@ -2008,7 +2008,7 @@ const App = (() => {
       bniva: { label: 'BNIVA Number',     render: r => s(r, 'BNIVA Number'),    sort: r => txtSort(r['BNIVA Number']),   w: 140 },
       appt:  { label: 'Appointment Date', render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: 150 },
       appid: { label: 'Application ID',   render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
-      notes: { label: 'Notes',            render: r => s(r, 'Notes'),           sort: r => txtSort(r['Notes']),          w: 600, wrap: true },
+      notes: { label: 'Notes',            render: r => s(r, 'Notes'),           sort: r => txtSort(r['Notes']),          w: 450, wrap: true },
     };
     // Scale each set's own px widths (as relative weights) to percentages
     // summing to 100%, so it fits the modal with no horizontal scroll —
