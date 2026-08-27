@@ -2000,7 +2000,7 @@ const App = (() => {
       // Hosting Company isn't reliably a sheet column, so it's looked up from
       // the module (same as Program Start), unlike C1/D's Cruise Line which
       // comes straight from its sheet.
-      hcompany:{ label: 'Host Company',   render: r => esc(moduleOf(r)?.hostingCompany || '—'), sort: r => txtSort(moduleOf(r)?.hostingCompany), w: 170 },
+      hcompany:{ label: 'Host Company',   render: r => esc(moduleOf(r)?.hostingCompany || '—'), sort: r => txtSort(moduleOf(r)?.hostingCompany), w: 320, wrap: true },
       pstart:{ label: 'Program Start',    render: r => formatDate(moduleOf(r)?.programStart), sort: r => dateSort(parseDate(moduleOf(r)?.programStart)), num: true, w: 140 },
       pay:   { label: 'Payment Status',   render: r => s(r, 'Payment Status'),  sort: r => txtSort(r['Payment Status']), w: 130 },
       vstat: { label: 'Visa Status',      render: r => s(r, 'Visa Status'),     sort: r => txtSort(r['Visa Status']),    w: 180 },
