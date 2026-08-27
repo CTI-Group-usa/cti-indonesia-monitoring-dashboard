@@ -1978,7 +1978,9 @@ const App = (() => {
       })],
       ['Secured Appointment', rows.filter(r => {
         const days = daysUntilWITASheet(r['Appointment Date']);
-        return days !== null && days > 0;   // future appointment (WITA today)
+        // Today counts as secured (>= 0), matching the table's "Upcoming
+        // Records" rule — an appointment happening today is still upcoming.
+        return days !== null && days >= 0;
       })],
     ];
   }
