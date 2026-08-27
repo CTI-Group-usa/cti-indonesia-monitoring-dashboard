@@ -2122,9 +2122,6 @@ const App = (() => {
       `<th class="sortable ${c.cls || ''}" data-i="${i}">${c.label}${i === _j1Sort.i ? `<span class="sort-arrow">${_j1Sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')}</tr>`;
     const hasChart = Array.isArray(j1rows) && j1rows.length;
     panel.innerHTML = `
-      <div class="stat-grid">
-        ${statCard('At Risk, Program Start <12wk', atRiskRows.length, { id: 'statJ1AtRisk', clickable: atRiskRows.length > 0 })}
-      </div>
       <div class="j1-perf-head">
         <div class="j1-perf-left">
           <div class="filter-bar">
@@ -2138,10 +2135,13 @@ const App = (() => {
           </div>
           <div class="toolbar"><span class="rec-count" id="j1Count"></span></div>
         </div>
-        ${hasChart ? `<div class="card chart-card j1-perf-chart">
-          <div class="card-title">J1 Visa — Visa Processing <span class="hint">(click a bar)</span></div>
-          <canvas id="j1ChartPerf" height="150"></canvas>
-        </div>` : ''}
+        <div class="j1-perf-topright">
+          ${statCard('At Risk, Program Start <12wk', atRiskRows.length, { id: 'statJ1AtRisk', clickable: atRiskRows.length > 0 })}
+          ${hasChart ? `<div class="card chart-card j1-perf-chart">
+            <div class="card-title">J1 Visa — Visa Processing <span class="hint">(click a bar)</span></div>
+            <canvas id="j1ChartPerf" height="150"></canvas>
+          </div>` : ''}
+        </div>
       </div>
       <div class="card table-card"><div class="table-wrap"><table class="data-table j1-table">
         <thead id="j1Head">${headHtml()}</thead><tbody id="j1Body">${bodyHtml()}</tbody>
