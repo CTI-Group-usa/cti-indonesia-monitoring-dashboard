@@ -2019,7 +2019,9 @@ const App = (() => {
       bniva: { label: 'BNIVA Number',     render: r => s(r, 'BNIVA Number'),    sort: r => txtSort(r['BNIVA Number']),   w: 140 },
       appt:  { label: 'Appointment Date', render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: 150 },
       appid: { label: 'Application ID',   render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
-      notes: { label: 'Notes',            render: r => esc(fuzzyVal(r, 'Notes')), sort: r => txtSort(fuzzyVal(r, 'Notes')), w: 450, wrap: true },
+      // TEMPORARY DEBUG: showing the raw column keys this row actually has,
+      // to find the real key for Notes (fuzzy match on "notes" found nothing).
+      notes: { label: 'Notes (DEBUG: raw keys)', render: r => esc(Object.keys(r).join(' | ')), sort: () => 0, w: 450, wrap: true },
     };
     // Scale each set's own px widths (as relative weights) to percentages
     // summing to 100%, so it fits the modal with no horizontal scroll —
