@@ -2068,6 +2068,30 @@ const App = (() => {
       return true;
     });
     let participants = applyFilters();
+
+    // At Risk: Program Start is less than 12 weeks away and the J1 Visa
+    // Status isn't resolved yet. Deliberately NOT affected by the Program
+    // Source / Appointment Range filters — like C1/D's own At Risk chip,
+    // this is a real-time "about to miss it" alert, not a browsing view.
+    // Also cross-checks the J1 Visa Log sheet by email, since the module's
+    // status can lag behind what the Visa Team already logged there.
+    const isValid = s => /valid|approv|issued|granted|complete|pass|board|ok to/i.test(String(s || ''));
+    const j1SheetByEmail = new Map();
+    (j1rows || []).forEach(row => {
+      const email = String(row['Email Address'] ?? '').trim().toLowerCase();
+      if (email) j1SheetByEmail.set(email, row);
+    });
+    const j1LogLookup = p => j1SheetByEmail.get(String(p.email ?? '').trim().toLowerCase()) || null;
+    const atRiskBase = allParticipants.filter(p => {
+      const hc = String(p.hostingCompany ?? '').trim();
+      return hc && hc !== '—' && hc.toLowerCase() !== 'application process on hold';
+    });
+    const atRiskRows = atRiskBase.filter(p => {
+      if (isValid(p.visaStatus)) return false;
+      const days = daysUntilWITA(p.programStart);
+      return days !== null && days >= 0 && days < 12 * 7;
+    });
+
     // Auto layout: every column sizes to its content (nowrap); Hosting Company
     // (cls j1-host, width:100% in CSS) soaks up any leftover horizontal space.
     const cols = [
@@ -2098,6 +2122,9 @@ const App = (() => {
       `<th class="sortable ${c.cls || ''}" data-i="${i}">${c.label}${i === _j1Sort.i ? `<span class="sort-arrow">${_j1Sort.dir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('')}</tr>`;
     const hasChart = Array.isArray(j1rows) && j1rows.length;
     panel.innerHTML = `
+      <div class="stat-grid">
+        ${statCard('At Risk, Program Start <12wk', atRiskRows.length, { id: 'statJ1AtRisk', clickable: atRiskRows.length > 0 })}
+      </div>
       <div class="j1-perf-head">
         <div class="j1-perf-left">
           <div class="filter-bar">
@@ -2120,6 +2147,26 @@ const App = (() => {
         <thead id="j1Head">${headHtml()}</thead><tbody id="j1Body">${bodyHtml()}</tbody>
       </table></div></div>`;
     if (hasChart) drawJ1ProcessingChart('j1ChartPerf', j1rows, allParticipants);
+
+    const atRiskCard = panel.querySelector('#statJ1AtRisk');
+    if (atRiskCard && atRiskRows.length) {
+      const arCols = [
+        { label: 'Name',            render: p => esc(p.fullName),            sort: p => txtSort(p.fullName), w: '14%', wrap: true },
+        { label: 'Email',           render: p => esc(p.email),               sort: p => txtSort(p.email),    w: '18%' },
+        { label: 'Hosting Company', render: p => esc(p.hostingCompany),      sort: p => txtSort(p.hostingCompany), w: '17%', wrap: true },
+        { label: 'Program Start',   render: p => formatDate(p.programStart), sort: p => dateSort(parseDate(p.programStart)), num: true, w: '11%' },
+        { label: 'J1 Visa Status',  render: p => esc(p.visaStatus),          sort: p => txtSort(p.visaStatus), w: '13%' },
+        { label: 'Visa Log Status', render: p => {
+            const row = j1LogLookup(p);
+            if (!row) return '—';
+            const raw = String(row['Visa Status'] ?? '').trim();
+            const cls = raw ? 'log-progress' : 'status-flag';
+            return `<span class="${cls}">${esc(raw || 'Registered')}</span>`;
+          }, sort: p => txtSort(j1LogLookup(p)?.['Visa Status'] || (j1LogLookup(p) ? 'Registered' : '')), w: '13%' },
+        { label: 'Program Sources', render: p => esc(p.programSources),      sort: p => txtSort(p.programSources), w: '14%' },
+      ];
+      atRiskCard.onclick = () => openDetailModal(atRiskRows, arCols, 'J1 — At Risk, Program Start < 12 Weeks');
+    }
 
     const apptSel = panel.querySelector('#j1ApptRange');
     apptSel.value = _j1Filters.apptRange;
