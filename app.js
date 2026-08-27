@@ -2021,7 +2021,7 @@ const App = (() => {
     // Name, Email, Host Company (J1's equivalent of Cruise Line), Program
     // Start (equivalent of Sign On Date), Payment Status, Notes.
     const ds160Cols   = pctCols([col.added, col.name, col.email, col.hcompany, col.pstart, col.pay, col.notes]);
-    const apptCols    = pctCols([col.added, col.name, col.email, col.prog, col.pstart, col.vstat, col.bniva, col.appt, col.appid]);
+    const apptCols    = pctCols([col.added, col.name, col.email, col.prog, col.pstart, col.vstat, col.bniva, col.notes]);
     const securedCols = pctCols([col.name, col.email, col.prog, col.pstart, col.vstat, col.bniva, col.appt, col.appid]);
     const counts = {};
     groups.forEach(([label, rs]) => { counts[label] = rs.length; });
