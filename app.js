@@ -1168,6 +1168,7 @@ const App = (() => {
         bniva: { label: 'BNIVA Number',     render: r => s(r, 'BNIVA Number'),    sort: r => txtSort(r['BNIVA Number']),  w: 140 },
         appt:  { label: 'Appointment Date', render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: 150 },
         appid: { label: 'Application ID',   render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
+        embassy:{ label: 'Embassy Location', render: r => s(r, 'Embassy Location'), sort: r => txtSort(r['Embassy Location']), w: 160 },
         notes: { label: 'Notes',            render: r => s(r, 'Notes'),           sort: r => txtSort(r['Notes']),         w: 600, wrap: true },
       };
       // Each column set has a different mix of columns, so a shared fixed px
@@ -1187,7 +1188,8 @@ const App = (() => {
       const ds160Cols      = pctCols([col.added, col.name, col.email, col.line, col.signOn, col.pay, col.vstat, col.appid]);
       const ds160ColsC1D   = pctCols([col.added, col.name, col.email, col.line, col.signOn, col.pay, col.notes]);
       const otherCols      = pctCols([col.name, col.email, col.line, col.signOn, col.pay, col.vstat, col.bniva, col.appt, col.appid]);
-      const c1dApptCols    = pctCols([col.added, col.name, col.email, col.line, col.signOn, col.vstat, col.bniva, col.appt, col.appid]);   // no Payment Status
+      // C1/D Pending Appointment: Embassy Location instead of Application ID.
+      const c1dApptCols    = pctCols([col.added, col.name, col.email, col.line, col.signOn, col.vstat, col.bniva, col.appt, col.embassy]);   // no Payment Status
       const c1dSecuredCols = pctCols([col.name, col.email, col.line, col.signOn, col.vstat, col.bniva, col.appt, col.appid]);               // no Payment Status
       const schApptCols    = pctCols([col.added, col.name, col.email, col.line, col.signOn, col.vstat, col.notes]);
       const firstLabel = procGroups[0][0];   // "Pending DS-160" / "Pending Application"
