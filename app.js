@@ -1188,9 +1188,9 @@ const App = (() => {
       const ds160Cols      = pctCols([col.added, col.name, col.email, col.line, col.signOn, col.pay, col.vstat, col.appid]);
       const ds160ColsC1D   = pctCols([col.added, col.name, col.email, col.line, col.signOn, col.pay, col.notes]);
       const otherCols      = pctCols([col.name, col.email, col.line, col.signOn, col.pay, col.vstat, col.bniva, col.appt, col.appid]);
-      // C1/D Pending Appointment: Embassy Location instead of Application ID.
+      // C1/D Pending + Secured Appointment: Embassy Location instead of Application ID.
       const c1dApptCols    = pctCols([col.added, col.name, col.email, col.line, col.signOn, col.vstat, col.bniva, col.appt, col.embassy]);   // no Payment Status
-      const c1dSecuredCols = pctCols([col.name, col.email, col.line, col.signOn, col.vstat, col.bniva, col.appt, col.appid]);               // no Payment Status
+      const c1dSecuredCols = pctCols([col.name, col.email, col.line, col.signOn, col.vstat, col.bniva, col.appt, col.embassy]);             // no Payment Status
       const schApptCols    = pctCols([col.added, col.name, col.email, col.line, col.signOn, col.vstat, col.notes]);
       const firstLabel = procGroups[0][0];   // "Pending DS-160" / "Pending Application"
       drawBar('c1dSheetChart', counts, label => {
