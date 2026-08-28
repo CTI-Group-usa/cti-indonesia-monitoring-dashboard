@@ -1103,7 +1103,7 @@ const App = (() => {
           if (norm(row['Appointment Date']) !== '') return false;   // no appointment yet
           if (tab.key === 'schengen') return norm(row['Notes']) !== '' && norm(row['Visa Status']) === '';   // Schengen: Notes not blank, Visa Status blank
           const vs = low(row['Visa Status']);                             // C1/D: visa status processed
-          return vs === 'visa payment processed' || vs === 'visa application processed';
+          return vs === 'visa payment processed' || vs === 'visa application processed' || vs === 'va paid';
         })],
         ['Secured Appointment', rows.filter(row => {
           const days = daysUntilWITASheet(row['Appointment Date']);
