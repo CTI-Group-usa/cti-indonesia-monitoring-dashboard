@@ -1978,7 +1978,7 @@ const App = (() => {
         if (low(r['Payment Status']) !== 'paid') return false;
         if (norm(r['Appointment Date']) !== '') return false;
         const vs = low(r['Visa Status']);
-        return vs === 'visa payment processed' || vs === 'visa application processed';
+        return vs === 'visa payment processed' || vs === 'visa application processed' || vs === 'va paid';
       })],
       ['Secured Appointment', rows.filter(r => {
         const days = daysUntilWITASheet(r['Appointment Date']);
@@ -2025,6 +2025,7 @@ const App = (() => {
       bniva: { label: 'BNIVA Number',     render: r => s(r, 'BNIVA Number'),    sort: r => txtSort(r['BNIVA Number']),   w: 140 },
       appt:  { label: 'Appointment Date', render: r => formatSheetDate(r['Appointment Date']), sort: r => dateSort(parseSheetDate(r['Appointment Date'])), num: true, w: 150 },
       appid: { label: 'Application ID',   render: r => s(r, 'Visa Application ID'), sort: r => txtSort(r['Visa Application ID']), w: 140 },
+      embassy:{ label: 'Embassy Location', render: r => esc(fuzzyVal(r, 'Embassy Location')), sort: r => txtSort(fuzzyVal(r, 'Embassy Location')), w: 160 },
       notes: { label: 'Notes',            render: r => esc(fuzzyVal(r, 'Notes')), sort: r => txtSort(fuzzyVal(r, 'Notes')), w: 450, wrap: true },
     };
     // Scale each set's own px widths (as relative weights) to percentages
@@ -2038,8 +2039,10 @@ const App = (() => {
     // Name, Email, Host Company (J1's equivalent of Cruise Line), Program
     // Start (equivalent of Sign On Date), Payment Status, Notes.
     const ds160Cols   = pctCols([col.added, col.name, col.email, col.hcompany, col.pstart, col.pay, col.notes]);
-    const apptCols    = pctCols([col.added, col.name, col.email, col.hcompany, col.pstart, col.vstat, col.bniva, col.notes]);
-    const securedCols = pctCols([col.name, col.email, col.prog, col.pstart, col.vstat, col.bniva, col.appt, col.appid]);
+    // Pending + Secured Appointment show Embassy Location, same as C1/D
+    // (Secured swaps it in for Application ID).
+    const apptCols    = pctCols([col.added, col.name, col.email, col.hcompany, col.pstart, col.vstat, col.bniva, col.embassy, col.notes]);
+    const securedCols = pctCols([col.name, col.email, col.prog, col.pstart, col.vstat, col.bniva, col.appt, col.embassy]);
     const counts = {};
     groups.forEach(([label, rs]) => { counts[label] = rs.length; });
     drawBar(canvasId, counts, label => {
