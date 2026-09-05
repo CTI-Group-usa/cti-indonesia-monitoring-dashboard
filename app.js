@@ -656,6 +656,7 @@ const App = (() => {
   let _lastComparedAt = null;         // epoch ms of the last daily comparison (6 AM WITA)
   let _j1Tab  = 'performance';        // J1 Program sub-tab: 'performance' | 'progress'
   let _j1Sort = { i: 0, dir: 1 };     // J1 Visa Performance table sort
+  let _j1Search = '';                 // J1 participants table search box
   let _j1Filters = { source: ['CTI Indonesia'], apptRange: 'upcoming' };   // J1 Visa Performance filters
 
   // Shared state via the worker KV endpoint (/state/<key>), so all users see
@@ -2132,9 +2133,16 @@ const App = (() => {
       { label: 'Current Appt',       render: p => formatDate(lastAppt(p)),    sort: p => dateSort(parseDate(lastAppt(p))), num: true },
     ];
     const cellTitle = html => String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    // Search box: matches against every rendered cell of the row, so the user
+    // can type a name, email, host company, status or a formatted date.
+    const rowText = p => cols.map(c => cellTitle(c.render(p))).join(' ').toLowerCase();
+    const searchedRows = () => {
+      const q = _j1Search.trim().toLowerCase();
+      return q ? participants.filter(p => rowText(p).includes(q)) : participants;
+    };
     const bodyHtml = () => {
       const c = cols[_j1Sort.i];
-      const rows = participants.slice().sort((a, b) => {
+      const rows = searchedRows().slice().sort((a, b) => {
         const x = c.sort(a), y = c.sort(b);
         const xe = (x === null || x === ''), ye = (y === null || y === '');
         if (xe && ye) return 0; if (xe) return 1; if (ye) return -1;
@@ -2158,7 +2166,11 @@ const App = (() => {
             </select>
             <button class="btn-sm" id="j1Clear">Clear</button>
           </div>
-          <div class="toolbar"><span class="rec-count" id="j1Count"></span></div>
+          <div class="toolbar">
+            <input type="search" id="j1Search" class="search-input"
+                   placeholder="Search name, email, host company, status…" value="${esc(_j1Search)}">
+            <span class="rec-count" id="j1Count"></span>
+          </div>
         </div>
         <div class="j1-perf-topright">
           ${statCard('At Risk, Program Start <12wk', atRiskRows.length, { id: 'statJ1AtRisk', clickable: atRiskRows.length > 0 })}
@@ -2208,17 +2220,26 @@ const App = (() => {
     apptSel.value = _j1Filters.apptRange;
     const updateCount = () => {
       const c = panel.querySelector('#j1Count');
-      if (c) c.textContent = `${participants.length.toLocaleString()} participant${participants.length === 1 ? '' : 's'}`;
+      const n = searchedRows().length;
+      if (c) c.textContent = `${n.toLocaleString()} participant${n === 1 ? '' : 's'}`;
     };
     // Full repaint (not just table body) — the At Risk chip's count depends
     // on the Program Source filter too, so it needs to stay in sync.
     const refresh = () => { destroyCharts(); paintJ1Performance(panel, allParticipants, j1rows); };
     updateCount();
 
+    const j1SearchEl = panel.querySelector('#j1Search');
+    if (j1SearchEl) j1SearchEl.addEventListener('input', e => {
+      _j1Search = e.target.value;
+      panel.querySelector('#j1Body').innerHTML = bodyHtml();
+      updateCount();
+    });
+
     wireMS(panel, 'j1Source', sel => { _j1Filters.source = sel; refresh(); });
     apptSel.onchange = () => { _j1Filters.apptRange = apptSel.value; refresh(); };
     panel.querySelector('#j1Clear').onclick = () => {
       _j1Filters = { source: [], apptRange: 'all' };
+      _j1Search = '';
       destroyCharts();
       paintJ1Performance(panel, allParticipants, j1rows);
     };
