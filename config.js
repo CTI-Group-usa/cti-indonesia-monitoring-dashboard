@@ -193,6 +193,7 @@ const CONFIG = {
     programStart:      'Program_Start_Date',
     visaStatus:        'J1_Visa_Status',
     applicationStatus: 'J1_Application_Status',         // Stage 1 / Stage 2 / Stage 3 / Stage 4
+    processingSponsor: 'Processing_Sponsor',
     appt1:             'J1_Visa_Appointment_Date',        // 1st appointment
     appt2:             'J1_Visa_2nd_Appointment_Date',
     appt3:             'J1_Visa_3rd_Appointment_Date',

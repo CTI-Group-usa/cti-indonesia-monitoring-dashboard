@@ -337,6 +337,7 @@ const Zoho = (() => {
       programStart:      r[F.programStart] || null,
       visaStatus:        val(r[F.visaStatus]),
       applicationStatus: val(r[F.applicationStatus]),
+      processingSponsor: val(r[F.processingSponsor]),
       appt1:             r[F.appt1] || null,
       appt2:             r[F.appt2] || null,
       appt3:             r[F.appt3] || null,
