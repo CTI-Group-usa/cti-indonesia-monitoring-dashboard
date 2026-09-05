@@ -2105,6 +2105,18 @@ const App = (() => {
       if (email) j1SheetByEmail.set(email, row);
     });
     const j1LogLookup = p => j1SheetByEmail.get(String(p.email ?? '').trim().toLowerCase()) || null;
+    // Tolerant column read on a J1 Visa Log row — the sheet's header text has
+    // drifted before (stray spacing), so fall back to a contains-match.
+    const sheetVal = (row, name) => {
+      if (!row) return '';
+      const target = name.trim().toLowerCase();
+      const keys = Object.keys(row);
+      const key = keys.find(k => k.trim().toLowerCase() === target)
+        || keys.find(k => k.trim().toLowerCase().includes(target));
+      const v = key ? row[key] : null;
+      return v == null ? '' : String(v).trim();
+    };
+    const embassyOf = p => sheetVal(j1LogLookup(p), 'Embassy Location');
     const atRiskBase = allParticipants.filter(p => {
       const hc = String(p.hostingCompany ?? '').trim();
       if (!hc || hc === '—' || hc.toLowerCase() === 'application process on hold') return false;
@@ -2131,6 +2143,9 @@ const App = (() => {
       { label: '2nd Appt',           render: p => formatDate(p.appt2),        sort: p => dateSort(parseDate(p.appt2)), num: true },
       { label: '3rd Appt',           render: p => formatDate(p.appt3),        sort: p => dateSort(parseDate(p.appt3)), num: true },
       { label: 'Current Appt',       render: p => formatDate(lastAppt(p)),    sort: p => dateSort(parseDate(lastAppt(p))), num: true },
+      // From the J1 Visa Log sheet (matched by email) — the module has no
+      // embassy field.
+      { label: 'Embassy Location',   render: p => esc(embassyOf(p) || '—'),   sort: p => txtSort(embassyOf(p)) },
     ];
     const cellTitle = html => String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     // Search box: matches against every rendered cell of the row, so the user
