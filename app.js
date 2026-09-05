@@ -2117,6 +2117,7 @@ const App = (() => {
       return v == null ? '' : String(v).trim();
     };
     const embassyOf = p => sheetVal(j1LogLookup(p), 'Embassy Location');
+    const sponsorOf = p => sheetVal(j1LogLookup(p), 'Processing Sponsor');
     const atRiskBase = allParticipants.filter(p => {
       const hc = String(p.hostingCompany ?? '').trim();
       if (!hc || hc === '—' || hc.toLowerCase() === 'application process on hold') return false;
@@ -2135,7 +2136,9 @@ const App = (() => {
     const cols = [
       { label: 'Full Name',          render: p => esc(p.fullName),            sort: p => txtSort(p.fullName) },
       { label: 'Email',              render: p => esc(p.email),               sort: p => txtSort(p.email) },
-      { label: 'J1 Program Sources', render: p => esc(p.programSources),      sort: p => txtSort(p.programSources) },
+      // From the J1 Visa Log sheet (matched by email); replaced the module's
+      // J1 Program Sources column, which stays as the filter dropdown.
+      { label: 'Processing Sponsor', render: p => esc(sponsorOf(p) || '—'),   sort: p => txtSort(sponsorOf(p)) },
       { label: 'Hosting Company',    cls: 'j1-host', render: p => esc(p.hostingCompany), sort: p => txtSort(p.hostingCompany) },
       { label: 'Program Start',      render: p => formatDate(p.programStart), sort: p => dateSort(parseDate(p.programStart)), num: true },
       { label: 'J1 Visa Status',     render: p => badge(p.visaStatus),        sort: p => txtSort(p.visaStatus) },
