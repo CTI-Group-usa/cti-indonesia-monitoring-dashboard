@@ -2147,7 +2147,7 @@ const App = (() => {
       { label: 'Current Appt',       render: p => formatDate(lastAppt(p)),    sort: p => dateSort(parseDate(lastAppt(p))), num: true },
       // From the J1 Visa Log sheet (matched by email) — the module has no
       // embassy field.
-      { label: 'Embassy Location',   render: p => esc(embassyOf(p) || '—'),   sort: p => txtSort(embassyOf(p)) },
+      { label: 'Location',           render: p => esc(embassyOf(p) || '—'),   sort: p => txtSort(embassyOf(p)) },
     ];
     const cellTitle = html => String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     // Search box: matches against every rendered cell of the row, so the user
